@@ -1,0 +1,21 @@
+{
+  "name": "baby-tracking-app",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24.18.0",
+    "bun": ">=1.3.0"
+  },
+  "trustedDependencies": [
+    "prisma",
+    "@prisma/client",
+    "@prisma/engines"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  }
+}
