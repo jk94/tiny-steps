@@ -16,6 +16,9 @@ build/
 # OS
 .DS_Store
 
+# Claude Code internal state (worktrees, session metadata)
+.claude/
+
 # Prisma SQLite dev database
 apps/backend/prisma/dev.db
 apps/backend/prisma/dev.db-journal
