@@ -1,0 +1,33 @@
+/*
+ * Mobile-first breakpoints.
+ *
+ * Unqualified styles throughout the app are written for the smallest
+ * (mobile) viewport. Use these custom properties together with `min-width`
+ * media queries to progressively enhance the layout for larger screens,
+ * e.g.:
+ *
+ *   .card {
+ *     padding: 0.5rem;
+ *   }
+ *
+ *   @media (min-width: 768px) {
+ *     .card {
+ *       padding: 1rem;
+ *     }
+ *   }
+ *
+ * The values themselves can't be read inside a media query (CSS custom
+ * properties aren't supported there yet), so they're documented here for
+ * consistency and copy-pasted into `min-width` queries where needed.
+ *
+ *   --breakpoint-sm: 480px   Large phones (landscape)
+ *   --breakpoint-md: 768px   Tablets
+ *   --breakpoint-lg: 1024px  Small laptops / tablet landscape
+ *   --breakpoint-xl: 1280px  Desktop
+ */
+:root {
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}
