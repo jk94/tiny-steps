@@ -24,6 +24,10 @@ services:
       # deploy` against this URL before the app starts.
       CONFIG_PATH: /app/config.yml
       DATABASE_URL: 'file:/app/data/dev.db'
+      # No default (unlike DATABASE_URL) — see apps/backend/src/config/jwt.config.ts
+      # and .env.example. Docker Compose auto-loads a root .env file.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     volumes:
       # Real config with secrets — copy from config.example.yml, never
       # committed (see .gitignore). Read-only in the container.

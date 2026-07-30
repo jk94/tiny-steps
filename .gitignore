@@ -9,6 +9,8 @@ build/
 # Environment / secrets
 .env
 .env.*
+# ...except the tracked template (mirrors config.example.yml's convention).
+!.env.example
 
 # Logs
 *.log

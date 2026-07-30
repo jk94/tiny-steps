@@ -31,10 +31,9 @@ apps/
   wasn't judged stable enough yet.
 - **`trustedDependencies`** (root `package.json`): Bun blocks postinstall/
   lifecycle scripts by default for any dependency not explicitly listed here.
-  `prisma` / `@prisma/client` / `@prisma/engines` are listed so `prisma
-  generate` actually runs and produces the query engine on `bun install`.
-  **Maintenance note:** once Phase 1 introduces `argon2`, it will need a
-  postinstall (native build) too and must be added to this list.
+  `prisma` / `@prisma/client` / `@prisma/engines` / `better-sqlite3` /
+  `argon2` are listed so their native postinstall builds actually run on
+  `bun install`.
 - **Config format: YAML.** OIDC-provider and database-provider configuration
   is loaded from a YAML file at backend startup (see `config.example.yml`),
   not via an admin UI.
@@ -75,6 +74,17 @@ export DATABASE_URL="file:./prisma/dev.db"
 already resolves to `apps/backend/config.yml` once `--cwd apps/backend` is in
 effect.)
 
+Local auth also requires two JWT signing secrets — `JWT_ACCESS_SECRET` and
+`JWT_REFRESH_SECRET` — with no code-level default (see
+`apps/backend/src/config/jwt.config.ts`): the app deliberately refuses to
+boot without them, dev included. Generate real values, don't reuse the
+example below:
+
+```bash
+export JWT_ACCESS_SECRET="$(openssl rand -base64 48)"
+export JWT_REFRESH_SECRET="$(openssl rand -base64 48)"
+```
+
 ### 3. Set up the database (Prisma + SQLite)
 
 ```bash
@@ -114,7 +124,12 @@ itself (no separate frontend/nginx container).
 # 1. Copy the example config and adjust as needed
 cp config.example.yml config.yml
 
-# 2. Build and start
+# 2. Copy the example env file and fill in real JWT secrets
+#    (docker-compose.yml auto-loads a root .env file)
+cp .env.example .env
+# then edit .env — e.g. `openssl rand -base64 48` for each secret
+
+# 3. Build and start
 docker compose up --build
 ```
 
