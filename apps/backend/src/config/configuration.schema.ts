@@ -13,8 +13,10 @@ export const configValidationSchema = Joi.object({
   database: Joi.object({
     // Sanity-check value only — see the comment on `database.provider` in
     // `config.example.yml` for why this doesn't switch the DB at runtime.
+    // Note there is deliberately no `url` field here: the DB connection
+    // string is resolved purely from `DATABASE_URL` / a code-level default,
+    // see `src/config/database-url.ts`.
     provider: Joi.string().valid('sqlite', 'postgresql', 'mysql').required(),
-    url: Joi.string().min(1).required(),
   }).required(),
 
   auth: Joi.object({

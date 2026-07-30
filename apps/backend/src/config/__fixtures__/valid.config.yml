@@ -2,7 +2,6 @@ server:
   port: 3000
 database:
   provider: sqlite
-  url: 'file:./data/dev.db'
 auth:
   local:
     enabled: true

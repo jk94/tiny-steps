@@ -14,9 +14,14 @@ services:
     ports:
       - '3000:3000'
     environment:
-      # Path to the mounted config file (see below) and the SQLite file
-      # inside the `sqlite_data` volume. `docker-entrypoint.sh` runs
-      # `prisma migrate deploy` against this URL before the app starts.
+      # Path to the mounted config file (see below). `config.yml` does NOT
+      # control the database connection string (see `config.example.yml`) —
+      # DATABASE_URL below is the sole source of truth for that. It's set
+      # explicitly here (rather than relying on the code-level default of
+      # `file:./data/dev.db`, see `src/config/database-url.ts`) because it
+      # must point at the `sqlite_data` volume mount, not the container's
+      # working directory. `docker-entrypoint.sh` runs `prisma migrate
+      # deploy` against this URL before the app starts.
       CONFIG_PATH: /app/config.yml
       DATABASE_URL: 'file:/app/data/dev.db'
     volumes:

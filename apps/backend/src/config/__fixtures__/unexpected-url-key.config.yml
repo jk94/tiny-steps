@@ -1,0 +1,13 @@
+server:
+  port: 3000
+database:
+  provider: sqlite
+  # `url` is no longer part of the config schema (see the finding this
+  # fixture guards against) — the loader must reject it as an unknown key
+  # rather than silently accepting/ignoring it.
+  url: 'file:./data/dev.db'
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers: []

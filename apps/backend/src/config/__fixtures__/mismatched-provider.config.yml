@@ -2,7 +2,6 @@ server:
   port: 3000
 database:
   provider: postgresql
-  url: 'postgresql://user:pass@localhost:5432/babytracker'
 auth:
   local:
     enabled: true

@@ -59,10 +59,12 @@ The backend needs a `config.yml` (path from `CONFIG_PATH`, default
 `./config.yml`, resolved relative to the process's working directory) and,
 for Prisma, a `DATABASE_URL` env var (read by `apps/backend/prisma.config.ts`
 for CLI commands, and by `PrismaService`'s driver adapter at runtime — see
-the comment at the top of `apps/backend/prisma/schema.prisma` for why the URL
-isn't in the schema file itself). Since all `bun run --cwd apps/backend ...`
-commands below run with `apps/backend` as the working directory, both paths
-are given relative to there:
+`apps/backend/src/config/database-url.ts`). `DATABASE_URL` is *not*
+configurable via `config.yml` — if unset it falls back to a code-level
+default (`file:./data/dev.db`, relative to the working directory), but
+setting it explicitly as below keeps the path predictable. Since all
+`bun run --cwd apps/backend ...` commands below run with `apps/backend` as
+the working directory, both paths are given relative to there:
 
 ```bash
 cp config.example.yml apps/backend/config.yml

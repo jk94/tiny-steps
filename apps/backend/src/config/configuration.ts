@@ -8,7 +8,6 @@ export interface AppConfig {
   };
   database: {
     provider: 'sqlite' | 'postgresql' | 'mysql';
-    url: string;
   };
   auth: {
     local: {
