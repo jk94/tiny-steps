@@ -68,6 +68,11 @@ COPY --from=build /app/apps/backend/dist ./dist
 COPY --from=build /app/apps/backend/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=build /app/apps/backend/prisma/migrations ./prisma/migrations
 COPY --from=build /app/apps/backend/prisma.config.ts ./prisma.config.ts
+# prisma.config.ts imports this directly from source (Prisma's CLI loader
+# transpiles it on the fly) — must ship alongside prisma.config.ts or
+# `prisma migrate deploy` fails at container start with a "Cannot find
+# module" error.
+COPY --from=build /app/apps/backend/src/config/database-url.ts ./src/config/database-url.ts
 COPY --from=build /app/apps/backend/package.json ./package.json
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
