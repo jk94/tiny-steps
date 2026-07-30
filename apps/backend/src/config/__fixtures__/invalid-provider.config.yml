@@ -1,0 +1,10 @@
+server:
+  port: 3000
+database:
+  provider: oracle
+  url: 'file:./data/dev.db'
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers: []
