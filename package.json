@@ -12,7 +12,8 @@
     "prisma",
     "@prisma/client",
     "@prisma/engines",
-    "better-sqlite3"
+    "better-sqlite3",
+    "argon2"
   ],
   "scripts": {
     "lint": "eslint .",
