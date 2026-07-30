@@ -17,5 +17,15 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "typescript-eslint": "^8.65.0",
+    "typescript": "^5.9.3",
+    "prettier": "^3.9.6",
+    "globals": "^17.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3"
   }
 }
