@@ -145,6 +145,11 @@ User ──< Membership >── Household ──< Child
 - **Erweiterbarkeit**: Prisma-Schema so gehalten, dass ein Wechsel auf PostgreSQL oder MySQL ohne größere Code-Änderungen möglich ist (Datenbank-Provider über Konfiguration wählbar, analog zur OIDC-Konfigurationsdatei)
 - Migrationslogik von Anfang an über Prisma Migrate, um spätere Wechsel des Datenbank-Providers sauber nachvollziehbar zu halten
 
+### 5.6 Tooling: Package-Manager & Konfigurationsformat
+- **Package-Manager**: Bun (Workspaces für das Monorepo, `bun install` statt npm/yarn/pnpm)
+- **Laufzeitumgebung**: Node.js — bewusst *kein* Bun-Runtime im Produktivbetrieb (Docker-Images, `nest start`, Prisma-Client), da Bun-Runtime-Kompatibilität mit Prisma's Query-Engine-Bindings und nativen Node-Modulen (z. B. Argon2 für Passwort-Hashing) zum Zeitpunkt der Entscheidung (Phase 0) noch nicht als stabil genug bewertet wurde. Bun bleibt reines Build-/Install-Tool
+- **Konfigurationsdatei-Format**: YAML (statt JSON) — menschenfreundlicher für Homelab-Nutzer, erlaubt Kommentare, passt zum bereits YAML-basierten `docker-compose.yml`
+
 ---
 
 ## 6. Erfolgskriterien (MVP)
