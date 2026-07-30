@@ -6,9 +6,10 @@ import { HouseholdModule } from './household/household.module';
 import { ChildModule } from './child/child.module';
 import { EventModule } from './event/event.module';
 import { HealthController } from './health.controller';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [AuthModule, HouseholdModule, ChildModule, EventModule],
+  imports: [PrismaModule, AuthModule, HouseholdModule, ChildModule, EventModule],
   controllers: [AppController, HealthController],
   providers: [AppService],
 })

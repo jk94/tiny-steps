@@ -1,0 +1,83 @@
+// Prisma schema — see https://pris.ly/d/prisma-schema
+//
+// NOTE on database provider switching (see also `config.example.yml` and the
+// root README): `datasource.provider` below is a *static string*. Prisma 7
+// no longer allows a connection URL in the schema file itself (it errors:
+// "The datasource property `url` is no longer supported in schema files") —
+// the URL is supplied instead:
+//   - to the Prisma CLI (`generate`/`migrate`) via `prisma.config.ts`, which
+//     reads it from the `DATABASE_URL` env var
+//   - to the runtime `PrismaClient` via an explicit *driver adapter*
+//     (`PrismaBetterSqlite3` for SQLite, see `src/prisma/prisma.service.ts`),
+//     which also reads `DATABASE_URL`
+// Switching providers (e.g. SQLite -> PostgreSQL) is therefore still a
+// one-time, explicit change: edit this `provider` string, swap the driver
+// adapter package/import in `PrismaService`, run `prisma generate`, and
+// apply a fresh `prisma migrate deploy` — never a runtime toggle.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  // Nullable: OIDC-only users authenticate without a local password.
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+  events      Event[]
+}
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  memberships Membership[]
+  children    Child[]
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String
+  // Placeholder string for now (Owner/Co-Parent/...); see PRD section 3.
+  role        String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@unique([userId, householdId])
+}
+
+model Child {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  birthDate   DateTime
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id])
+  events    Event[]
+}
+
+model Event {
+  id         String   @id @default(cuid())
+  childId    String
+  userId     String
+  // Placeholder string for now (Feeding/Sleep/Diaper/...); see PRD 4.1/5.2.
+  type       String
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}

@@ -11,7 +11,8 @@
   "trustedDependencies": [
     "prisma",
     "@prisma/client",
-    "@prisma/engines"
+    "@prisma/engines",
+    "better-sqlite3"
   ],
   "scripts": {
     "lint": "eslint .",
