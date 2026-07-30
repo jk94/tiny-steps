@@ -1,5 +1,7 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -15,6 +17,14 @@ import loadConfiguration from './config/configuration';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [loadConfiguration],
+    }),
+    // Serves the built React SPA (copied into dist/public by the Docker
+    // build, see the root Dockerfile) with client-side routing fallback.
+    // `/api/**` and `/health` are excluded so they reach the Nest
+    // controllers below instead of falling through to `index.html`.
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, 'public'),
+      exclude: ['/api/{*splat}', '/health'],
     }),
     PrismaModule,
     AuthModule,

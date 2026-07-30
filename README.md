@@ -47,12 +47,42 @@ apps/
 - [Node.js](https://nodejs.org) matching `.nvmrc` (runtime)
 - [Docker](https://www.docker.com/) + Docker Compose (for self-hosted deployment)
 
-### Local development
+### 1. Install dependencies
 
 ```bash
-# Install all workspace dependencies (backend + frontend)
 bun install
+```
 
+### 2. Configure the backend
+
+The backend needs a `config.yml` (path from `CONFIG_PATH`, default
+`./config.yml`, resolved relative to the process's working directory) and,
+for Prisma, a `DATABASE_URL` env var (read by `apps/backend/prisma.config.ts`
+for CLI commands, and by `PrismaService`'s driver adapter at runtime — see
+the comment at the top of `apps/backend/prisma/schema.prisma` for why the URL
+isn't in the schema file itself). Since all `bun run --cwd apps/backend ...`
+commands below run with `apps/backend` as the working directory, both paths
+are given relative to there:
+
+```bash
+cp config.example.yml apps/backend/config.yml
+export DATABASE_URL="file:./prisma/dev.db"
+```
+
+(`CONFIG_PATH` isn't set explicitly here because the default, `./config.yml`,
+already resolves to `apps/backend/config.yml` once `--cwd apps/backend` is in
+effect.)
+
+### 3. Set up the database (Prisma + SQLite)
+
+```bash
+bun run --cwd apps/backend prisma:generate
+bun run --cwd apps/backend prisma:migrate:dev
+```
+
+### 4. Run the dev servers
+
+```bash
 # Backend (NestJS) — http://localhost:3000
 bun run --cwd apps/backend start:dev
 
@@ -64,13 +94,6 @@ Health check once the backend is running:
 
 ```bash
 curl http://localhost:3000/health
-```
-
-### Database (Prisma + SQLite)
-
-```bash
-bun run --cwd apps/backend prisma:generate
-bun run --cwd apps/backend prisma:migrate:dev
 ```
 
 ### Linting & formatting (repo-wide)
@@ -101,6 +124,13 @@ This will:
   at `/`, plus an unprefixed `GET /health` check
 - persist the SQLite database across `docker compose down` / `up` cycles via
   the `sqlite_data` volume
+
+Verify it's up:
+
+```bash
+curl http://localhost:3000/health   # {"status":"ok",...}
+curl http://localhost:3000/         # serves the SPA's index.html
+```
 
 See `config.example.yml` for all available configuration options. Note that
 `database.provider` in that file is only a **sanity-check / fail-fast**

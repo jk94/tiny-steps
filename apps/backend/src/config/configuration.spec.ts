@@ -28,6 +28,12 @@ describe('loadConfiguration', () => {
     expect(() => loadConfiguration()).toThrow(/Invalid configuration/);
   });
 
+  it('throws (fails fast) when database.provider is valid but does not match the generated Prisma Client', () => {
+    process.env.CONFIG_PATH = fixture('mismatched-provider.config.yml');
+
+    expect(() => loadConfiguration()).toThrow(/Prisma Client was generated for "sqlite"/);
+  });
+
   it('throws when the config file does not exist', () => {
     process.env.CONFIG_PATH = fixture('does-not-exist.config.yml');
 

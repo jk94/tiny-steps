@@ -21,6 +21,17 @@ export interface AppConfig {
 }
 
 /**
+ * The database provider `apps/backend/prisma/schema.prisma` is actually
+ * generated for (its `datasource.provider` is a static string — see the
+ * comment there). Kept as a constant here so `config.yml`'s
+ * `database.provider` can be sanity-checked against it at startup: this
+ * catches a homelab user pointing `config.yml` at a provider the running
+ * Prisma Client was never generated for. It is NOT a runtime switch — see
+ * `config.example.yml` and the root README for the full explanation.
+ */
+const GENERATED_DATABASE_PROVIDER: AppConfig['database']['provider'] = 'sqlite';
+
+/**
  * Loads and validates `config.yml` (path overridable via `CONFIG_PATH`).
  *
  * Note: `@nestjs/config`'s built-in `validate`/`validationSchema` options
@@ -50,5 +61,15 @@ export default function loadConfiguration(): AppConfig {
     throw new Error(`Invalid configuration in "${configPath}": ${error.message}`);
   }
 
-  return value as AppConfig;
+  const config = value as AppConfig;
+
+  if (config.database.provider !== GENERATED_DATABASE_PROVIDER) {
+    throw new Error(
+      `Invalid configuration in "${configPath}": database.provider is "${config.database.provider}", ` +
+        `but the Prisma Client was generated for "${GENERATED_DATABASE_PROVIDER}". Changing this value ` +
+        'alone does not switch databases — see config.example.yml for how to actually migrate providers.',
+    );
+  }
+
+  return config;
 }
