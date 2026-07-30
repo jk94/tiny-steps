@@ -1,0 +1,35 @@
+# Example configuration for the Baby Tracking App backend.
+#
+# Copy this file to `config.yml` (git-ignored) and adjust the values for
+# your deployment. The backend reads its config path from the `CONFIG_PATH`
+# env var (default: `./config.yml`), loads this YAML file, and validates it
+# at startup — invalid config makes the app refuse to boot (fail-fast).
+
+server:
+  port: 3000
+
+database:
+  # sqlite | postgresql | mysql
+  #
+  # IMPORTANT: this is a sanity-check value only, not a runtime switch. It
+  # must match the static `datasource.provider` string that
+  # `apps/backend/prisma/schema.prisma` was actually generated for. The
+  # backend fails fast at startup if the two disagree. Changing this value
+  # alone does NOT make the app talk to a different kind of database —
+  # switching providers is an explicit one-time process: edit
+  # `schema.prisma`'s `provider`, swap the matching Prisma driver adapter in
+  # `PrismaService`, run `prisma generate`, then apply a fresh
+  # `prisma migrate deploy` against the new database.
+  #
+  # NOTE: there is deliberately no `url` field here. The database connection
+  # string is controlled solely via the `DATABASE_URL` environment variable
+  # (see `docker-compose.yml`), with a working default of
+  # `file:./data/dev.db` if it's unset — editing this file does NOT change
+  # which database the app connects to.
+  provider: sqlite
+
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers: [] # populated in Phase 1

@@ -1,0 +1,35 @@
+# Single-container self-hosted deployment (see README + CLAUDE.md for why
+# there is only one service: NestJS serves the built SPA itself).
+#
+# Usage:
+#   cp config.example.yml config.yml   # adjust as needed
+#   docker compose up --build
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: baby-tracker:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Path to the mounted config file (see below). `config.yml` does NOT
+      # control the database connection string (see `config.example.yml`) —
+      # DATABASE_URL below is the sole source of truth for that. It's set
+      # explicitly here (rather than relying on the code-level default of
+      # `file:./data/dev.db`, see `src/config/database-url.ts`) because it
+      # must point at the `sqlite_data` volume mount, not the container's
+      # working directory. `docker-entrypoint.sh` runs `prisma migrate
+      # deploy` against this URL before the app starts.
+      CONFIG_PATH: /app/config.yml
+      DATABASE_URL: 'file:/app/data/dev.db'
+    volumes:
+      # Real config with secrets — copy from config.example.yml, never
+      # committed (see .gitignore). Read-only in the container.
+      - ./config.yml:/app/config.yml:ro
+      # Persists the SQLite database across `docker compose down`/`up`.
+      - sqlite_data:/app/data
+
+volumes:
+  sqlite_data:

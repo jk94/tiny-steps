@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Prisma SQLite dev database
+apps/backend/prisma/dev.db
+apps/backend/prisma/dev.db-journal
+
+# Runtime data (e.g. SQLite volume mounted in docker-compose)
+data/
+
+# Real config (only config.example.yml is tracked)
+config.yml

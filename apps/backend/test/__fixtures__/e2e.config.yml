@@ -1,0 +1,12 @@
+# Minimal valid config used by app.e2e-spec.ts to boot the full AppModule
+# without depending on a `config.yml` existing on a clean checkout (see
+# `CONFIG_PATH` in `src/config/configuration.ts`).
+server:
+  port: 3000
+database:
+  provider: sqlite
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers: []

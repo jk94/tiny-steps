@@ -1,0 +1,9 @@
+server:
+  port: 3000
+database:
+  provider: postgresql
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers: []

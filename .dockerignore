@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+*.tsbuildinfo
+**/*.tsbuildinfo
+*.log
+.DS_Store
+apps/backend/prisma/dev.db*
+data
+config.yml
+.git
