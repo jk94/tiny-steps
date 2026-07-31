@@ -43,10 +43,10 @@ const buildEntry = (): OidcProviderEntry => ({
 });
 
 /** Simulates the token response `authorizationCodeGrant()` resolves with. */
-const buildTokenResponse = (subject: string) => ({
+const buildTokenResponse = (subject: string, idTokenClaims: Record<string, unknown> = {}) => ({
   access_token: 'access-token-value',
   token_type: 'bearer' as const,
-  claims: () => ({ sub: subject }),
+  claims: () => ({ sub: subject, ...idTokenClaims }),
 });
 
 describe('OidcService', () => {
@@ -123,6 +123,39 @@ describe('OidcService', () => {
       expect(authService.issueSessionFor).toHaveBeenCalledTimes(1);
       expect(authService.issueSessionFor).toHaveBeenCalledWith(createdUser);
       expect(result).toBe(authResult);
+    });
+
+    it('resolves the email from the ID Token claims when present, skipping the UserInfo round trip entirely', async () => {
+      registry.get.mockReturnValue(buildEntry());
+      mockedAuthorizationCodeGrant.mockResolvedValue(
+        buildTokenResponse(SUBJECT, { email: 'from-id-token@example.com' }),
+      );
+      prisma.oidcIdentity.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      const createdUser = buildUser({ id: 'new-user', email: 'from-id-token@example.com' });
+      prisma.user.create.mockResolvedValue(createdUser);
+      prisma.oidcIdentity.create.mockResolvedValue({
+        id: 'identity-1',
+        userId: createdUser.id,
+        providerId: PROVIDER_ID,
+        subject: SUBJECT,
+        createdAt: new Date(),
+      });
+      authService.issueSessionFor.mockResolvedValue({
+        user: { id: createdUser.id, email: createdUser.email, createdAt: createdUser.createdAt },
+        tokens: { accessToken: 'a', refreshToken: 'r' },
+      });
+
+      await service.handleCallback(PROVIDER_ID, new URL('http://localhost/'), {
+        state: 's',
+        nonce: 'n',
+        codeVerifier: 'c',
+      });
+
+      expect(mockedFetchUserInfo).not.toHaveBeenCalled();
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: { email: 'from-id-token@example.com', passwordHash: null },
+      });
     });
 
     it('short-circuits on an existing OidcIdentity: resolves the linked User directly, no email lookup', async () => {

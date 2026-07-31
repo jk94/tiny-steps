@@ -118,9 +118,15 @@ export class OidcService {
     // Guaranteed present: an ID token is always returned when `expectedNonce`
     // is passed above (openid-client asserts this), and `sub` is a required
     // ID Token claim per the OIDC spec.
-    const subject = tokens.claims()!.sub;
+    const idTokenClaims = tokens.claims()!;
 
-    const user = await this.resolveUser(entry.config.id, subject, tokens.access_token, entry);
+    const user = await this.resolveUser(
+      entry.config.id,
+      idTokenClaims.sub,
+      tokens.access_token,
+      idTokenClaims,
+      entry,
+    );
 
     return this.authService.issueSessionFor(user);
   }
@@ -129,6 +135,7 @@ export class OidcService {
     providerId: string,
     subject: string,
     accessToken: string,
+    idTokenClaims: client.IDToken,
     entry: OidcProviderEntry,
   ): Promise<User> {
     // Short-circuit on an already-linked identity: no email lookup at all,
@@ -150,11 +157,13 @@ export class OidcService {
     }
 
     // No existing identity — need the email claim to map to a local
-    // account. Not every IdP includes `email` in the ID Token depending on
-    // granted scopes/configuration, so fetch UserInfo for the authoritative
-    // claim set (`fetchUserInfo` also re-validates `sub` matches).
-    const userInfo = await client.fetchUserInfo(entry.oidcConfig, accessToken, subject);
-    const rawEmail = userInfo.email;
+    // account. Prefer the already-validated ID Token's `email` claim
+    // (present when the `email` scope is granted and the IdP populates the
+    // ID Token, not just UserInfo) to avoid an unnecessary UserInfo round
+    // trip; only fall back to `fetchUserInfo` when the ID Token doesn't
+    // already carry it (`fetchUserInfo` also re-validates `sub` matches, so
+    // it remains the authoritative source in that fallback case).
+    const rawEmail = await this.resolveEmail(idTokenClaims, entry, accessToken, subject);
     if (typeof rawEmail !== 'string' || rawEmail.trim().length === 0) {
       throw new OidcMappingError(
         'email_required',
@@ -179,6 +188,28 @@ export class OidcService {
     }
 
     return this.createUserWithIdentity(email, providerId, subject);
+  }
+
+  /**
+   * Resolves the `email` claim, preferring the ID Token (no extra network
+   * call) and falling back to `fetchUserInfo` only when the ID Token
+   * doesn't already carry it. `email_verified` is deliberately not
+   * consulted anywhere in this resolution — see the unconditional-linking
+   * policy in `resolveUser` and ADR-0004, Call 3.
+   */
+  private async resolveEmail(
+    idTokenClaims: client.IDToken,
+    entry: OidcProviderEntry,
+    accessToken: string,
+    subject: string,
+  ): Promise<string | undefined> {
+    const idTokenEmail = idTokenClaims.email;
+    if (typeof idTokenEmail === 'string' && idTokenEmail.trim().length > 0) {
+      return idTokenEmail;
+    }
+
+    const userInfo = await client.fetchUserInfo(entry.oidcConfig, accessToken, subject);
+    return userInfo.email;
   }
 
   private async createUserWithIdentity(
