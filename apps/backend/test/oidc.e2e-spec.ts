@@ -372,4 +372,21 @@ describe('OIDC (e2e)', () => {
         .expect(404);
     });
   });
+
+  describe('cross-token confusion protection (JwtStrategy)', () => {
+    it('rejects a genuinely-minted oidc_txn token presented as the access_token cookie on a protected route', async () => {
+      // A real oidc_txn token, minted by actually hitting the login route
+      // (not hand-shaped) — see `oidc-transaction-cookie.service.ts` and
+      // `JwtStrategy.validate()`'s `purpose`-claim guard, which is
+      // unit-tested with mock payloads in `jwt.strategy.spec.ts`. This
+      // proves the guard also rejects the real, end-to-end-minted token.
+      const { txnCookie } = await startLogin();
+      const txnTokenValue = txnCookie.slice(txnCookie.indexOf('=') + 1);
+
+      await request(app.getHttpServer())
+        .get('/api/auth/me')
+        .set('Cookie', [`access_token=${txnTokenValue}`])
+        .expect(401);
+    });
+  });
 });
