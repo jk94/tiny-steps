@@ -31,9 +31,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships   Membership[]
-  events        Event[]
-  refreshTokens RefreshToken[]
+  memberships     Membership[]
+  events          Event[]
+  refreshTokens   RefreshToken[]
+  createdInvites  Invite[]       @relation("InviteCreatedBy")
+  acceptedInvites Invite[]       @relation("InviteAcceptedBy")
 }
 
 model RefreshToken {
@@ -53,13 +55,19 @@ model Household {
 
   memberships Membership[]
   children    Child[]
+  invites     Invite[]
 }
 
 model Membership {
   id          String   @id @default(cuid())
   userId      String
   householdId String
-  // Placeholder string for now (Owner/Co-Parent/...); see PRD section 3.
+  // Stores a `HouseholdRole` string value (Owner/Co-Parent/...; see PRD
+  // section 3 and `src/household/household-role.enum.ts`). Kept as a plain
+  // `String`, not a Prisma `enum`, because Prisma's `enum` type is not
+  // supported on the SQLite connector — this is permanent, not a migration
+  // stepping stone. Enforced at the application layer via
+  // `toHouseholdRole()`; see ADR-0002.
   role        String
   createdAt   DateTime @default(now())
 
@@ -67,6 +75,24 @@ model Membership {
   household Household @relation(fields: [householdId], references: [id])
 
   @@unique([userId, householdId])
+}
+
+model Invite {
+  id               String    @id @default(cuid())
+  tokenHash        String    @unique
+  householdId      String
+  createdByUserId  String
+  // HouseholdRole granted on acceptance; MVP always CO_PARENT, set server-side only.
+  role             String
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  acceptedAt       DateTime?
+  acceptedByUserId String?
+  createdAt        DateTime  @default(now())
+
+  household      Household @relation(fields: [householdId], references: [id])
+  createdByUser  User      @relation("InviteCreatedBy", fields: [createdByUserId], references: [id])
+  acceptedByUser User?     @relation("InviteAcceptedBy", fields: [acceptedByUserId], references: [id])
 }
 
 model Child {
