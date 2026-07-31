@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiError } from './http-client';
+import { apiFetch, ApiError, readCookie } from './http-client';
 
 function jsonResponse(status: number, body: unknown, ok = status >= 200 && status < 300): Response {
   return {
@@ -9,10 +9,18 @@ function jsonResponse(status: number, body: unknown, ok = status >= 200 && statu
   } as Response;
 }
 
+// `path=/` mirrors the real backend's `csrf_token` cookie scoping
+// (`AuthCookieService`). This matters: a cookie's `path` attribute is not
+// cosmetic — per RFC 6265, `document.cookie` only exposes a cookie to script
+// running on a page whose own path is under the cookie's path. The backend
+// used to scope this cookie to `path=/api`, which made it invisible to
+// `document.cookie` on every real SPA page (`/`, `/dashboard`, ...) since
+// none of them live under `/api` — see the regression test below, which
+// reproduces that exact bug.
 function setCookie(value: string | undefined) {
   document.cookie = value
-    ? `csrf_token=${value}`
-    : 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    ? `csrf_token=${value}; path=/`
+    : 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
 }
 
 function clearCookies() {
@@ -171,5 +179,40 @@ describe('apiFetch', () => {
       body: { statusCode: 404, message: 'Not Found', error: 'Not Found' },
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Regression guard for a real bug: the backend originally scoped the
+// `csrf_token` cookie to `path=/api`, but the SPA's own pages are served at
+// root-level paths (`/`, `/dashboard`, ...), never under `/api`. Per RFC
+// 6265, that meant `document.cookie` never exposed the cookie to frontend JS
+// on any real page, so `X-CSRF-Token` was silently never attached and every
+// CSRF-protected route (refresh, logout, ...) 403'd. These tests exercise
+// jsdom's own, genuine cookie path-scoping (not a re-implementation of the
+// same assumption) by navigating to a root-level SPA path and setting
+// cookies with explicit `path` attributes, so a future regression (someone
+// narrowing `csrf_token`'s path again) would make this suite fail.
+describe('cookie path scoping (readCookie)', () => {
+  const originalPath = window.location.pathname;
+
+  afterEach(() => {
+    clearCookies();
+    window.history.pushState({}, '', originalPath);
+  });
+
+  it('does NOT see a cookie scoped to path=/api from a root-level SPA page (the original bug)', () => {
+    window.history.pushState({}, '', '/dashboard');
+
+    document.cookie = 'csrf_token=old-buggy-scope; path=/api';
+
+    expect(readCookie('csrf_token')).toBeUndefined();
+  });
+
+  it('sees a cookie scoped to path=/ from a root-level SPA page (the fixed backend behaviour)', () => {
+    window.history.pushState({}, '', '/dashboard');
+
+    document.cookie = 'csrf_token=fixed-scope; path=/';
+
+    expect(readCookie('csrf_token')).toBe('fixed-scope');
   });
 });

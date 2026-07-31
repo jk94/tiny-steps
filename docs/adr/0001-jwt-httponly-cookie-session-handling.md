@@ -74,6 +74,15 @@ Use **JWT access + refresh tokens, delivered as httpOnly, secure cookies** (not
   header) protects the authenticated, state-changing routes `refresh` and `logout`. This extra
   layer specifically anticipates the planned Capacitor/Tauri native wrapper (Phase 5), whose
   embedded webviews have historically had inconsistent `SameSite` enforcement.
+  - `csrf_token` is scoped to `path: '/'` (unlike `access_token`'s `/api` and `refresh_token`'s
+    `/api/auth`, both narrower on purpose to limit exposure). This is deliberate, not an oversight:
+    per RFC 6265, `document.cookie` only exposes a cookie to script running on a page whose own path
+    is under the cookie's path, and the SPA's pages are served at root-level paths (`/`, `/dashboard`,
+    ...), never under `/api`. A narrower `path: '/api'` was originally shipped and made the cookie
+    invisible to frontend JS on every real page, silently breaking CSRF-protected requests
+    end-to-end — this was caught during the frontend foundation sub-step's review, not a design
+    revisited later. Broadening the path is safe because this cookie is non-httpOnly and carries no
+    sensitive data by design; its whole purpose is to be readable by same-origin JS.
 - **Password hashing**: Argon2 with library defaults (already OWASP-recommended parameters) — no
   custom tuning.
 - **Email normalization**: emails are trimmed and lowercased before validation, storage, and
