@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HouseholdRole, toHouseholdRole } from './household-role.enum';
 import { generateInviteToken, hashInviteToken } from './invite-token.util';
 
 export const INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/** Prisma's unique-constraint-violation error code (see docs.prisma.io). */
+const PRISMA_UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
 
 export type InvitePreviewStatus = 'invalid' | 'expired' | 'used' | 'revoked' | 'valid';
 
@@ -92,6 +96,14 @@ export class InviteService {
    * household, no duplicate is created, but the invite is still consumed
    * (stamped as accepted) so it can't be replayed. Both writes happen in a
    * transaction — they must succeed or fail together.
+   *
+   * The `isUsable` check below runs against a row read *before* the
+   * transaction, so it can't be relied on as the source of truth for the
+   * writes themselves — a concurrent request could accept/revoke the same
+   * invite in between. The transaction therefore re-validates usability
+   * atomically via a conditional `updateMany` (mirrors the refresh-token
+   * rotation guard in `AuthService.refresh`), instead of trusting the
+   * earlier read.
    */
   async accept(token: string, userId: string): Promise<AcceptedInvite> {
     const invite = await this.prisma.invite.findUnique({
@@ -112,20 +124,66 @@ export class InviteService {
     const role = toHouseholdRole(invite.role);
 
     await this.prisma.$transaction(async (tx) => {
+      // Atomically consume the invite: the WHERE clause only matches (and
+      // thus only stamps) a row that's still usable at the moment of the
+      // write. A separate read-then-write here would leave a race where two
+      // concurrent accepts of the same token both pass the pre-transaction
+      // check above before either write lands, letting both grant
+      // membership from a single-use invite.
+      const updateResult = await tx.invite.updateMany({
+        where: {
+          id: invite.id,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gte: new Date() },
+        },
+        data: { acceptedAt: new Date(), acceptedByUserId: userId },
+      });
+
       const existingMembership = await tx.membership.findUnique({
         where: { userId_householdId: { userId, householdId: invite.householdId } },
       });
 
-      if (!existingMembership) {
+      if (updateResult.count !== 1) {
+        if (existingMembership) {
+          // This exact invite was already consumed by this exact user —
+          // most likely a concurrent duplicate of this same request (e.g. a
+          // UI double-click). Treat it as the same idempotent success as
+          // any other already-a-member case rather than a hard failure.
+          return;
+        }
+        // Someone else (or a prior concurrent request) already
+        // consumed/invalidated this invite between the initial read above
+        // and this transaction — collapse into the same uniform "invalid
+        // invite" case the pre-check uses.
+        throw new NotFoundException();
+      }
+
+      if (existingMembership) {
+        // Idempotent: the user already has a Membership (e.g. from a
+        // different invite to the same household) — the invite is still
+        // consumed above so it can't be replayed, but no duplicate
+        // Membership is created.
+        return;
+      }
+
+      try {
         await tx.membership.create({
           data: { userId, householdId: invite.householdId, role },
         });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === PRISMA_UNIQUE_CONSTRAINT_VIOLATION
+        ) {
+          // Backstop for a same-user race not covered by the invite-level
+          // guard above (e.g. two different invites to the same household
+          // accepted concurrently): another transaction created the
+          // Membership between our findUnique above and this create.
+          return;
+        }
+        throw error;
       }
-
-      await tx.invite.update({
-        where: { id: invite.id },
-        data: { acceptedAt: new Date(), acceptedByUserId: userId },
-      });
     });
 
     return { household: { id: invite.household.id, name: invite.household.name }, role };

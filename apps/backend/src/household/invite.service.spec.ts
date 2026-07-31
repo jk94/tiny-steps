@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { HouseholdRole } from './household-role.enum';
 import { hashInviteToken } from './invite-token.util';
 import { INVITE_TOKEN_TTL_MS, InviteService } from './invite.service';
@@ -102,13 +103,16 @@ describe('InviteService', () => {
   });
 
   describe('accept', () => {
-    const setupTransaction = (existingMembership: unknown) => {
+    const setupTransaction = (
+      existingMembership: unknown,
+      updateManyResult: { count: number } = { count: 1 },
+    ) => {
       const tx = {
         membership: {
           findUnique: jest.fn().mockResolvedValue(existingMembership),
           create: jest.fn(),
         },
-        invite: { update: jest.fn() },
+        invite: { updateMany: jest.fn().mockResolvedValue(updateManyResult) },
       };
       prisma.$transaction.mockImplementation(async (callback: (tx: unknown) => unknown) => {
         return callback(tx);
@@ -123,12 +127,17 @@ describe('InviteService', () => {
 
       const result = await service.accept('token', 'user-2');
 
+      expect(tx.invite.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: row.id,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gte: expect.any(Date) },
+        },
+        data: { acceptedAt: expect.any(Date), acceptedByUserId: 'user-2' },
+      });
       expect(tx.membership.create).toHaveBeenCalledWith({
         data: { userId: 'user-2', householdId: household.id, role: HouseholdRole.CO_PARENT },
-      });
-      expect(tx.invite.update).toHaveBeenCalledWith({
-        where: { id: row.id },
-        data: { acceptedAt: expect.any(Date), acceptedByUserId: 'user-2' },
       });
       expect(result).toEqual({ household, role: HouseholdRole.CO_PARENT });
     });
@@ -142,8 +151,13 @@ describe('InviteService', () => {
       const result = await service.accept('token', 'user-2');
 
       expect(tx.membership.create).not.toHaveBeenCalled();
-      expect(tx.invite.update).toHaveBeenCalledWith({
-        where: { id: row.id },
+      expect(tx.invite.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: row.id,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gte: expect.any(Date) },
+        },
         data: { acceptedAt: expect.any(Date), acceptedByUserId: 'user-2' },
       });
       expect(result).toEqual({ household, role: HouseholdRole.CO_PARENT });
@@ -159,6 +173,55 @@ describe('InviteService', () => {
 
       await expect(service.accept('token', 'user-2')).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the atomic invite update finds no matching row and the user has no membership (consumed/invalidated concurrently)', async () => {
+      const row = buildInviteRow();
+      prisma.invite.findUnique.mockResolvedValue(row);
+      setupTransaction(null, { count: 0 });
+
+      await expect(service.accept('token', 'user-2')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns success without throwing when the atomic invite update finds no matching row but the user already has a Membership (same-user concurrent double-submit)', async () => {
+      const row = buildInviteRow();
+      prisma.invite.findUnique.mockResolvedValue(row);
+      const existingMembership = { id: 'membership-existing' };
+      const tx = setupTransaction(existingMembership, { count: 0 });
+
+      const result = await service.accept('token', 'user-2');
+
+      expect(tx.membership.create).not.toHaveBeenCalled();
+      expect(result).toEqual({ household, role: HouseholdRole.CO_PARENT });
+    });
+
+    it('returns the existing Membership instead of throwing when creating it hits a unique-constraint race (P2002 backstop)', async () => {
+      const row = buildInviteRow();
+      prisma.invite.findUnique.mockResolvedValue(row);
+      const tx = setupTransaction(null);
+      tx.membership.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`userId`,`householdId`)',
+          {
+            code: 'P2002',
+            clientVersion: '7.9.1',
+          },
+        ),
+      );
+
+      const result = await service.accept('token', 'user-2');
+
+      expect(result).toEqual({ household, role: HouseholdRole.CO_PARENT });
+    });
+
+    it('rethrows unrelated errors from Membership creation unchanged', async () => {
+      const row = buildInviteRow();
+      prisma.invite.findUnique.mockResolvedValue(row);
+      const tx = setupTransaction(null);
+      const unrelatedError = new Error('connection lost');
+      tx.membership.create.mockRejectedValue(unrelatedError);
+
+      await expect(service.accept('token', 'user-2')).rejects.toThrow(unrelatedError);
     });
   });
 });
