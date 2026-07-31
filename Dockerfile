@@ -76,7 +76,7 @@ COPY --from=build /app/apps/backend/src/config/database-url.ts ./src/config/data
 COPY --from=build /app/apps/backend/package.json ./package.json
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN mkdir -p /app/data \
+RUN mkdir -p /app/data/uploads/children \
     && chown -R app:app /app \
     && chmod +x /usr/local/bin/docker-entrypoint.sh
 
