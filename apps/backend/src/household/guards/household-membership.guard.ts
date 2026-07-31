@@ -30,7 +30,10 @@ export class HouseholdMembershipGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<HouseholdScopedRequest>();
 
     const userId = request.user.id;
-    const householdId = request.params.householdId;
+    // Express types `params` values as `string | string[]` (repeated query
+    // params can produce arrays), but a `:householdId` path segment is
+    // always a single string for the routes this guard is used on.
+    const householdId = request.params.householdId as string;
 
     const membership = await this.householdAccessService.findMembershipOrThrow(userId, householdId);
 

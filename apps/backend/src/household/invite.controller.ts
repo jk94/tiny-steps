@@ -3,7 +3,8 @@ import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
-import { AcceptedInvite, InvitePreview, InviteService } from './invite.service';
+import { InviteService } from './invite.service';
+import type { AcceptedInvite, InvitePreview } from './invite.service';
 
 @Controller('invites')
 export class InviteController {

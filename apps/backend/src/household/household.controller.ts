@@ -7,8 +7,10 @@ import { CreateHouseholdDto } from './dto/create-household.dto';
 import { HouseholdMembershipGuard } from './guards/household-membership.guard';
 import { RequireRole } from './guards/require-role.decorator';
 import { HouseholdRole, toHouseholdRole } from './household-role.enum';
-import { HouseholdService, HouseholdSummary } from './household.service';
-import { CreatedInvite, InviteService } from './invite.service';
+import { HouseholdService } from './household.service';
+import type { HouseholdSummary } from './household.service';
+import { InviteService } from './invite.service';
+import type { CreatedInvite } from './invite.service';
 import type { HouseholdScopedRequest } from './types/household-scoped-request';
 
 @Controller('households')
