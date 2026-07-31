@@ -13,10 +13,10 @@ Phase 0 abgeschlossen (Backend-/Frontend-Grundgerüst, Basis-Datenmodell, Konfig
 ## Aufgaben
 
 ### Lokale Authentifizierung
-- [ ] Registrierung mit E-Mail/Passwort
-- [ ] Passwort-Hashing mit Argon2
-- [ ] Login-Endpoint für lokale Zugangsdaten
-- [ ] Session-/Token-Handling festlegen und implementieren (JWT oder Server-Session)
+- [x] Registrierung mit E-Mail/Passwort
+- [x] Passwort-Hashing mit Argon2
+- [x] Login-Endpoint für lokale Zugangsdaten
+- [x] Session-/Token-Handling festlegen und implementieren (JWT oder Server-Session) — Entscheidung: JWT (Access + Refresh) in httpOnly-Cookies, mit DB-gestützter Refresh-Token-Rotation samt Reuse-Detection; Details und Begründung siehe [ADR-0001](../adr/0001-jwt-httponly-cookie-session-handling.md)
 
 ### OIDC-Authentifizierung
 - [ ] Passport-Strategie(n) für OIDC (Authorization Code Flow + PKCE) integrieren (`@nestjs/passport`, `openid-client`)

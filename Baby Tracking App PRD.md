@@ -103,7 +103,7 @@ Ein **Haushalt/Familienverbund** kann mehrere Nutzer und mehrere Kind-Profile en
 - **Lokaler Login**: E-Mail/Passwort mit sicherem Hashing (z. B. Argon2), optional 2FA später
 - **OIDC**: Standard-konforme Anbindung (Authorization Code Flow + PKCE). Ein oder mehrere OIDC-Provider (z. B. Keycloak, Authentik, Google, Microsoft Entra) werden über eine Konfigurationsdatei eingetragen — kein Code-Deploy nötig, um einen weiteren Provider hinzuzufügen
 - Beide Methoden (lokal + OIDC) koexistieren nebeneinander; ein Nutzer wählt beim Login die gewünschte Methode
-- Session-Handling: JWT oder Server-Session, abhängig von gewähltem Backend-Ansatz
+- Session-Handling: JWT (Access- und Refresh-Token) in httpOnly-Cookies, mit serverseitig widerrufbaren Refresh-Tokens — Entscheidung inkl. Begründung siehe [ADR-0001](docs/adr/0001-jwt-httponly-cookie-session-handling.md)
 
 ### 5.2 Multiuser-Datenmodell (Grobentwurf)
 ```

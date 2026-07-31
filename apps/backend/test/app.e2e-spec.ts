@@ -9,6 +9,8 @@ describe('AppModule (e2e)', () => {
   let app: INestApplication<App>;
   const originalConfigPath = process.env.CONFIG_PATH;
   const originalDatabaseUrl = process.env.DATABASE_URL;
+  const originalJwtAccessSecret = process.env.JWT_ACCESS_SECRET;
+  const originalJwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
 
   beforeEach(async () => {
     // Point the loader at a minimal fixture config instead of the default
@@ -20,6 +22,11 @@ describe('AppModule (e2e)', () => {
     // PrismaService connects eagerly as part of module init (see
     // `src/prisma/prisma.module.ts`), so give it a throwaway in-memory DB.
     process.env.DATABASE_URL = ':memory:';
+    // AuthModule fails to bootstrap without these (see
+    // `src/config/jwt.config.ts`) — required regardless of what this test
+    // actually exercises, since it boots the full AppModule.
+    process.env.JWT_ACCESS_SECRET = 'e2e-test-access-secret';
+    process.env.JWT_REFRESH_SECRET = 'e2e-test-refresh-secret';
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -36,6 +43,8 @@ describe('AppModule (e2e)', () => {
     await app.close();
     process.env.CONFIG_PATH = originalConfigPath;
     process.env.DATABASE_URL = originalDatabaseUrl;
+    process.env.JWT_ACCESS_SECRET = originalJwtAccessSecret;
+    process.env.JWT_REFRESH_SECRET = originalJwtRefreshSecret;
   });
 
   it('GET /health returns ok status outside the /api prefix', () => {
