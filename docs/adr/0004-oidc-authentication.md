@@ -243,7 +243,7 @@ before a first production deployment that enables OIDC — see Consequences belo
   `AuthCookieService`, and `AuthService.issueSessionFor()` end to end, so a session established via
   OIDC is indistinguishable from a local-auth session to every existing guard/decorator.
 - Adding or removing providers is a pure `config.yml` change (plus a restart, since discovery happens
-  fail-fast at boot) — no code change, migration, or admin UI needed, consistent with PRD 5.6.
+  at boot) — no code change, migration, or admin UI needed, consistent with PRD 5.6.
 - The `oidc_txn` cookie approach needed no new infrastructure (no session store, no separate signing
   secret) and is single-use/short-lived by construction.
 
@@ -261,11 +261,33 @@ before a first production deployment that enables OIDC — see Consequences belo
   given real-world IdP (Keycloak quirks, Entra ID's specific claim shapes, etc.) won't be caught by
   this test suite. Manual verification against at least one real IdP before enabling OIDC in a
   production deployment is recommended, not enforced.
-- OIDC discovery failing for any single configured provider fails the *entire* app's boot (fail-fast,
-  matching `loadConfiguration()`/`resolveJwtSecrets()`'s existing posture) — an operator who
-  misconfigures one provider's `issuer` takes down local auth too, since the whole process won't
-  start. Judged acceptable: a broken login button discovered only at a user's login attempt was
-  judged worse than a loud, immediate boot failure an operator sees right away.
+- **OIDC discovery is per-provider graceful-degradation, not fail-fast, with a bounded timeout.**
+  An earlier version of this decision applied the same fail-fast posture as
+  `loadConfiguration()`/`resolveJwtSecrets()` — any provider's `discovery()` failure would fail the
+  entire app's boot. That reasoning didn't hold up: `loadConfiguration()`/`resolveJwtSecrets()` fail
+  only on *static, deterministic, always-wrong* config (malformed YAML, an unset secret) — the same
+  input fails the same way every time, so failing loudly and immediately is unambiguously correct.
+  `client.discovery()` is a *network* call to an external IdP, with a categorically different failure
+  mode: a transiently-unreachable or slow-to-start IdP (e.g. in a docker-compose stack where this app
+  and a self-hosted Keycloak start together) is not a misconfiguration, and treating it as one meant a
+  flaky/slow-starting IdP could crash or indefinitely hang the *entire* app's boot — taking local auth
+  and every other unrelated feature down with it.
+
+  **Actual behavior**: `OidcProviderRegistry.onModuleInit()` iterates providers, `await`s each
+  `discovery()` call inside a `try`/`catch`, and on failure logs an error (provider id, issuer, and
+  the underlying error) and simply omits that provider from its internal `Map`, rather than
+  rethrowing. The app boots regardless, and every other, successfully-discovered provider (and local
+  auth) is unaffected. `get(providerId)` for a provider that failed discovery returns `undefined` —
+  identical to a provider that was never configured at all — so `OidcController`'s existing
+  `/login`/`/callback` 404 handling for an unknown provider id already covers this case with no
+  additional branching needed. `discovery()` is also called with a bounded `timeout` (10 seconds,
+  `openid-client`'s own `DiscoveryRequestOptions.timeout`), so a hanging/never-responding IdP can't
+  stall boot indefinitely even before the `try`/`catch` gets a chance to catch anything.
+
+  A misconfigured provider (bad `issuer`, unreachable IdP, etc.) now surfaces as a broken login button
+  for that one provider — discoverable via the error log at boot and via that provider simply being
+  absent from `GET /api/auth/oidc/providers` — rather than as a down app. Judged the correct trade-off
+  once the network-I/O distinction above was made explicit.
 - A manual account-linking endpoint (for a user to deliberately link a *second* OIDC identity to their
   existing account outside of the automatic email-match path) is explicitly out of scope for this
   sub-step, as is the frontend login-provider-selection UI — both are later work.

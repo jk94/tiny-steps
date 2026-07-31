@@ -17,14 +17,23 @@ export interface PublicOidcProvider {
 }
 
 /**
+ * Bound on `client.discovery()`'s network round trip (in seconds, per
+ * `openid-client`'s `DiscoveryRequestOptions.timeout`), so a
+ * hanging/slow-to-start IdP can't stall app boot indefinitely — see
+ * ADR-0004. Well above what a healthy IdP needs, short enough that boot
+ * doesn't hang for minutes on a genuinely unreachable one.
+ */
+const DISCOVERY_TIMEOUT_SECONDS = 10;
+
+/**
  * Discovers and caches each configured OIDC provider's `openid-client`
  * `Configuration` at application startup.
  *
- * Discovery failures fail the whole app's bootstrap (see `onModuleInit`),
- * consistent with this app's existing config posture (`loadConfiguration()`,
- * `resolveJwtSecrets()`) — a misconfigured OIDC provider should stop the app
- * from starting, not silently produce a broken login button discovered only
- * at a user's login attempt.
+ * A discovery failure for one provider (network I/O, not a static config
+ * error — see ADR-0004) is logged and that provider is simply omitted from
+ * the registry, rather than failing the whole app's bootstrap. This keeps a
+ * transiently-unreachable or misconfigured IdP from taking down local auth
+ * and every other, unrelated feature along with it.
  */
 @Injectable()
 export class OidcProviderRegistry implements OnModuleInit {
@@ -37,22 +46,28 @@ export class OidcProviderRegistry implements OnModuleInit {
     const providerConfigs = this.configService.get('auth.oidc.providers', { infer: true });
 
     for (const providerConfig of providerConfigs) {
-      const oidcConfig = await client
-        .discovery(
+      try {
+        const oidcConfig = await client.discovery(
           new URL(providerConfig.issuer),
           providerConfig.clientId,
           providerConfig.clientSecret,
-        )
-        .catch((error: unknown) => {
-          const reason = error instanceof Error ? error.message : String(error);
-          throw new Error(
-            `OIDC discovery failed for provider "${providerConfig.id}" (issuer "${providerConfig.issuer}"): ${reason}`,
-            { cause: error },
-          );
-        });
+          undefined,
+          { timeout: DISCOVERY_TIMEOUT_SECONDS },
+        );
 
-      this.providers.set(providerConfig.id, { config: providerConfig, oidcConfig });
-      this.logger.log(`Discovered OIDC provider "${providerConfig.id}"`);
+        this.providers.set(providerConfig.id, { config: providerConfig, oidcConfig });
+        this.logger.log(`Discovered OIDC provider "${providerConfig.id}"`);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        // Deliberately not rethrown — see the class doc comment and
+        // ADR-0004. This provider is simply absent from `this.providers`,
+        // which `get()`/`list()` already treat identically to "never
+        // configured" (a 404 on its login/callback routes).
+        this.logger.error(
+          `OIDC discovery failed for provider "${providerConfig.id}" (issuer "${providerConfig.issuer}"), ` +
+            `omitting it from the registry: ${reason}`,
+        );
+      }
     }
   }
 
