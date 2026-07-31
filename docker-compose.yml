@@ -24,6 +24,11 @@ services:
       # deploy` against this URL before the app starts.
       CONFIG_PATH: /app/config.yml
       DATABASE_URL: 'file:/app/data/dev.db'
+      # Directory for uploaded files (currently only child photos, see
+      # apps/backend/src/config/uploads-dir.ts) — must point inside the
+      # `sqlite_data` volume mount, same reasoning as DATABASE_URL above,
+      # not the code-level default of `./data/uploads`.
+      UPLOADS_DIR: /app/data/uploads
       # No default (unlike DATABASE_URL) — see apps/backend/src/config/jwt.config.ts
       # and .env.example. Docker Compose auto-loads a root .env file.
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
@@ -32,7 +37,8 @@ services:
       # Real config with secrets — copy from config.example.yml, never
       # committed (see .gitignore). Read-only in the container.
       - ./config.yml:/app/config.yml:ro
-      # Persists the SQLite database across `docker compose down`/`up`.
+      # Persists both the SQLite database and uploaded child photos across
+      # `docker compose down`/`up`.
       - sqlite_data:/app/data
 
 volumes:

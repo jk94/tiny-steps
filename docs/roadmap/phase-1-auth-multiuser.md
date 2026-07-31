@@ -36,9 +36,9 @@ Phase 0 abgeschlossen (Backend-/Frontend-Grundgerüst, Basis-Datenmodell, Konfig
 - [x] Unterstützung für Nutzer in mehreren Haushalten (z. B. getrenntlebende Eltern)
 
 ### Kind-Profile
-- [ ] Kind-Profil anlegen (Name, Geburtsdatum, Foto optional)
-- [ ] Kind-Profil bearbeiten/löschen (nur Owner)
-- [ ] Mehrere Kind-Profile pro Haushalt (Geschwister)
+- [x] Kind-Profil anlegen (Name, Geburtsdatum, Foto optional) — Foto-Upload läuft über Multer (In-Memory) mit MIME-Type-Sniffing und 2-MB-Limit, Speicherung lokal auf Disk (selbes Docker-Volume wie SQLite); Details siehe [ADR-0003](../adr/0003-child-photo-storage-on-local-disk.md)
+- [x] Kind-Profil bearbeiten/löschen — Rollen-Feinschliff gegenüber der Checklisten-Kurzform "nur Owner": Anlegen/Löschen bleibt Owner-only (strukturelle Haushalts-Änderung), Lesen/Bearbeiten ist für Co-Parent erlaubt, passend zu PRD Abschnitt 3 und der Definition of Done dieser Phase; Details siehe [ADR-0003](../adr/0003-child-photo-storage-on-local-disk.md)
+- [x] Mehrere Kind-Profile pro Haushalt (Geschwister)
 
 ### Frontend
 - [ ] Login-/Registrierungs-UI (lokal)
