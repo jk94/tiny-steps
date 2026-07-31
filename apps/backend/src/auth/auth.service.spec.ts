@@ -22,7 +22,6 @@ describe('AuthService', () => {
     refreshToken: {
       create: jest.Mock;
       findUnique: jest.Mock;
-      update: jest.Mock;
       updateMany: jest.Mock;
     };
   };
@@ -35,7 +34,6 @@ describe('AuthService', () => {
       refreshToken: {
         create: jest.fn(),
         findUnique: jest.fn(),
-        update: jest.fn(),
         updateMany: jest.fn(),
       },
     };
@@ -49,6 +47,10 @@ describe('AuthService', () => {
       revokedAt: null,
       createdAt: new Date(),
     });
+    // Default: the atomic rotation update in `refresh()` successfully
+    // consumes exactly one (still-unrevoked) row. Individual tests override
+    // this to simulate the race/reuse case (count: 0).
+    prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
   });
 
   describe('register', () => {
@@ -160,8 +162,8 @@ describe('AuthService', () => {
 
       const result = await service.refresh(token);
 
-      expect(prisma.refreshToken.update).toHaveBeenCalledWith({
-        where: { id: 'refresh-row-1' },
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: 'refresh-row-1', revokedAt: null },
         data: { revokedAt: expect.any(Date) },
       });
       expect(result.tokens.refreshToken).toEqual(expect.any(String));
@@ -192,9 +194,39 @@ describe('AuthService', () => {
         revokedAt: new Date(),
         createdAt: new Date(),
       });
+      // The atomic rotation update's WHERE clause (`revokedAt: null`) won't
+      // match an already-revoked row, so it consumes zero rows.
+      prisma.refreshToken.updateMany.mockResolvedValueOnce({ count: 0 });
 
       await expect(service.refresh(token)).rejects.toBeInstanceOf(UnauthorizedException);
 
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+    });
+
+    it('treats a concurrent rotation race (atomic update consumes zero rows) as reuse and revokes all sessions', async () => {
+      // Simulates two concurrent requests racing on the same still-valid
+      // token: both pass the initial `findUnique` read, but only one atomic
+      // `updateMany` can actually consume the row. This test represents the
+      // loser of that race.
+      const token = await signRefreshToken({ sub: 'user-1', jti: 'refresh-row-1' });
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'refresh-row-1',
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() + 1000 * 60),
+        revokedAt: null,
+        createdAt: new Date(),
+      });
+      prisma.refreshToken.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(service.refresh(token)).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: 'refresh-row-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user-1', revokedAt: null },
         data: { revokedAt: expect.any(Date) },

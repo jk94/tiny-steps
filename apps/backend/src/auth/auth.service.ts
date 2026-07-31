@@ -100,14 +100,27 @@ export class AuthService {
       throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
     }
 
-    if (tokenRow.revokedAt) {
-      // Reuse of an already-rotated-out token is a theft signal — revoke
-      // every active session of this user as defense-in-depth.
-      await this.revokeAllRefreshTokensForUser(tokenRow.userId);
+    if (tokenRow.expiresAt.getTime() < Date.now()) {
       throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
     }
 
-    if (tokenRow.expiresAt.getTime() < Date.now()) {
+    // Atomically consume the token: the WHERE clause only matches (and thus
+    // only revokes) a row that's still unrevoked at the moment of the
+    // write. A separate read-then-write here would leave a race where two
+    // concurrent requests both read `revokedAt: null` before either write
+    // lands, letting both mint a new pair and never tripping reuse
+    // detection.
+    const rotationResult = await this.prisma.refreshToken.updateMany({
+      where: { id: tokenRow.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    if (rotationResult.count !== 1) {
+      // Someone else already consumed this token — either a concurrent
+      // request (the race above) or genuine reuse of an already-rotated-out
+      // token. Either way, treat it as a theft signal and revoke every
+      // active session of this user as defense-in-depth.
+      await this.revokeAllRefreshTokensForUser(tokenRow.userId);
       throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
     }
 
@@ -115,11 +128,6 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
     }
-
-    await this.prisma.refreshToken.update({
-      where: { id: tokenRow.id },
-      data: { revokedAt: new Date() },
-    });
 
     return this.issueTokenPair(user);
   }
