@@ -39,3 +39,4 @@ Proposed | Accepted | Deprecated | Superseded by ADR-NNNN
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-jwt-httponly-cookie-session-handling.md) | JWT with httpOnly cookies for session/token handling | Accepted |
+| [0002](0002-application-level-household-roles-and-invites.md) | Application-level household roles, and hashed-token invites | Accepted |
