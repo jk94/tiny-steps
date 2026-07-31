@@ -1,0 +1,5 @@
+# Known Issues / Follow-up TODOs
+
+Small, non-blocking items deliberately deferred during implementation. Not scheduled to a specific roadmap phase — revisit when finishing up / hardening before a release.
+
+- **Flaky backend e2e tests (occasional `socket hang up`)**: observed intermittently (~1 in 6 runs as of Phase 1, sub-step 3) across `apps/backend/test/*.e2e-spec.ts`. Root cause: the Nest test app in these specs is never bound to a real HTTP port (no explicit `app.listen()`/`.getHttpServer()` setup with a listener), which `supertest` tolerates most of the time but occasionally races under concurrent requests. First noticed during Phase 1 sub-step 2's review (attempting true HTTP-level concurrency tests for the invite-accept race also hit `ECONNRESET` for the same reason). Fix direction: bind the test app to an ephemeral port in `beforeAll` (`await app.listen(0)`) instead of relying on `app.getHttpServer()` alone. Not a correctness bug in application code — purely a test-harness reliability issue.
