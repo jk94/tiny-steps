@@ -9,6 +9,16 @@ import type { AuthenticatedUser } from '../types/authenticated-request';
 
 interface AccessTokenPayload {
   sub: string;
+  /**
+   * Real access tokens never set this claim. Only present to let
+   * `validate()` structurally reject an `oidc_txn` transaction token
+   * (see `auth/oidc/oidc-transaction-cookie.service.ts`) if one were ever
+   * presented here — e.g. an attacker copying its value into the
+   * `access_token` cookie by hand. Both token kinds are signed with the
+   * same secret (see ADR-0004), so signature verification alone can't
+   * distinguish them; this claim-shape check is the structural guard.
+   */
+  purpose?: unknown;
 }
 
 /** Reads the access token from the httpOnly `access_token` cookie, not an Authorization header. */
@@ -35,6 +45,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * access token is still cryptographically valid.
    */
   async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
+    // See the `purpose` field's doc comment above — structurally reject
+    // anything shaped like an `oidc_txn` transaction token rather than a
+    // real access token.
+    if (payload.purpose !== undefined || typeof payload.sub !== 'string') {
+      throw new UnauthorizedException('Invalid access token');
+    }
+
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) {
       throw new UnauthorizedException('User no longer exists');

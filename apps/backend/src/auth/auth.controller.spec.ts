@@ -1,10 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import {
-  ACCESS_TOKEN_COOKIE_NAME,
-  AuthController,
-  REFRESH_TOKEN_COOKIE_NAME,
-} from './auth.controller';
+import { ACCESS_TOKEN_COOKIE_NAME, AuthCookieService } from './auth-cookie.service';
+import { AuthController, REFRESH_TOKEN_COOKIE_NAME } from './auth.controller';
 import { AuthResult, AuthService } from './auth.service';
 import { CSRF_COOKIE_NAME } from './guards/csrf.guard';
 import { AuthenticatedUser } from './types/authenticated-request';
@@ -30,7 +27,7 @@ describe('AuthController', () => {
       refresh: jest.fn(),
       logout: jest.fn(),
     };
-    controller = new AuthController(authService as unknown as AuthService);
+    controller = new AuthController(authService as unknown as AuthService, new AuthCookieService());
     res = {
       cookie: jest.fn().mockReturnThis(),
       clearCookie: jest.fn().mockReturnThis(),
