@@ -33,6 +33,7 @@ describe('ProtectedRoute', () => {
       user: undefined,
       isAuthenticated: false,
       isLoading: true,
+      error: null,
       login: vi.fn(),
       register: vi.fn(),
       logout: vi.fn(),
@@ -50,6 +51,7 @@ describe('ProtectedRoute', () => {
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      error: null,
       login: vi.fn(),
       register: vi.fn(),
       logout: vi.fn(),
@@ -65,6 +67,7 @@ describe('ProtectedRoute', () => {
       user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
       isAuthenticated: true,
       isLoading: false,
+      error: null,
       login: vi.fn(),
       register: vi.fn(),
       logout: vi.fn(),
@@ -73,5 +76,28 @@ describe('ProtectedRoute', () => {
     renderAt('/dashboard');
 
     expect(screen.getByText('Dashboard content')).toBeInTheDocument();
+  });
+
+  it('still redirects to /login on a genuine auth-check error, but logs the distinction', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const backendFailure = new Error('Internal Server Error');
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: backendFailure,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderAt('/dashboard');
+
+    // Redirect behaviour is unchanged by an error state — no distinct
+    // "error" UI exists yet, that's a later sub-step.
+    expect(screen.getByText('Login page (from /dashboard)')).toBeInTheDocument();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), backendFailure);
+
+    consoleErrorSpy.mockRestore();
   });
 });

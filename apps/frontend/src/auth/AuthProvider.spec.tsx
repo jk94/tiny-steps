@@ -62,6 +62,25 @@ describe('AuthProvider / useAuth', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
+    expect(result.current.error).toBeFalsy();
+  });
+
+  it('exposes a genuine (non-401) fetchMe failure via error, while still reporting logged-out state', async () => {
+    const backendFailure = new ApiError(500, { message: 'Internal Server Error' });
+    mockedAuthApi.fetchMe.mockRejectedValueOnce(backendFailure);
+
+    const { result } = renderUseAuth();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // A genuine backend/network failure must look the same as "not logged
+    // in" from user/isAuthenticated's perspective (ProtectedRoute doesn't
+    // branch on error yet) ...
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.user).toBeNull();
+    // ... but must be distinguishable at the data layer via `error`, unlike
+    // the ordinary 401/no-session case above.
+    expect(result.current.error).toBe(backendFailure);
   });
 
   it('login() success updates state without a second /me call', async () => {

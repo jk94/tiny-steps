@@ -85,10 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = meQuery.isLoading ? undefined : (meQuery.data ?? null);
   const isAuthenticated = !!meQuery.data;
   const isLoading = meQuery.isLoading;
+  // Only set when `fetchMeOrNull` rethrew a non-401 failure — the ordinary
+  // "no session" 401 case resolves to `null` data with no query error.
+  const error = meQuery.error;
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated, isLoading, login, register, logout }),
-    [user, isAuthenticated, isLoading, login, register, logout],
+    () => ({ user, isAuthenticated, isLoading, error, login, register, logout }),
+    [user, isAuthenticated, isLoading, error, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

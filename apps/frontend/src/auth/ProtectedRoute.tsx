@@ -8,7 +8,7 @@ import { useAuth } from './useAuth';
  * login form can redirect back after a successful login.
  */
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -16,6 +16,13 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
+    // Redirect behaviour is unchanged either way (no distinct "error" UI
+    // yet — that's a later sub-step), but a genuine backend/network failure
+    // shouldn't be silently indistinguishable from "not logged in" in the
+    // console at least.
+    if (error) {
+      console.error('Redirecting to /login after a failed auth check:', error);
+    }
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
