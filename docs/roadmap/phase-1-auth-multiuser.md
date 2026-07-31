@@ -19,10 +19,10 @@ Phase 0 abgeschlossen (Backend-/Frontend-Grundgerüst, Basis-Datenmodell, Konfig
 - [x] Session-/Token-Handling festlegen und implementieren (JWT oder Server-Session) — Entscheidung: JWT (Access + Refresh) in httpOnly-Cookies, mit DB-gestützter Refresh-Token-Rotation samt Reuse-Detection; Details und Begründung siehe [ADR-0001](../adr/0001-jwt-httponly-cookie-session-handling.md)
 
 ### OIDC-Authentifizierung
-- [ ] Passport-Strategie(n) für OIDC (Authorization Code Flow + PKCE) integrieren (`@nestjs/passport`, `openid-client`)
-- [ ] OIDC-Provider-Konfiguration über die Konfigurationsdatei aus Phase 0 (mehrere Provider möglich, z. B. Keycloak, Authentik, Google, Entra ID)
-- [ ] Provider-übergreifendes User-Mapping (externe OIDC-Identität ↔ internes `User`-Konto)
-- [ ] Login-Auswahl: Nutzer wählt zwischen lokalem Login und verfügbaren OIDC-Providern
+- [x] Authorization Code Flow + PKCE gegen mehrere, config-gesteuerte Provider — Entscheidung: direkte `openid-client`-Service-Integration statt Passport-Strategie (aktuelles `openid-client` v6 hat keine für Passport passende Klassenform, und Passport erwartet eine Strategie-Instanz pro festem Namen, nicht eine dynamische, erst zur Laufzeit aus `config.yml` bekannte Provider-Liste); Details siehe [ADR-0004](../adr/0004-oidc-authentication.md)
+- [x] OIDC-Provider-Konfiguration über die Konfigurationsdatei aus Phase 0 (mehrere Provider möglich, z. B. Keycloak, Authentik, Google, Entra ID) — `clientSecret` liegt bewusst in `config.yml`, nicht in einer Env-Var (strukturierte, mehrteilige Provider-Liste statt eines einzelnen Secrets); siehe ADR-0004
+- [x] Provider-übergreifendes User-Mapping (externe OIDC-Identität ↔ internes `User`-Konto) via neuem `OidcIdentity`-Modell — **OIDC-Logins mit passender E-Mail werden automatisch verknüpft, unabhängig vom `email_verified`-Claim — eine bewusste, vom Nutzer freigegebene Risikoabwägung für den self-hosted/Familien-Kontext dieser App, siehe ADR-0004 für die volle Begründung und die Warnung vor öffentlichen/offenen OIDC-Providern**
+- [x] Login-Auswahl (Backend-Seite): `GET /api/auth/oidc/providers` liefert die konfigurierten Provider (nur `id`/`displayName`, keine Secrets) für eine künftige Frontend-Auswahl-UI; das eigentliche Frontend folgt in einem separaten Schritt
 
 ### Rollen- & Rechtemodell
 - [x] `Membership`-Entity mit Rolle (Owner, Co-Parent für MVP) vervollständigen — Rolle wird als TypeScript-`HouseholdRole`-Enum auf Anwendungsebene durchgesetzt (Prisma-Enums werden auf SQLite nicht unterstützt, Spalte bleibt `String`); Details siehe [ADR-0002](../adr/0002-application-level-household-roles-and-invites.md)
