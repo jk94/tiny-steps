@@ -63,7 +63,7 @@ describe('AuthController', () => {
       expect(res.cookie).toHaveBeenCalledWith(
         CSRF_COOKIE_NAME,
         expect.any(String),
-        expect.objectContaining({ httpOnly: false, sameSite: 'lax', path: '/api' }),
+        expect.objectContaining({ httpOnly: false, sameSite: 'lax', path: '/' }),
       );
     });
   });

@@ -37,12 +37,20 @@ const refreshTokenCookieOptions: CookieOptions = {
 
 // Non-httpOnly by design — the double-submit CSRF check requires
 // client-side JS to be able to read this value and echo it back in the
-// `X-CSRF-Token` header (see `CsrfGuard`).
+// `X-CSRF-Token` header (see `CsrfGuard`). `path: '/'` (not `/api`) is
+// deliberate: the SPA's own pages are served at root-level paths (`/`,
+// `/dashboard`, ...), never under `/api`, and per RFC 6265 cookie
+// path-matching a cookie is only exposed to `document.cookie` when the
+// *current document's own path* is under the cookie's path — so a narrower
+// `/api` scope made this cookie invisible to frontend JS on every real SPA
+// page, breaking CSRF-protected requests end-to-end. Broadening it to `/`
+// carries no additional risk since this cookie is non-httpOnly and carries
+// no sensitive data by design.
 const csrfCookieOptions: CookieOptions = {
   httpOnly: false,
   sameSite: 'lax',
   secure: isProduction(),
-  path: '/api',
+  path: '/',
   maxAge: REFRESH_TOKEN_TTL_MS,
 };
 

@@ -104,6 +104,11 @@ describe('Auth (e2e)', () => {
       expect(refreshCookie).toMatch(/HttpOnly/i);
       expect(refreshCookie).toMatch(/Path=\/api\/auth(;|$)/i);
       expect(csrfCookie).not.toMatch(/HttpOnly/i);
+      // Must be scoped to `/`, not `/api` — the SPA's own pages live outside
+      // `/api`, so a narrower path would make `document.cookie` unable to
+      // see this cookie on any real page, breaking CSRF end-to-end (see
+      // AuthCookieService for the full rationale).
+      expect(csrfCookie).toMatch(/Path=\/(;|$)/i);
     });
 
     it('rejects registering the same email twice with 409', async () => {

@@ -12,7 +12,8 @@ Common commands (run from repo root unless noted):
 - `bun run --cwd apps/backend start:dev` — run the NestJS backend with hot reload (`GET /health`, API under `/api`)
 - `bun run --cwd apps/backend test` — backend unit tests (Jest)
 - `bun run --cwd apps/backend prisma:migrate:dev` — apply Prisma migrations against local SQLite
-- `bun run --cwd apps/frontend dev` — run the Vite dev server for the frontend standalone
+- `bun run --cwd apps/frontend dev` — run the Vite dev server for the frontend; requires the backend (`bun run --cwd apps/backend start:dev`) running on `localhost:3000` too, since `vite.config.ts` proxies `/api` there for cookie-domain reasons (see comment in that file)
+- `bun run --cwd apps/frontend test` — frontend unit tests (Vitest)
 - `cp config.example.yml config.yml && docker compose up --build` — build and run the whole app as a single container (backend serves the built frontend)
 
 The two sources of truth for requirements/scope remain:
