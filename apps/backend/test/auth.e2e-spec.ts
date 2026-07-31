@@ -191,11 +191,15 @@ describe('Auth (e2e)', () => {
         .expect(201);
 
       const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
-      const oldRefreshCookie = findSetCookie(setCookie, REFRESH_TOKEN_COOKIE_NAME)!;
+      const oldRefreshCookie = findSetCookie(setCookie, REFRESH_TOKEN_COOKIE_NAME)!.split(';')[0];
+      const csrfCookieRaw = findSetCookie(setCookie, CSRF_COOKIE_NAME)!;
+      const csrfCookie = csrfCookieRaw.split(';')[0];
+      const csrfToken = cookieValue(csrfCookieRaw)!;
 
       const refreshResponse = await request(app.getHttpServer())
         .post('/api/auth/refresh')
-        .set('Cookie', [oldRefreshCookie.split(';')[0]])
+        .set('Cookie', [oldRefreshCookie, csrfCookie])
+        .set(CSRF_HEADER_NAME, csrfToken)
         .expect(200);
 
       const newRefreshCookie = findSetCookie(
@@ -208,8 +212,25 @@ describe('Auth (e2e)', () => {
       // rejected, and revokes the whole session family.
       await request(app.getHttpServer())
         .post('/api/auth/refresh')
-        .set('Cookie', [oldRefreshCookie.split(';')[0]])
+        .set('Cookie', [oldRefreshCookie, csrfCookie])
+        .set(CSRF_HEADER_NAME, csrfToken)
         .expect(401);
+    });
+
+    it('rejects refresh without a matching X-CSRF-Token header', async () => {
+      const email = testEmail('refresh-no-csrf');
+      const registerResponse = await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ email, password: 'correct-pass1' })
+        .expect(201);
+
+      const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
+      const refreshCookie = findSetCookie(setCookie, REFRESH_TOKEN_COOKIE_NAME)!.split(';')[0];
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', [refreshCookie])
+        .expect(403);
     });
 
     it('logs out (revoking the session) and clears cookies; the revoked refresh token then fails', async () => {
@@ -239,7 +260,8 @@ describe('Auth (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/api/auth/refresh')
-        .set('Cookie', [refreshCookie])
+        .set('Cookie', [refreshCookie, csrfCookie])
+        .set(CSRF_HEADER_NAME, csrfToken)
         .expect(401);
     });
 
@@ -309,7 +331,16 @@ describe('Auth (e2e)', () => {
     });
 
     it('keeps /api/auth/refresh reachable (401, not 404, without a refresh cookie)', async () => {
-      await request(app.getHttpServer()).post('/api/auth/refresh').expect(401);
+      // A matching (arbitrary) CSRF cookie/header pair is enough to satisfy
+      // CsrfGuard — it only checks the pair matches, not that it came from a
+      // real session — so this still exercises the route's own "missing
+      // refresh cookie" 401, not a CSRF 403.
+      const csrfToken = 'e2e-arbitrary-csrf-token';
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', [`${CSRF_COOKIE_NAME}=${csrfToken}`])
+        .set(CSRF_HEADER_NAME, csrfToken)
+        .expect(401);
     });
 
     it('keeps /api/auth/logout reachable (401, not 404, without a session)', async () => {

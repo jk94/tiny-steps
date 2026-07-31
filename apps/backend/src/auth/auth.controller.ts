@@ -93,6 +93,9 @@ export class AuthController {
   // Deliberately not behind JwtAuthGuard: the access token may already be
   // expired by the time a client calls this — that's the whole point of a
   // refresh endpoint. Only the (longer-lived) refresh_token cookie matters.
+  // Still behind CsrfGuard: it's a state-changing, cookie-authenticated
+  // route (matches `logout`'s CSRF protection).
+  @UseGuards(CsrfGuard)
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refresh(
