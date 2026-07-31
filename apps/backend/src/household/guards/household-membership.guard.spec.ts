@@ -56,10 +56,7 @@ describe('HouseholdMembershipGuard', () => {
     const { context, request } = buildContext();
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(householdAccessService.findMembershipOrThrow).toHaveBeenCalledWith(
-      userId,
-      householdId,
-    );
+    expect(householdAccessService.findMembershipOrThrow).toHaveBeenCalledWith(userId, householdId);
     expect(request.membership).toBe(membership);
   });
 

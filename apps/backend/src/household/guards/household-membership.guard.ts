@@ -32,10 +32,7 @@ export class HouseholdMembershipGuard implements CanActivate {
     const userId = request.user.id;
     const householdId = request.params.householdId;
 
-    const membership = await this.householdAccessService.findMembershipOrThrow(
-      userId,
-      householdId,
-    );
+    const membership = await this.householdAccessService.findMembershipOrThrow(userId, householdId);
 
     const requiredRoles = this.reflector.getAllAndOverride<HouseholdRole[] | undefined>(
       HOUSEHOLD_ROLES_KEY,
