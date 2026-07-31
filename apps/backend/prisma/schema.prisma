@@ -96,11 +96,17 @@ model Invite {
 }
 
 model Child {
-  id          String   @id @default(cuid())
-  householdId String
-  name        String
-  birthDate   DateTime
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  householdId   String
+  name          String
+  birthDate     DateTime
+  // Path to the stored photo file, relative to `resolveUploadsDir()` (e.g.
+  // "children/<childId>-<uuid>.jpg"), NOT an absolute host path and NEVER
+  // returned to API clients directly — see `ChildPhotoStorageService` and
+  // ADR-0003. Null when no photo has been uploaded.
+  photoPath     String?
+  photoMimeType String?
+  createdAt     DateTime @default(now())
 
   household Household @relation(fields: [householdId], references: [id])
   events    Event[]
