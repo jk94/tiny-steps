@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import { configValidationSchema } from './configuration.schema';
+import { OidcProviderConfig } from './oidc-provider.config';
 
 export interface AppConfig {
   server: {
@@ -14,7 +15,7 @@ export interface AppConfig {
       enabled: boolean;
     };
     oidc: {
-      providers: unknown[];
+      providers: OidcProviderConfig[];
     };
   };
 }

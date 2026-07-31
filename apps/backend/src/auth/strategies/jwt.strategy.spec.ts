@@ -40,4 +40,20 @@ describe('JwtStrategy', () => {
       UnauthorizedException,
     );
   });
+
+  it('rejects a payload carrying a `purpose` claim (shaped like an oidc_txn token, not a real access token)', async () => {
+    await expect(strategy.validate({ sub: 'user-1', purpose: 'oidc-txn' })).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('rejects a payload without a string `sub`', async () => {
+    await expect(strategy.validate({ sub: undefined as unknown as string })).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
 });

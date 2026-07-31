@@ -24,7 +24,26 @@ export const configValidationSchema = Joi.object({
       enabled: Joi.boolean().required(),
     }).required(),
     oidc: Joi.object({
-      providers: Joi.array().default([]),
+      // See `src/config/oidc-provider.config.ts` (`OidcProviderConfig`) and
+      // ADR-0004 for the full reasoning, in particular why `clientSecret`
+      // lives here rather than in an env var.
+      providers: Joi.array()
+        .items(
+          Joi.object({
+            id: Joi.string()
+              .pattern(/^[a-z0-9-]+$/)
+              .required(),
+            displayName: Joi.string().required(),
+            issuer: Joi.string()
+              .uri({ scheme: ['https', 'http'] })
+              .required(),
+            clientId: Joi.string().required(),
+            clientSecret: Joi.string().required(),
+            scopes: Joi.array().items(Joi.string()).default(['openid', 'profile', 'email']),
+          }),
+        )
+        .unique('id')
+        .default([]),
     }).required(),
   }).required(),
 });

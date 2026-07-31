@@ -1,0 +1,24 @@
+# Used by oidc.e2e-spec.ts. Both issuers are fake — discovery/token/userinfo
+# calls are intercepted via `nock` (see the spec file) and never touch the
+# real network. A second provider exists purely so
+# GET /api/auth/oidc/providers has more than one entry to assert on.
+server:
+  port: 3000
+database:
+  provider: sqlite
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers:
+      - id: fake-idp
+        displayName: 'Fake IdP'
+        issuer: 'https://idp.oidc.e2e.test'
+        clientId: 'e2e-client'
+        clientSecret: 'e2e-client-secret'
+        scopes: ['openid', 'profile', 'email']
+      - id: fake-idp-two
+        displayName: 'Fake IdP Two'
+        issuer: 'https://idp-two.oidc.e2e.test'
+        clientId: 'e2e-client-two'
+        clientSecret: 'e2e-client-secret-two'

@@ -85,6 +85,17 @@ export JWT_ACCESS_SECRET="$(openssl rand -base64 48)"
 export JWT_REFRESH_SECRET="$(openssl rand -base64 48)"
 ```
 
+OIDC login (if any providers are configured in `config.yml`, see
+`config.example.yml`) also needs `PUBLIC_URL` — the base URL this deployment
+is reachable at, used to build the OIDC `redirect_uri` (see
+`apps/backend/src/config/public-url.ts` and
+[ADR-0004](docs/adr/0004-oidc-authentication.md)). Falls back to
+`http://localhost:3000` if unset:
+
+```bash
+export PUBLIC_URL="http://localhost:3000"
+```
+
 ### 3. Set up the database (Prisma + SQLite)
 
 ```bash
@@ -124,8 +135,8 @@ itself (no separate frontend/nginx container).
 # 1. Copy the example config and adjust as needed
 cp config.example.yml config.yml
 
-# 2. Copy the example env file and fill in real JWT secrets
-#    (docker-compose.yml auto-loads a root .env file)
+# 2. Copy the example env file and fill in real JWT secrets, plus PUBLIC_URL
+#    if you're using OIDC login (docker-compose.yml auto-loads a root .env file)
 cp .env.example .env
 # then edit .env — e.g. `openssl rand -base64 48` for each secret
 

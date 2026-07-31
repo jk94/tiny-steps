@@ -36,6 +36,23 @@ model User {
   refreshTokens   RefreshToken[]
   createdInvites  Invite[]       @relation("InviteCreatedBy")
   acceptedInvites Invite[]       @relation("InviteAcceptedBy")
+  oidcIdentities  OidcIdentity[]
+}
+
+model OidcIdentity {
+  id         String   @id @default(cuid())
+  userId     String
+  // Matches an `OidcProviderConfig.id` from `config.yml` (see
+  // `src/config/oidc-provider.config.ts`) — config-defined, not a DB FK,
+  // since providers aren't DB rows.
+  providerId String
+  // The OIDC `sub` claim from the provider.
+  subject    String
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([providerId, subject])
 }
 
 model RefreshToken {

@@ -73,7 +73,7 @@ export class AuthService {
       throw error;
     }
 
-    return this.issueTokenPair(user);
+    return this.issueSessionFor(user);
   }
 
   async login(dto: LoginDto): Promise<AuthResult> {
@@ -88,7 +88,7 @@ export class AuthService {
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
-    return this.issueTokenPair(user);
+    return this.issueSessionFor(user);
   }
 
   async refresh(refreshToken: string): Promise<AuthResult> {
@@ -129,7 +129,7 @@ export class AuthService {
       throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
     }
 
-    return this.issueTokenPair(user);
+    return this.issueSessionFor(user);
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -164,7 +164,17 @@ export class AuthService {
     });
   }
 
-  private async issueTokenPair(user: User): Promise<AuthResult> {
+  /**
+   * Creates the `RefreshToken` row and signs both JWTs for `user`,
+   * establishing a new session. The single reusable entry point for
+   * "start a session for this now-resolved `User`" — shared by local-auth
+   * `register`/`login`/`refresh` above and, since this is the OIDC
+   * sub-step, `OidcService`'s callback handler as well (see
+   * `auth/oidc/oidc.service.ts`). Not `private` so `OidcService` can call
+   * it directly, producing byte-identical token/cookie behaviour for
+   * OIDC-originated sessions as for local-auth ones.
+   */
+  async issueSessionFor(user: User): Promise<AuthResult> {
     const refreshTokenRow = await this.prisma.refreshToken.create({
       data: {
         userId: user.id,

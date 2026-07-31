@@ -33,6 +33,13 @@ services:
       # and .env.example. Docker Compose auto-loads a root .env file.
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # Public base URL this deployment is reachable at (e.g. behind your
+      # reverse proxy's domain) — used to build the OIDC redirect_uri, which
+      # must byte-exact-match what's registered at each configured IdP. See
+      # apps/backend/src/config/public-url.ts and
+      # docs/adr/0004-oidc-authentication.md. Falls back to
+      # http://localhost:3000 if unset, which only works for local testing.
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
     volumes:
       # Real config with secrets — copy from config.example.yml, never
       # committed (see .gitignore). Read-only in the container.

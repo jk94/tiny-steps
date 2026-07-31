@@ -32,4 +32,19 @@ auth:
   local:
     enabled: true
   oidc:
-    providers: [] # populated in Phase 1
+    # NOTE: an OIDC login whose email claim matches an existing local (or
+    # other-provider) account is auto-linked to that account, unconditionally
+    # — no email_verified check. Only configure providers you trust to own
+    # the emails they assert. See docs/adr/0004-oidc-authentication.md.
+    providers: []
+    # Example provider entry (uncomment/adapt for a real deployment). This
+    # file is git-ignored and operator-managed once copied to `config.yml`
+    # (see the root README) — treat it as a secrets file, same as
+    # `clientSecret` below being stored here instead of an env var.
+    # providers:
+    #   - id: keycloak
+    #     displayName: "Keycloak"
+    #     issuer: "https://keycloak.example.com/realms/family"
+    #     clientId: "baby-tracker"
+    #     clientSecret: "REPLACE_ME"
+    #     scopes: ["openid", "profile", "email"]
