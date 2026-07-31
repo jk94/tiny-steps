@@ -156,6 +156,32 @@ describe('Auth (e2e)', () => {
       ).toBeDefined();
     });
 
+    it('normalizes email casing/whitespace so register and login treat it as the same account', async () => {
+      const canonicalEmail = testEmail('normalize');
+      const mixedCaseEmail = ` ${canonicalEmail.toUpperCase()} `;
+
+      const registerResponse = await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ email: mixedCaseEmail, password: 'correct-pass1' })
+        .expect(201);
+
+      expect(registerResponse.body.user.email).toBe(canonicalEmail);
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: canonicalEmail, password: 'correct-pass1' })
+        .expect(200);
+
+      expect(loginResponse.body.user.email).toBe(canonicalEmail);
+
+      // Registering the same email again with different casing must still
+      // hit the unique-email conflict, not create a second account.
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ email: mixedCaseEmail, password: 'another-pass1' })
+        .expect(409);
+    });
+
     it('rejects GET /api/auth/me without an access token cookie', async () => {
       await request(app.getHttpServer()).get('/api/auth/me').expect(401);
     });
