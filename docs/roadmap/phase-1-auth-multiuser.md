@@ -25,15 +25,15 @@ Phase 0 abgeschlossen (Backend-/Frontend-Grundgerüst, Basis-Datenmodell, Konfig
 - [ ] Login-Auswahl: Nutzer wählt zwischen lokalem Login und verfügbaren OIDC-Providern
 
 ### Rollen- & Rechtemodell
-- [ ] `Membership`-Entity mit Rolle (Owner, Co-Parent für MVP) vervollständigen
-- [ ] NestJS-Guards zur Rechteprüfung auf Basis der `Membership`-Rolle
-- [ ] Zugriffsprüfung: Ein Nutzer darf nur auf Haushalte/Kinder zugreifen, denen er zugeordnet ist
+- [x] `Membership`-Entity mit Rolle (Owner, Co-Parent für MVP) vervollständigen — Rolle wird als TypeScript-`HouseholdRole`-Enum auf Anwendungsebene durchgesetzt (Prisma-Enums werden auf SQLite nicht unterstützt, Spalte bleibt `String`); Details siehe [ADR-0002](../adr/0002-application-level-household-roles-and-invites.md)
+- [x] NestJS-Guards zur Rechteprüfung auf Basis der `Membership`-Rolle — `HouseholdMembershipGuard` + `@RequireRole()`-Decorator
+- [x] Zugriffsprüfung: Ein Nutzer darf nur auf Haushalte/Kinder zugreifen, denen er zugeordnet ist — für Kinder als wiederverwendbare Erweiterungsstelle (`HouseholdAccessService`) vorbereitet, Kind-Profile selbst folgen in einem separaten Schritt
 
 ### Haushalt & Einladung
-- [ ] Haushalt erstellen (erster Nutzer wird automatisch Owner)
-- [ ] Einladungsmechanismus per Link oder Code
-- [ ] Einladung annehmen → Nutzer wird `Membership` im Haushalt zugeordnet
-- [ ] Unterstützung für Nutzer in mehreren Haushalten (z. B. getrenntlebende Eltern)
+- [x] Haushalt erstellen (erster Nutzer wird automatisch Owner)
+- [x] Einladungsmechanismus per Link oder Code — ein einzelner, gehashter Opaque-Token dient als Link und Code; Details siehe [ADR-0002](../adr/0002-application-level-household-roles-and-invites.md). Widerruf/Auflisten offener Einladungen bewusst zurückgestellt (`revokedAt`-Spalte existiert bereits als Vorbereitung)
+- [x] Einladung annehmen → Nutzer wird `Membership` im Haushalt zugeordnet
+- [x] Unterstützung für Nutzer in mehreren Haushalten (z. B. getrenntlebende Eltern)
 
 ### Kind-Profile
 - [ ] Kind-Profil anlegen (Name, Geburtsdatum, Foto optional)
