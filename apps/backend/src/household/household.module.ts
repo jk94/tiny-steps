@@ -17,6 +17,14 @@ import { InviteService } from './invite.service';
   imports: [PrismaModule, AuthModule],
   controllers: [HouseholdController, InviteController],
   providers: [HouseholdService, InviteService, HouseholdAccessService, HouseholdMembershipGuard],
-  exports: [HouseholdMembershipGuard],
+  // HouseholdAccessService is exported alongside HouseholdMembershipGuard
+  // (not just the guard itself): NestJS resolves a guard referenced via
+  // `@UseGuards(GuardClass)` from the *consuming* controller's own module,
+  // so `ChildModule` re-declares `HouseholdMembershipGuard` as its own
+  // provider (see `child.module.ts`) rather than relying purely on this
+  // export — that re-declared instance needs HouseholdAccessService
+  // resolvable from ChildModule's own import graph, hence exporting it here
+  // too.
+  exports: [HouseholdMembershipGuard, HouseholdAccessService],
 })
 export class HouseholdModule {}
