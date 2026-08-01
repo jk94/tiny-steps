@@ -3,7 +3,8 @@
     "loading": "Loading…"
   },
   "nav": {
-    "dashboardLink": "Dashboard"
+    "dashboardLink": "Dashboard",
+    "householdsLink": "Households"
   },
   "layout": {
     "logoutButton": "Log out"
@@ -53,6 +54,116 @@
         "emailInUse": "This email address is already linked to a local account. Please sign in with email and password.",
         "generic": "Something went wrong signing you in. Please try again later."
       }
+    }
+  },
+  "household": {
+    "list": {
+      "title": "Households",
+      "empty": "You aren't a member of any household yet.",
+      "createLink": "Create household",
+      "roleOwner": "Owner",
+      "roleCoParent": "Member"
+    },
+    "create": {
+      "title": "Create household",
+      "nameLabel": "Household name",
+      "submitButton": "Create",
+      "submitButtonPending": "Creating…"
+    },
+    "detail": {
+      "createdAtLabel": "Created on",
+      "yourRoleLabel": "Your role",
+      "backLink": "Back to households"
+    },
+    "invite": {
+      "generateButton": "Generate invite link",
+      "generateButtonPending": "Generating…",
+      "linkLabel": "Invite link",
+      "copyButton": "Copy link",
+      "copiedConfirmation": "Copied!",
+      "copyFailed": "Copy failed. Please copy the link manually.",
+      "expiresAtLabel": "Valid until",
+      "ownerOnlyHint": "Only the household owner can generate invites."
+    },
+    "switcher": {
+      "label": "Switch household",
+      "placeholder": "Choose a household…"
+    },
+    "validation": {
+      "nameRequired": "Please enter a name for the household.",
+      "nameTooLong": "The name must be at most 120 characters long."
+    },
+    "errors": {
+      "notFound": "This household wasn't found, or you aren't a member.",
+      "forbidden": "Only the household owner can perform this action.",
+      "generic": "Something went wrong. Please try again later."
+    }
+  },
+  "invite": {
+    "preview": {
+      "title": "Invitation",
+      "loading": "Checking invitation…",
+      "validDescription": "You've been invited to join the household \"{{householdName}}\".",
+      "expiresAtLabel": "Valid until",
+      "invalid": "This invite link is invalid.",
+      "expired": "This invite link has expired.",
+      "used": "This invite link has already been used.",
+      "revoked": "This invite link has been revoked."
+    },
+    "guestPrompt": "Log in or register to accept the invitation.",
+    "loginLink": "Log in",
+    "registerLink": "Register",
+    "acceptButton": "Accept invitation",
+    "acceptButtonPending": "Accepting…",
+    "errors": {
+      "acceptFailed": "This invitation couldn't be accepted. It may be invalid or expired.",
+      "generic": "Something went wrong. Please try again later."
+    }
+  },
+  "child": {
+    "list": {
+      "title": "Children",
+      "empty": "No child profiles have been created for this household yet.",
+      "addLink": "Add child",
+      "photoAlt": "Photo of {{name}}"
+    },
+    "create": {
+      "title": "Create child profile",
+      "submitButton": "Create",
+      "submitButtonPending": "Creating…"
+    },
+    "edit": {
+      "title": "Edit child profile",
+      "submitButton": "Save",
+      "submitButtonPending": "Saving…",
+      "deleteButton": "Delete child profile",
+      "deleteButtonPending": "Deleting…",
+      "deleteDialog": {
+        "title": "Delete child profile?",
+        "description": "This action can't be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "fields": {
+      "nameLabel": "Name",
+      "birthDateLabel": "Birth date",
+      "photoLabel": "Photo (optional)",
+      "photoHint": "JPEG, PNG, or WebP, maximum 2 MB."
+    },
+    "validation": {
+      "nameRequired": "Please enter a name.",
+      "nameTooLong": "The name must be at most 120 characters long.",
+      "birthDateRequired": "Please enter a birth date.",
+      "birthDateFuture": "Birth date can't be in the future.",
+      "photoTooLarge": "The photo must be at most 2 MB.",
+      "photoInvalidType": "Please choose a JPEG, PNG, or WebP image."
+    },
+    "errors": {
+      "notFound": "This child profile wasn't found.",
+      "forbidden": "Only the household owner can perform this action.",
+      "invalidInput": "Couldn't save your changes. Please check the name, birth date, and photo.",
+      "generic": "Something went wrong. Please try again later."
     }
   }
 }

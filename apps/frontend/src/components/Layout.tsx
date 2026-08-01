@@ -1,6 +1,7 @@
 import { Link, Outlet } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
+import { HouseholdSwitcher } from './HouseholdSwitcher';
 
 /**
  * Minimal app shell shared by every route. Kept intentionally bare — real
@@ -19,7 +20,9 @@ export function Layout() {
       <header>
         <nav>
           <Link to="/">{t('nav.dashboardLink')}</Link>
+          <Link to="/households">{t('nav.householdsLink')}</Link>
         </nav>
+        {!isLoading && isAuthenticated && <HouseholdSwitcher />}
         {/*
          * Placeholder language switcher — two plain buttons, no styling.
          * This belongs in a real settings area once one exists (Phase 6);

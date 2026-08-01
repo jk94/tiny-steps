@@ -1,23 +1,40 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { Layout } from './Layout';
 import * as useAuthModule from '../auth/useAuth';
+import * as householdApi from '../api/household-api';
+import { queryClient } from '../lib/query-client';
 
 vi.mock('../auth/useAuth');
+vi.mock('../api/household-api');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 function renderLayout() {
   return render(
-    <MemoryRouter>
-      <Layout />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
 describe('Layout', () => {
+  beforeEach(() => {
+    queryClient.clear();
+    mockedHouseholdApi.listHouseholds.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+    queryClient.clear();
+  });
+
   it('renders no email/logout button when unauthenticated', () => {
     mockedUseAuth.mockReturnValue({
       user: null,
@@ -115,5 +132,58 @@ describe('Layout', () => {
     await user.click(screen.getByRole('button', { name: 'Zu Englisch wechseln' }));
 
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+  });
+
+  it('renders the households nav link', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderLayout();
+
+    expect(screen.getByRole('link', { name: 'Households' })).toHaveAttribute('href', '/households');
+  });
+
+  it('does not render the household switcher when unauthenticated', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderLayout();
+
+    expect(mockedHouseholdApi.listHouseholds).not.toHaveBeenCalled();
+    expect(screen.queryByRole('combobox', { name: 'Switch household' })).not.toBeInTheDocument();
+  });
+
+  it("renders the household switcher with the user's households when authenticated", async () => {
+    mockedHouseholdApi.listHouseholds.mockResolvedValueOnce([
+      { id: 'h1', name: 'Team Müller', role: 'OWNER', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderLayout();
+
+    expect(await screen.findByRole('combobox', { name: 'Switch household' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Team Müller' })).toBeInTheDocument();
   });
 });

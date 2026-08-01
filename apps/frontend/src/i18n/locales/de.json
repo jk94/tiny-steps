@@ -3,7 +3,8 @@
     "loading": "Lädt…"
   },
   "nav": {
-    "dashboardLink": "Dashboard"
+    "dashboardLink": "Dashboard",
+    "householdsLink": "Haushalte"
   },
   "layout": {
     "logoutButton": "Abmelden"
@@ -53,6 +54,116 @@
         "emailInUse": "Diese E-Mail-Adresse ist bereits mit einem lokalen Konto verknüpft. Bitte melde dich mit E-Mail und Passwort an.",
         "generic": "Etwas ist bei der Anmeldung schiefgelaufen. Bitte versuche es später erneut."
       }
+    }
+  },
+  "household": {
+    "list": {
+      "title": "Haushalte",
+      "empty": "Du bist noch keinem Haushalt zugeordnet.",
+      "createLink": "Haushalt anlegen",
+      "roleOwner": "Inhaber:in",
+      "roleCoParent": "Mitglied"
+    },
+    "create": {
+      "title": "Haushalt anlegen",
+      "nameLabel": "Name des Haushalts",
+      "submitButton": "Anlegen",
+      "submitButtonPending": "Wird angelegt…"
+    },
+    "detail": {
+      "createdAtLabel": "Angelegt am",
+      "yourRoleLabel": "Deine Rolle",
+      "backLink": "Zurück zu den Haushalten"
+    },
+    "invite": {
+      "generateButton": "Einladungslink erzeugen",
+      "generateButtonPending": "Wird erzeugt…",
+      "linkLabel": "Einladungslink",
+      "copyButton": "Link kopieren",
+      "copiedConfirmation": "Kopiert!",
+      "copyFailed": "Kopieren fehlgeschlagen. Bitte kopiere den Link manuell.",
+      "expiresAtLabel": "Gültig bis",
+      "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen."
+    },
+    "switcher": {
+      "label": "Haushalt wechseln",
+      "placeholder": "Haushalt wählen…"
+    },
+    "validation": {
+      "nameRequired": "Bitte gib einen Namen für den Haushalt ein.",
+      "nameTooLong": "Der Name darf höchstens 120 Zeichen lang sein."
+    },
+    "errors": {
+      "notFound": "Dieser Haushalt wurde nicht gefunden oder du bist kein Mitglied.",
+      "forbidden": "Nur die haushaltführende Person darf diese Aktion ausführen.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
+  },
+  "invite": {
+    "preview": {
+      "title": "Einladung",
+      "loading": "Einladung wird geprüft…",
+      "validDescription": "Du wurdest eingeladen, dem Haushalt „{{householdName}}“ beizutreten.",
+      "expiresAtLabel": "Gültig bis",
+      "invalid": "Dieser Einladungslink ist ungültig.",
+      "expired": "Dieser Einladungslink ist abgelaufen.",
+      "used": "Dieser Einladungslink wurde bereits verwendet.",
+      "revoked": "Dieser Einladungslink wurde widerrufen."
+    },
+    "guestPrompt": "Melde dich an oder registriere dich, um die Einladung anzunehmen.",
+    "loginLink": "Anmelden",
+    "registerLink": "Registrieren",
+    "acceptButton": "Einladung annehmen",
+    "acceptButtonPending": "Wird angenommen…",
+    "errors": {
+      "acceptFailed": "Diese Einladung konnte nicht angenommen werden. Sie ist möglicherweise ungültig oder abgelaufen.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
+  },
+  "child": {
+    "list": {
+      "title": "Kinder",
+      "empty": "Für diesen Haushalt sind noch keine Kind-Profile angelegt.",
+      "addLink": "Kind hinzufügen",
+      "photoAlt": "Foto von {{name}}"
+    },
+    "create": {
+      "title": "Kind-Profil anlegen",
+      "submitButton": "Anlegen",
+      "submitButtonPending": "Wird angelegt…"
+    },
+    "edit": {
+      "title": "Kind-Profil bearbeiten",
+      "submitButton": "Speichern",
+      "submitButtonPending": "Wird gespeichert…",
+      "deleteButton": "Kind-Profil löschen",
+      "deleteButtonPending": "Wird gelöscht…",
+      "deleteDialog": {
+        "title": "Kind-Profil löschen?",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "fields": {
+      "nameLabel": "Name",
+      "birthDateLabel": "Geburtsdatum",
+      "photoLabel": "Foto (optional)",
+      "photoHint": "JPEG, PNG oder WebP, maximal 2 MB."
+    },
+    "validation": {
+      "nameRequired": "Bitte gib einen Namen ein.",
+      "nameTooLong": "Der Name darf höchstens 120 Zeichen lang sein.",
+      "birthDateRequired": "Bitte gib ein Geburtsdatum ein.",
+      "birthDateFuture": "Das Geburtsdatum darf nicht in der Zukunft liegen.",
+      "photoTooLarge": "Das Foto darf höchstens 2 MB groß sein.",
+      "photoInvalidType": "Bitte wähle ein JPEG-, PNG- oder WebP-Bild aus."
+    },
+    "errors": {
+      "notFound": "Dieses Kind-Profil wurde nicht gefunden.",
+      "forbidden": "Nur die haushaltführende Person darf diese Aktion ausführen.",
+      "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe Name, Geburtsdatum und Foto.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   }
 }
