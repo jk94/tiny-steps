@@ -41,6 +41,7 @@ Phase 0 abgeschlossen (Backend-/Frontend-Grundgerüst, Basis-Datenmodell, Konfig
 - [x] Mehrere Kind-Profile pro Haushalt (Geschwister)
 
 ### Frontend
+- [x] i18n-Infrastruktur (DE/EN) eingerichtet — bewusst aus Phase 6/PRD 4.2 vorgezogen, siehe ADR-0005
 - [ ] Login-/Registrierungs-UI (lokal)
 - [ ] OIDC-Redirect-Flow im Frontend (Login-Button je konfiguriertem Provider)
 - [ ] Haushalts-Verwaltung: Haushalt anlegen, Einladungslink generieren/anzeigen, Einladung annehmen

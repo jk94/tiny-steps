@@ -42,3 +42,4 @@ Proposed | Accepted | Deprecated | Superseded by ADR-NNNN
 | [0002](0002-application-level-household-roles-and-invites.md) | Application-level household roles, and hashed-token invites | Accepted |
 | [0003](0003-child-photo-storage-on-local-disk.md) | Child profiles, role-scoped edit/delete, and local-disk photo storage | Accepted |
 | [0004](0004-oidc-authentication.md) | OIDC authentication: direct `openid-client` integration, and the unconditional email-match account-linking policy | Accepted |
+| [0005](0005-i18n-infrastructure-brought-forward.md) | i18n infrastructure (German/English), brought forward from Phase 6 | Accepted |

@@ -1,0 +1,19 @@
+{
+  "common": {
+    "loading": "Lädt…"
+  },
+  "nav": {
+    "dashboardLink": "Dashboard"
+  },
+  "layout": {
+    "logoutButton": "Abmelden"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Hier entsteht die Übersicht für das Baby-Tracking."
+  },
+  "language": {
+    "switchToGerman": "Auf Deutsch umschalten",
+    "switchToEnglish": "Zu Englisch wechseln"
+  }
+}

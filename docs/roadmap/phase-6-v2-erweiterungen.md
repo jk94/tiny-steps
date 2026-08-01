@@ -38,9 +38,17 @@ MVP (Phasen 0–5) ist produktiv im Einsatz und stabil.
 - [ ] UI zur Rollenzuweisung bei Einladung/Verwaltung von Haushaltsmitgliedern
 
 ### Mehrsprachigkeit
-- [ ] i18n-Infrastruktur im Frontend einrichten
-- [ ] Übersetzung der bestehenden UI-Texte (mindestens Deutsch/Englisch)
-- [ ] Sprachumschaltung in den Nutzereinstellungen
+- [x] i18n-Infrastruktur im Frontend einrichten — bewusst aus Phase 6 in Phase 1 vorgezogen (vor der
+      Login-/Registrierungs-UI), da die UI-Oberfläche zu diesem Zeitpunkt noch klein war; Details und
+      Begründung siehe [ADR-0005](../adr/0005-i18n-infrastructure-brought-forward.md)
+- [x] Übersetzung der bestehenden UI-Texte (mindestens Deutsch/Englisch) — bezieht sich auf die zum
+      Zeitpunkt von ADR-0005 existierende UI-Oberfläche (Loading-Anzeige, App-Shell/Navigation,
+      Dashboard-Platzhalter); Übersetzung neuer UI-Oberflächen (Login/Registrierung, Haushalts- und
+      Kind-Profil-Verwaltung, …) ist laufende Arbeit im jeweiligen Sub-Schritt, nicht hier
+      abgeschlossen
+- [ ] Sprachumschaltung in den Nutzereinstellungen — ein einfacher, provisorischer Umschalter existiert
+      bereits in der App-Shell (siehe ADR-0005), bleibt aber offen, bis ein echter
+      Nutzereinstellungen-Bereich existiert
 
 ## Definition of Done
 

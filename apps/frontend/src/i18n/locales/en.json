@@ -1,0 +1,19 @@
+{
+  "common": {
+    "loading": "Loading…"
+  },
+  "nav": {
+    "dashboardLink": "Dashboard"
+  },
+  "layout": {
+    "logoutButton": "Log out"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Baby tracking overview will live here."
+  },
+  "language": {
+    "switchToGerman": "Switch to German",
+    "switchToEnglish": "Switch to English"
+  }
+}
