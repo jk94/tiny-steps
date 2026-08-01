@@ -114,6 +114,47 @@ describe('AuthForm (mode: register, 409 handling)', () => {
   });
 });
 
+describe('AuthForm (error clearing)', () => {
+  it('clears a stale form-level error when a subsequent submit fails client-side validation', async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new ApiError(401, {}));
+    const user = userEvent.setup();
+    renderAuthForm('login', onSubmit);
+
+    await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
+    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+
+    expect(await screen.findByText('Invalid email or password.')).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Email address'));
+    await user.type(screen.getByLabelText('Email address'), 'not-an-email');
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+
+    expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
+    expect(screen.queryByText('Invalid email or password.')).not.toBeInTheDocument();
+  });
+
+  it('clears a field-level error as soon as the user edits that field, without resubmitting', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    renderAuthForm('login', onSubmit);
+
+    await user.type(screen.getByLabelText('Email address'), 'not-an-email');
+    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+
+    const emailInput = screen.getByLabelText('Email address');
+    expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
+    expect(emailInput).toHaveAttribute('aria-invalid', 'true');
+
+    await user.type(emailInput, '.com');
+
+    expect(screen.queryByText('Please enter a valid email address.')).not.toBeInTheDocument();
+    expect(emailInput).toHaveAttribute('aria-invalid', 'false');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
 describe('AuthForm (pending state)', () => {
   it('disables the submit button and shows pending text while onSubmit is in flight', async () => {
     let resolveSubmit: () => void;

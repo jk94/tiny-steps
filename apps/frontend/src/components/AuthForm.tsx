@@ -42,6 +42,9 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     }
     if (nextFieldErrorKeys.email || nextFieldErrorKeys.password) {
       setFieldErrorKeys(nextFieldErrorKeys);
+      // A fresh validation attempt supersedes any stale server-side error
+      // from a prior submit (e.g. a 401 "invalid credentials" message).
+      setFormErrorKey(null);
       return;
     }
 
@@ -77,7 +80,14 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
           required
           autoComplete="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            // Clear this field's error the moment the user starts correcting
+            // it, rather than leaving a stale message until the next submit.
+            if (fieldErrorKeys.email) {
+              setFieldErrorKeys((prev) => ({ ...prev, email: undefined }));
+            }
+          }}
           aria-invalid={!!fieldErrorKeys.email}
           aria-describedby={fieldErrorKeys.email ? 'email-error' : undefined}
           disabled={isSubmitting}
@@ -98,7 +108,14 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
           minLength={MIN_PASSWORD_LENGTH}
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            // Clear this field's error the moment the user starts correcting
+            // it, rather than leaving a stale message until the next submit.
+            if (fieldErrorKeys.password) {
+              setFieldErrorKeys((prev) => ({ ...prev, password: undefined }));
+            }
+          }}
           aria-invalid={!!fieldErrorKeys.password}
           aria-describedby={fieldErrorKeys.password ? 'password-error' : undefined}
           disabled={isSubmitting}
