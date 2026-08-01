@@ -1,8 +1,10 @@
 import { Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { GuestOnlyRoute } from './auth/GuestOnlyRoute';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 
 function App() {
   return (
@@ -11,7 +13,10 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route index element={<Dashboard />} />
         </Route>
-        <Route path="login" element={<Login />} />
+        <Route element={<GuestOnlyRoute />}>
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+        </Route>
       </Route>
     </Routes>
   );

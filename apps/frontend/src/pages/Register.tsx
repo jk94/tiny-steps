@@ -3,22 +3,24 @@ import { useLocation, useNavigate, type Location } from 'react-router';
 import { AuthForm } from '../components/AuthForm';
 import { useAuth } from '../auth/useAuth';
 
-export function Login() {
+export function Register() {
   const { t } = useTranslation();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: Location } | null)?.from;
 
   const handleSubmit = async (email: string, password: string) => {
-    await login(email, password);
+    // Registration auto-logs-in (backend sets the same auth cookies as
+    // login), so the redirect behaviour mirrors Login exactly.
+    await register(email, password);
     navigate(from ?? '/', { replace: true });
   };
 
   return (
     <section>
-      <h1>{t('auth.login.title')}</h1>
-      <AuthForm mode="login" onSubmit={handleSubmit} />
+      <h1>{t('auth.register.title')}</h1>
+      <AuthForm mode="register" onSubmit={handleSubmit} />
     </section>
   );
 }

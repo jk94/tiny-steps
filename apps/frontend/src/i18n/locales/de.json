@@ -15,5 +15,32 @@
   "language": {
     "switchToGerman": "Auf Deutsch umschalten",
     "switchToEnglish": "Zu Englisch wechseln"
+  },
+  "auth": {
+    "login": {
+      "title": "Anmelden",
+      "submitButton": "Anmelden",
+      "submitButtonPending": "Anmeldung läuft…",
+      "switchModeLink": "Noch kein Konto? Jetzt registrieren"
+    },
+    "register": {
+      "title": "Registrieren",
+      "submitButton": "Registrieren",
+      "submitButtonPending": "Registrierung läuft…",
+      "switchModeLink": "Bereits ein Konto? Jetzt anmelden"
+    },
+    "fields": {
+      "emailLabel": "E-Mail-Adresse",
+      "passwordLabel": "Passwort"
+    },
+    "validation": {
+      "emailInvalid": "Bitte gib eine gültige E-Mail-Adresse ein.",
+      "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein."
+    },
+    "errors": {
+      "invalidCredentials": "E-Mail-Adresse oder Passwort ist falsch.",
+      "emailAlreadyRegistered": "Diese E-Mail-Adresse ist bereits registriert.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
   }
 }
