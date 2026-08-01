@@ -41,6 +41,18 @@
       "invalidCredentials": "E-Mail-Adresse oder Passwort ist falsch.",
       "emailAlreadyRegistered": "Diese E-Mail-Adresse ist bereits registriert.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    },
+    "oidc": {
+      "dividerLabel": "oder weiter mit",
+      "continueWithProvider": "Mit {{provider}} anmelden",
+      "errors": {
+        "invalidState": "Die Anmeldesitzung ist abgelaufen oder ungültig. Bitte versuche es erneut.",
+        "idpError": "Der Anmeldevorgang wurde abgebrochen. Bitte versuche es erneut.",
+        "authFailed": "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
+        "emailRequired": "Dein Konto beim Anbieter enthält keine E-Mail-Adresse. Bitte melde dich mit E-Mail und Passwort an oder wende dich an eine Administratorin bzw. einen Administrator.",
+        "emailInUse": "Diese E-Mail-Adresse ist bereits mit einem lokalen Konto verknüpft. Bitte melde dich mit E-Mail und Passwort an.",
+        "generic": "Etwas ist bei der Anmeldung schiefgelaufen. Bitte versuche es später erneut."
+      }
     }
   }
 }

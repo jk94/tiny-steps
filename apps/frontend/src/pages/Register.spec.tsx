@@ -1,14 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { Register } from './Register';
 import { ApiError } from '../api/http-client';
 import * as useAuthModule from '../auth/useAuth';
+import * as oidcApi from '../api/oidc-api';
+import { queryClient } from '../lib/query-client';
 
 vi.mock('../auth/useAuth');
+vi.mock('../api/oidc-api');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
+const mockedOidcApi = vi.mocked(oidcApi);
 
 function mockAuth(register: (email: string, password: string) => Promise<void>) {
   mockedUseAuth.mockReturnValue({
@@ -24,13 +29,15 @@ function mockAuth(register: (email: string, password: string) => Promise<void>) 
 
 function renderRegisterAt(entry: { pathname: string; state?: unknown }) {
   return render(
-    <MemoryRouter initialEntries={[entry]}>
-      <Routes>
-        <Route path="/register" element={<Register />} />
-        <Route path="/" element={<p>Dashboard stub</p>} />
-        <Route path="/some/page" element={<p>Some page stub</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<p>Dashboard stub</p>} />
+          <Route path="/some/page" element={<p>Some page stub</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -41,6 +48,16 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('Register', () => {
+  beforeEach(() => {
+    queryClient.clear();
+    mockedOidcApi.fetchOidcProviders.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+    queryClient.clear();
+  });
+
   it('renders the register heading', () => {
     mockAuth(vi.fn());
     renderRegisterAt({ pathname: '/register' });
@@ -85,5 +102,18 @@ describe('Register', () => {
     expect(screen.getByRole('heading', { name: 'Register' })).toBeInTheDocument();
     expect(register).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Dashboard stub')).not.toBeInTheDocument();
+  });
+
+  it('renders OIDC provider buttons when providers are configured', async () => {
+    mockAuth(vi.fn());
+    mockedOidcApi.fetchOidcProviders.mockResolvedValue([
+      { id: 'keycloak', displayName: 'Keycloak' },
+    ]);
+    renderRegisterAt({ pathname: '/register' });
+
+    expect(await screen.findByRole('link', { name: 'Continue with Keycloak' })).toHaveAttribute(
+      'href',
+      '/api/auth/oidc/keycloak/login',
+    );
   });
 });
