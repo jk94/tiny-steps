@@ -1,3 +1,4 @@
+import './i18n'; // must run before first render — initializes the singleton
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
