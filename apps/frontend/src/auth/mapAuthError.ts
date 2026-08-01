@@ -1,9 +1,7 @@
 import { ApiError } from '../api/http-client';
 
 export type AuthErrorKey =
-  | 'auth.errors.invalidCredentials'
-  | 'auth.errors.emailAlreadyRegistered'
-  | 'auth.errors.generic';
+  'auth.errors.invalidCredentials' | 'auth.errors.emailAlreadyRegistered' | 'auth.errors.generic';
 
 /**
  * Maps a caught login/register failure to a translation key — never to raw

@@ -9,9 +9,7 @@ describe('mapAuthError', () => {
   });
 
   it('maps a 401 to the invalid-credentials key in register mode', () => {
-    expect(mapAuthError(new ApiError(401, {}), 'register')).toBe(
-      'auth.errors.invalidCredentials',
-    );
+    expect(mapAuthError(new ApiError(401, {}), 'register')).toBe('auth.errors.invalidCredentials');
   });
 
   it('maps a 409 in register mode to the email-already-registered key', () => {
@@ -26,7 +24,10 @@ describe('mapAuthError', () => {
 
   it('maps a 400 to the generic key without inspecting error.body', () => {
     expect(
-      mapAuthError(new ApiError(400, { statusCode: 400, message: ['email must be an email'] }), 'login'),
+      mapAuthError(
+        new ApiError(400, { statusCode: 400, message: ['email must be an email'] }),
+        'login',
+      ),
     ).toBe('auth.errors.generic');
   });
 
