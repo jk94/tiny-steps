@@ -15,5 +15,32 @@
   "language": {
     "switchToGerman": "Switch to German",
     "switchToEnglish": "Switch to English"
+  },
+  "auth": {
+    "login": {
+      "title": "Log in",
+      "submitButton": "Log in",
+      "submitButtonPending": "Logging in…",
+      "switchModeLink": "Need an account? Register"
+    },
+    "register": {
+      "title": "Register",
+      "submitButton": "Register",
+      "submitButtonPending": "Registering…",
+      "switchModeLink": "Already have an account? Log in"
+    },
+    "fields": {
+      "emailLabel": "Email address",
+      "passwordLabel": "Password"
+    },
+    "validation": {
+      "emailInvalid": "Please enter a valid email address.",
+      "passwordTooShort": "Password must be at least 8 characters long."
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password.",
+      "emailAlreadyRegistered": "This email address is already registered.",
+      "generic": "Something went wrong. Please try again later."
+    }
   }
 }
