@@ -41,6 +41,18 @@
       "invalidCredentials": "Invalid email or password.",
       "emailAlreadyRegistered": "This email address is already registered.",
       "generic": "Something went wrong. Please try again later."
+    },
+    "oidc": {
+      "dividerLabel": "or continue with",
+      "continueWithProvider": "Continue with {{provider}}",
+      "errors": {
+        "invalidState": "Your sign-in session expired or was invalid. Please try again.",
+        "idpError": "Sign-in was cancelled or failed at the provider. Please try again.",
+        "authFailed": "Sign-in failed. Please try again.",
+        "emailRequired": "Your account with this provider doesn't include an email address. Please sign in with email and password, or contact an administrator.",
+        "emailInUse": "This email address is already linked to a local account. Please sign in with email and password.",
+        "generic": "Something went wrong signing you in. Please try again later."
+      }
     }
   }
 }
