@@ -44,8 +44,8 @@ Phase 0 abgeschlossen (Backend-/Frontend-Grundgerüst, Basis-Datenmodell, Konfig
 - [x] i18n-Infrastruktur (DE/EN) eingerichtet — bewusst aus Phase 6/PRD 4.2 vorgezogen, siehe ADR-0005
 - [x] Login-/Registrierungs-UI (lokal)
 - [x] OIDC-Redirect-Flow im Frontend (Login-Button je konfiguriertem Provider) — Button je konfiguriertem Provider auf Login/Register, `<a href>`-Navigation (kein XHR) für den Redirect+Cookie-Flow, Fehlerdarstellung für `oidc_error` per i18n-Mapping
-- [ ] Haushalts-Verwaltung: Haushalt anlegen, Einladungslink generieren/anzeigen, Einladung annehmen
-- [ ] Kind-Profil-Verwaltung UI (Anlegen/Bearbeiten/Löschen)
+- [x] Haushalts-Verwaltung: Haushalt anlegen, Einladungslink generieren/anzeigen, Einladung annehmen — inkl. Haushalts-Switcher im Header; kein Backend-Endpunkt für Mitgliederliste/-entfernung vorhanden, daher keine entsprechende UI
+- [x] Kind-Profil-Verwaltung UI (Anlegen/Bearbeiten/Löschen) — inkl. Foto-Upload mit Client-Vorprüfung; „Foto entfernen" ist noch nicht möglich, da das Backend das nicht unterstützt
 - [x] Geschützte Routen (nur mit gültiger Session/Token erreichbar)
 
 ## Definition of Done
