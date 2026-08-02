@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { EventType } from '../api/event-api';
@@ -25,22 +24,22 @@ function filterLabel(t: TFunction, type: EventType): string {
 }
 
 export interface TimelineFilterProps {
-  /** Called with the full new enabled-types set on every toggle, including the initial default. */
+  /** The currently enabled event types, owned by the parent (fully controlled component). */
+  enabledTypes: Set<EventType>;
+  /** Called with the full new enabled-types set whenever a checkbox is toggled. */
   onChange: (enabledTypes: Set<EventType>) => void;
 }
 
 /**
- * Three toggle checkboxes (Feeding/Sleep/Diaper), defaulting to all three
- * enabled. Purely a client-side filter — no backend param, no query-key
- * impact (see `TimelineEventList`, which receives the resulting set and
- * filters the already-fetched daily events in-memory). Owns its own
- * checked/unchecked state; `onChange` is how the sibling
- * `TimelineEventList` (rendered by the same parent page) learns about the
- * current selection.
+ * Three toggle checkboxes (Feeding/Sleep/Diaper). Purely a client-side
+ * filter — no backend param, no query-key impact (see `TimelineEventList`,
+ * which receives the resulting set and filters the already-fetched daily
+ * events in-memory). Fully controlled: `enabledTypes` and `onChange` are the
+ * single source of truth, owned by the parent page, so this component holds
+ * no state of its own.
  */
-export function TimelineFilter({ onChange }: TimelineFilterProps) {
+export function TimelineFilter({ enabledTypes, onChange }: TimelineFilterProps) {
   const { t } = useTranslation();
-  const [enabledTypes, setEnabledTypes] = useState<Set<EventType>>(() => new Set(ALL_EVENT_TYPES));
 
   function toggle(type: EventType) {
     const next = new Set(enabledTypes);
@@ -49,7 +48,6 @@ export function TimelineFilter({ onChange }: TimelineFilterProps) {
     } else {
       next.add(type);
     }
-    setEnabledTypes(next);
     onChange(next);
   }
 

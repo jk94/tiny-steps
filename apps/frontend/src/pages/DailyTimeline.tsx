@@ -66,7 +66,7 @@ export function DailyTimeline() {
         dateKey={dayBoundaries.dateKey}
       />
 
-      <TimelineFilter onChange={setEnabledTypes} />
+      <TimelineFilter enabledTypes={enabledTypes} onChange={setEnabledTypes} />
 
       <TimelineEventList
         householdId={householdId!}
