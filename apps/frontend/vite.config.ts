@@ -16,14 +16,14 @@ export default defineConfig({
       // CORS/cross-origin handling, matching the single-container
       // production topology where the backend serves the built SPA from
       // the same origin.
+      // `ws: true` also makes this proxy forward the WebSocket upgrade
+      // request itself (not just plain HTTP) for `RealtimeGateway`'s
+      // handshake at `/api/socket.io` (see its doc comment for why the
+      // Socket.IO path lives under `/api` rather than at Socket.IO's own
+      // default `/socket.io`) — harmless for the plain REST requests this
+      // same entry proxies, since `ws` only matters when an upgrade is
+      // actually requested.
       '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      // Same cookie-domain reasoning as '/api' above, plus `ws: true` so
-      // Vite's proxy also forwards the WebSocket upgrade request itself
-      // (not just plain HTTP), which the Socket.IO handshake needs.
-      '/socket.io': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         ws: true,

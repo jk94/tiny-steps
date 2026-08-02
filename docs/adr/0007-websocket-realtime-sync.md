@@ -204,6 +204,32 @@ duplicated here.
   "remember what this session had joined" design would avoid, judged not worth the added server
   state for this slice.
 
+## Addendum: handshake moved under `/api` — the `access_token` cookie's path scope excluded `/socket.io`
+
+After this slice merged, real browser connections (not `apps/backend/test/realtime.e2e-spec.ts`'s
+socket, which manually sets its own `Cookie` header via `extraHeaders` and so never exercised
+browser path-matching) failed every handshake with `RealtimeGateway` logging "no access_token
+cookie on handshake" — `handleConnection` correctly saw no cookie, because the browser never sent
+one.
+
+Root cause: `AuthCookieService` scopes the `access_token` cookie to `path: '/api'` (see its doc
+comment — deliberately narrower than the SPA's own routes). Socket.IO's default handshake path is
+`/socket.io`, which is not a sub-path of `/api`. Per RFC 6265 cookie path-matching, a browser only
+attaches a cookie to a request whose path is under (or equal to) the cookie's own path — so a
+handshake at `/socket.io` was structurally never eligible to carry the cookie, regardless of
+`SameSite`/`secure`/same-origin. This is the same path-matching rule the `csrf_token` cookie's own
+doc comment already describes (in the opposite direction — that cookie was widened to `path: '/'`
+for exactly this reason), which this ADR's original decision (b) missed applying to the WS
+handshake itself.
+
+Fix: `RealtimeGateway` now sets `path: '/api/socket.io'` on `@WebSocketGateway()`, and the frontend's
+`createSocket()` (`apps/frontend/src/realtime/socket-client.ts`) passes the matching `path` to
+`io()`. The dev-only Vite proxy (`apps/frontend/vite.config.ts`) no longer needs a separate
+`/socket.io` proxy entry — the existing `/api` entry now carries `ws: true` and forwards the
+handshake like any other `/api` request. `AuthCookieService`'s cookie scoping itself did not need to
+change; narrowing the handshake's own path to match it was the more targeted fix, consistent with
+every other authenticated endpoint already living under `/api`.
+
 ## Related
 
 - [Phase 3 roadmap](../roadmap/phase-3-sync-uebersicht.md) — "Echtzeit-Sync (Backend)" and

@@ -184,9 +184,18 @@ describe('Realtime sync (e2e)', () => {
     return response.body as { id: string };
   }
 
-  /** Opens an authenticated Socket.IO connection, carrying `user`'s session cookies on the handshake. */
+  /**
+   * Opens an authenticated Socket.IO connection, carrying `user`'s session cookies on the
+   * handshake. Note this sets `Cookie` explicitly via `extraHeaders` rather than relying on a
+   * real cookie jar, so it does NOT exercise browser-side cookie path-matching — it would have
+   * passed even with the `/api`-cookie-vs-`/socket.io`-handshake path mismatch described in
+   * ADR-0007's addendum, which only a real browser's `SameSite`/path scoping caught. `path` here
+   * must still match `RealtimeGateway`'s configured path for the handshake to reach the gateway
+   * at all.
+   */
   async function connectSocket(user: AuthenticatedTestUser): Promise<ClientSocket> {
     const socket = io(baseUrl, {
+      path: '/api/socket.io',
       transports: ['websocket'],
       forceNew: true,
       extraHeaders: { Cookie: user.cookies.join('; ') },
@@ -290,6 +299,7 @@ describe('Realtime sync (e2e)', () => {
 
   it('rejects a socket handshake with no valid access_token cookie', async () => {
     const socket = io(baseUrl, {
+      path: '/api/socket.io',
       transports: ['websocket'],
       forceNew: true,
     });
