@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Server } from 'socket.io';
 import type { EventType } from '../event/event-type.enum';
 import { householdRoom } from './household-room.util';
+import type { AuthenticatedSocketData } from './realtime.gateway';
 
 export type EventChangeAction = 'created' | 'updated' | 'deleted';
 
@@ -45,5 +46,29 @@ export class RealtimeService {
     // this stays defensive rather than assuming that ordering can never
     // change.
     this.server?.to(householdRoom(householdId)).emit(EVENT_CHANGED, payload);
+  }
+
+  /**
+   * Removes any of `userId`'s currently-connected sockets from the given
+   * household's room, without disconnecting the socket itself — the user
+   * may still legitimately be connected for other households/purposes.
+   * Called after a `Membership` row is deleted so a user who's already
+   * connected and joined stops receiving that household's
+   * `event:changed` broadcasts, since `handleJoinHousehold`'s membership
+   * check only runs once, at join time (see its doc comment).
+   */
+  async evictFromHousehold(userId: string, householdId: string): Promise<void> {
+    if (!this.server) {
+      // Same defensive early-return as `broadcastEventChange` above — no
+      // sockets can be joined to any room before `afterInit()` runs.
+      return;
+    }
+
+    const socketsInRoom = await this.server.in(householdRoom(householdId)).fetchSockets();
+    for (const socket of socketsInRoom) {
+      if ((socket.data as AuthenticatedSocketData).user.id === userId) {
+        socket.leave(householdRoom(householdId));
+      }
+    }
   }
 }
