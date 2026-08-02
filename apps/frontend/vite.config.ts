@@ -20,6 +20,14 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // Same cookie-domain reasoning as '/api' above, plus `ws: true` so
+      // Vite's proxy also forwards the WebSocket upgrade request itself
+      // (not just plain HTTP), which the Socket.IO handshake needs.
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 });
