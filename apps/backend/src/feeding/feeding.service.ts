@@ -8,6 +8,7 @@ import {
 import { Child, Event, FeedingDetail, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
 import { FeedingSide, toFeedingSide } from './feeding-side.enum';
@@ -77,10 +78,19 @@ function toSummary(event: EventWithFeedingDetail): FeedingEventSummary {
  * `Event` (base row) and `FeedingDetail` (1:1 detail row) are always
  * created/deleted together: `FeedingDetail.eventId` has `onDelete: Cascade`,
  * so `remove()` only needs to delete the `Event` row.
+ *
+ * Every mutating method (`create`/`update`/`remove`/`stop`) broadcasts an
+ * `event:changed` message to the household's WebSocket room via
+ * `RealtimeService` after the write succeeds, so other connected household
+ * members' UIs update without a manual reload (see PRD section 6's
+ * real-time acceptance criterion).
  */
 @Injectable()
 export class FeedingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(
     householdId: string,
@@ -154,6 +164,14 @@ export class FeedingService {
         },
       },
       include: { feedingDetail: true },
+    });
+
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.FEEDING,
+      action: 'created',
+      eventId: event.id,
+      childId,
+      householdId,
     });
 
     return toSummary(event);
@@ -255,6 +273,14 @@ export class FeedingService {
       include: { feedingDetail: true },
     });
 
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.FEEDING,
+      action: 'updated',
+      eventId,
+      childId,
+      householdId,
+    });
+
     return toSummary(updated);
   }
 
@@ -275,6 +301,17 @@ export class FeedingService {
       include: { feedingDetail: true },
     });
 
+    // Collapsed into the generic 'updated' action — from a connected
+    // household member's point of view, a timer stopping is just another
+    // change to the same event (see RealtimeService's payload doc comment).
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.FEEDING,
+      action: 'updated',
+      eventId,
+      childId,
+      householdId,
+    });
+
     return toSummary(updated);
   }
 
@@ -283,6 +320,14 @@ export class FeedingService {
     // Deletes the FeedingDetail too, via `onDelete: Cascade` — no manual
     // two-step delete needed here.
     await this.prisma.event.delete({ where: { id: eventId } });
+
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.FEEDING,
+      action: 'deleted',
+      eventId,
+      childId,
+      householdId,
+    });
   }
 
   private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {

@@ -9,6 +9,7 @@ import * as childApi from '../api/child-api';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/household-api');
+vi.mock('../realtime/useHouseholdRoom');
 // Partial mock: `ChildForm` imports `buildChildFormData` from this same
 // module, so a full auto-mock would silently turn it into a `vi.fn()`
 // returning `undefined` and break `onSubmit`'s FormData payload — keep the

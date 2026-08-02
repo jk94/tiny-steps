@@ -7,12 +7,15 @@ import { Layout } from './Layout';
 import * as useAuthModule from '../auth/useAuth';
 import * as householdApi from '../api/household-api';
 import { queryClient } from '../lib/query-client';
+import * as useRealtimeConnectionModule from '../realtime/useRealtimeConnection';
 
 vi.mock('../auth/useAuth');
 vi.mock('../api/household-api');
+vi.mock('../realtime/useRealtimeConnection');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedHouseholdApi = vi.mocked(householdApi);
+const mockedUseRealtimeConnection = vi.mocked(useRealtimeConnectionModule.useRealtimeConnection);
 
 function renderLayout() {
   return render(
@@ -28,6 +31,7 @@ describe('Layout', () => {
   beforeEach(() => {
     queryClient.clear();
     mockedHouseholdApi.listHouseholds.mockResolvedValue([]);
+    mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
   });
 
   afterEach(() => {
@@ -185,5 +189,56 @@ describe('Layout', () => {
 
     expect(await screen.findByRole('combobox', { name: 'Switch household' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Team Müller' })).toBeInTheDocument();
+  });
+
+  it('shows no connection status when unauthenticated (no socket exists yet)', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
+
+    renderLayout();
+
+    expect(screen.queryByTestId('realtime-connection-status')).not.toBeInTheDocument();
+  });
+
+  it('shows "Connected" when authenticated and the socket is connected', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
+
+    renderLayout();
+
+    expect(screen.getByTestId('realtime-connection-status')).toHaveTextContent('Connected');
+  });
+
+  it('shows "Disconnected" when authenticated but the socket is not (yet) connected', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: false });
+
+    renderLayout();
+
+    expect(screen.getByTestId('realtime-connection-status')).toHaveTextContent('Disconnected');
   });
 });

@@ -8,16 +8,20 @@ import * as oidcApi from './api/oidc-api';
 import * as householdApi from './api/household-api';
 import * as inviteApi from './api/invite-api';
 import { queryClient } from './lib/query-client';
+import * as useRealtimeConnectionModule from './realtime/useRealtimeConnection';
 
 vi.mock('./auth/useAuth');
 vi.mock('./api/oidc-api');
 vi.mock('./api/household-api');
 vi.mock('./api/invite-api');
+vi.mock('./realtime/useRealtimeConnection');
+vi.mock('./realtime/useHouseholdRoom');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedOidcApi = vi.mocked(oidcApi);
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedInviteApi = vi.mocked(inviteApi);
+const mockedUseRealtimeConnection = vi.mocked(useRealtimeConnectionModule.useRealtimeConnection);
 
 function renderAppAt(entry: string) {
   return render(
@@ -35,6 +39,7 @@ describe('App', () => {
     mockedOidcApi.fetchOidcProviders.mockResolvedValue([]);
     mockedHouseholdApi.listHouseholds.mockResolvedValue([]);
     mockedInviteApi.previewInvite.mockResolvedValue({ status: 'invalid' });
+    mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
   });
 
   afterEach(() => {

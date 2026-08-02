@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { resolveJwtSecrets } from '../config/jwt.config';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AccessTokenVerifierService } from './access-token-verifier.service';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -33,6 +34,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   providers: [
     AuthService,
     AuthCookieService,
+    AccessTokenVerifierService,
     JwtStrategy,
     JwtAuthGuard,
     LocalAuthEnabledGuard,
@@ -44,6 +46,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     // bootstrap (fail-fast) rather than starting up with broken auth.
     { provide: JWT_SECRETS, useFactory: resolveJwtSecrets },
   ],
-  exports: [JwtAuthGuard, CsrfGuard],
+  // AccessTokenVerifierService is exported alongside JwtAuthGuard/CsrfGuard
+  // so RealtimeModule can reuse it for WebSocket handshake auth (see
+  // realtime/realtime.gateway.ts) without duplicating token-verification
+  // logic — see AccessTokenVerifierService's own doc comment.
+  exports: [JwtAuthGuard, CsrfGuard, AccessTokenVerifierService],
 })
 export class AuthModule {}

@@ -12,10 +12,12 @@ import { bumpPhotoCacheBust } from '../child/childPhotoCacheBust';
 import { mapChildError } from '../child/mapChildError';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 export function ChildEdit() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

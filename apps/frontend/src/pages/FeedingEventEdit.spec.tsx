@@ -8,6 +8,7 @@ import * as feedingApi from '../api/feeding-api';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/feeding-api');
+vi.mock('../realtime/useHouseholdRoom');
 
 const mockedFeedingApi = vi.mocked(feedingApi);
 

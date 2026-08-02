@@ -8,6 +8,7 @@ import * as diaperApi from '../api/diaper-api';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/diaper-api');
+vi.mock('../realtime/useHouseholdRoom');
 
 const mockedDiaperApi = vi.mocked(diaperApi);
 

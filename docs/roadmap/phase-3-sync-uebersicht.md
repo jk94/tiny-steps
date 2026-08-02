@@ -13,15 +13,15 @@ Phase 2 abgeschlossen (Event-Typen sind erfassbar).
 ## Aufgaben
 
 ### Echtzeit-Sync (Backend)
-- [ ] WebSocket-Gateway einrichten (`@nestjs/websockets`)
-- [ ] Haushalts-Räume/Channels: Nutzer werden beim Verbindungsaufbau ihrem/n Haushalt/en zugeordnet
-- [ ] Event-Erstellung/-Änderung/-Löschung löst Broadcast an alle verbundenen Haushaltsmitglieder aus
-- [ ] Reconnect-Handling (Client verpasst keine Updates bei kurzzeitigem Verbindungsabbruch)
+- [x] WebSocket-Gateway einrichten (`@nestjs/websockets`) — Socket.IO (`@nestjs/platform-socket.io`) statt raw `ws`, wegen der eingebauten Räume-/Broadcast-Unterstützung; Entscheidung samt Alternativen siehe [ADR-0007](../adr/0007-websocket-realtime-sync.md)
+- [x] Haushalts-Räume/Channels: Nutzer werden beim Verbindungsaufbau ihrem/n Haushalt/en zugeordnet — umgesetzt abweichend von dieser Formulierung: Räume werden nicht pauschal beim Verbindungsaufbau, sondern pro aktiver Route beigetreten (`joinHousehold`/`leaveHousehold`), da es keinen globalen „aktueller Haushalt"-State im Frontend gibt; Begründung siehe ADR-0007
+- [x] Event-Erstellung/-Änderung/-Löschung löst Broadcast an alle verbundenen Haushaltsmitglieder aus — schlankes Payload (nur IDs, kein voller Event-Body); Client invalidiert die passenden React-Query-Keys statt aus dem Payload zu hydratisieren; siehe ADR-0007
+- [x] Reconnect-Handling (Client verpasst keine Updates bei kurzzeitigem Verbindungsabbruch) — kein serverseitiges Replay-/Outbox-Log; Frontend invalidiert React-Query-Keys bei jedem `connect`-Event (Erst- wie Re-Connect), Socket.IO übernimmt die eigentliche Reconnect-/Backoff-Mechanik; siehe ADR-0007
 
 ### Echtzeit-Sync (Frontend)
-- [ ] WebSocket-Client-Integration
-- [ ] Live-Update des lokalen State bei eingehenden Events ohne manuellen Reload
-- [ ] Verbindungsstatus-Anzeige (verbunden/getrennt)
+- [x] WebSocket-Client-Integration — `RealtimeProvider`/`useRealtimeConnection` (`apps/frontend/src/realtime/`), analog zum bestehenden `AuthProvider`-Muster; siehe ADR-0007
+- [x] Live-Update des lokalen State bei eingehenden Events ohne manuellen Reload — React-Query-Invalidierung pro Event-Typ
+- [x] Verbindungsstatus-Anzeige (verbunden/getrennt) — Indikator in `Layout.tsx`
 
 ### Tages-Timeline
 - [ ] Chronologische Ansicht aller Ereignisse eines Tages für ein Kind
@@ -35,7 +35,7 @@ Phase 2 abgeschlossen (Event-Typen sind erfassbar).
 - [ ] UI-Komponente „Letzte Fütterung vor X Stunden“ (bzw. analog für Schlaf/Windel)
 
 ### Tests
-- [ ] E2E-Test: Zwei Nutzer im selben Haushalt sehen einen neuen Eintrag ohne manuellen Reload (Erfolgskriterium PRD Abschnitt 6)
+- [x] E2E-Test: Zwei Nutzer im selben Haushalt sehen einen neuen Eintrag ohne manuellen Reload (Erfolgskriterium PRD Abschnitt 6)
 
 ## Definition of Done
 

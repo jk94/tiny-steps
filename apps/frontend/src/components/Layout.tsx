@@ -1,6 +1,7 @@
 import { Link, Outlet } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
+import { useRealtimeConnection } from '../realtime/useRealtimeConnection';
 import { HouseholdSwitcher } from './HouseholdSwitcher';
 
 /**
@@ -13,6 +14,7 @@ import { HouseholdSwitcher } from './HouseholdSwitcher';
  */
 export function Layout() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { isConnected } = useRealtimeConnection();
   const { t, i18n } = useTranslation();
 
   return (
@@ -47,6 +49,15 @@ export function Layout() {
         </div>
         {!isLoading && isAuthenticated && user && (
           <div>
+            {/* Connection status only makes sense once a socket exists at
+                all, i.e. once authenticated (see RealtimeProvider) — same
+                conditional-rendering gate as the email/logout block it sits
+                next to. */}
+            <span data-testid="realtime-connection-status">
+              {isConnected
+                ? t('layout.connectionStatus.connected')
+                : t('layout.connectionStatus.disconnected')}
+            </span>
             <span>{user.email}</span>
             <button type="button" onClick={() => void logout()}>
               {t('layout.logoutButton')}

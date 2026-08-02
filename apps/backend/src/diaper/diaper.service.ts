@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Child, DiaperDetail, Event, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateDiaperEventDto } from './dto/create-diaper-event.dto';
 import { UpdateDiaperEventDto } from './dto/update-diaper-event.dto';
 import { DiaperType, toDiaperType } from './diaper-type.enum';
@@ -64,10 +65,18 @@ function toSummary(event: EventWithDiaperDetail): DiaperEventSummary {
  * `Event` (base row) and `DiaperDetail` (1:1 detail row) are always
  * created/deleted together: `DiaperDetail.eventId` has `onDelete: Cascade`,
  * so `remove()` only needs to delete the `Event` row.
+ *
+ * `create`/`update`/`remove` each broadcast an `event:changed` message to
+ * the household's WebSocket room via `RealtimeService` after the write
+ * succeeds — same rationale as `FeedingService`'s identical doc comment
+ * (no `stop()` here, so there's no timer-stop call site to also cover).
  */
 @Injectable()
 export class DiaperService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(
     householdId: string,
@@ -96,6 +105,14 @@ export class DiaperService {
         },
       },
       include: { diaperDetail: true },
+    });
+
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.DIAPER,
+      action: 'created',
+      eventId: event.id,
+      childId,
+      householdId,
     });
 
     return toSummary(event);
@@ -155,6 +172,14 @@ export class DiaperService {
       include: { diaperDetail: true },
     });
 
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.DIAPER,
+      action: 'updated',
+      eventId,
+      childId,
+      householdId,
+    });
+
     return toSummary(updated);
   }
 
@@ -163,6 +188,14 @@ export class DiaperService {
     // Deletes the DiaperDetail too, via `onDelete: Cascade` — no manual
     // two-step delete needed here.
     await this.prisma.event.delete({ where: { id: eventId } });
+
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.DIAPER,
+      action: 'deleted',
+      eventId,
+      childId,
+      householdId,
+    });
   }
 
   private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {

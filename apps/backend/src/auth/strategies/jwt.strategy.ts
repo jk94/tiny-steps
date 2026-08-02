@@ -3,23 +3,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import type { Request } from 'express';
 import { Strategy } from 'passport-jwt';
 import type { JwtSecrets } from '../../config/jwt.config';
-import { PrismaService } from '../../prisma/prisma.service';
+import { AccessTokenVerifierService } from '../access-token-verifier.service';
 import { JWT_SECRETS } from '../jwt-secrets.token';
 import type { AuthenticatedUser } from '../types/authenticated-request';
-
-interface AccessTokenPayload {
-  sub: string;
-  /**
-   * Real access tokens never set this claim. Only present to let
-   * `validate()` structurally reject an `oidc_txn` transaction token
-   * (see `auth/oidc/oidc-transaction-cookie.service.ts`) if one were ever
-   * presented here — e.g. an attacker copying its value into the
-   * `access_token` cookie by hand. Both token kinds are signed with the
-   * same secret (see ADR-0004), so signature verification alone can't
-   * distinguish them; this claim-shape check is the structural guard.
-   */
-  purpose?: unknown;
-}
 
 /** Reads the access token from the httpOnly `access_token` cookie, not an Authorization header. */
 const cookieExtractor = (req: Request): string | null => {
@@ -29,34 +15,36 @@ const cookieExtractor = (req: Request): string | null => {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly accessTokenVerifier: AccessTokenVerifierService,
     @Inject(JWT_SECRETS) jwtSecrets: JwtSecrets,
   ) {
     super({
       jwtFromRequest: cookieExtractor,
       secretOrKey: jwtSecrets.accessSecret,
       ignoreExpiration: false,
+      // Needed so `validate()` below can re-extract the raw token and
+      // delegate to `AccessTokenVerifierService.verify()` — see its doc
+      // comment for why the *same* verification logic must run here and in
+      // `RealtimeGateway`'s WebSocket handshake auth.
+      passReqToCallback: true,
     });
   }
 
   /**
-   * Looks the user up fresh on every request (rather than trusting the JWT
-   * payload alone) so a deleted/disabled user is rejected even while their
-   * access token is still cryptographically valid.
+   * Delegates entirely to `AccessTokenVerifierService.verify()` (payload
+   * shape checks + fresh user lookup, see its own doc comment). Passport
+   * has already verified this token's signature/expiration once via
+   * `secretOrKey`/`ignoreExpiration` above, so `verify()` re-checking it
+   * against the raw token is a harmless bit of duplicate crypto work — the
+   * point of this delegation isn't to skip that, it's to guarantee this
+   * path and the WebSocket handshake path can never diverge on the
+   * payload/user-lookup rules.
    */
-  async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
-    // See the `purpose` field's doc comment above — structurally reject
-    // anything shaped like an `oidc_txn` transaction token rather than a
-    // real access token.
-    if (payload.purpose !== undefined || typeof payload.sub !== 'string') {
+  async validate(req: Request): Promise<AuthenticatedUser> {
+    const rawToken = cookieExtractor(req);
+    if (!rawToken) {
       throw new UnauthorizedException('Invalid access token');
     }
-
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user) {
-      throw new UnauthorizedException('User no longer exists');
-    }
-
-    return { id: user.id, email: user.email, createdAt: user.createdAt };
+    return this.accessTokenVerifier.verify(rawToken);
   }
 }

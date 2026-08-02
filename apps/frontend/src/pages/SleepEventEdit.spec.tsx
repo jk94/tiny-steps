@@ -8,6 +8,7 @@ import * as sleepApi from '../api/sleep-api';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
+vi.mock('../realtime/useHouseholdRoom');
 
 const mockedSleepApi = vi.mocked(sleepApi);
 

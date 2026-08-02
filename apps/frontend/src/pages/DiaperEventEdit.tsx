@@ -10,6 +10,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapDiaperError } from '../diaper/mapDiaperError';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 export function DiaperEventEdit() {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export function DiaperEventEdit() {
     childId: string;
     eventId: string;
   }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

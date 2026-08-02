@@ -13,6 +13,7 @@ import { SleepModule } from './sleep/sleep.module';
 import { DiaperModule } from './diaper/diaper.module';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import loadConfiguration from './config/configuration';
 
 @Module({
@@ -34,6 +35,7 @@ import loadConfiguration from './config/configuration';
     HouseholdModule,
     ChildModule,
     EventModule,
+    RealtimeModule,
     FeedingModule,
     SleepModule,
     DiaperModule,

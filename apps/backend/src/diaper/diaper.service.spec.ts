@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import type { RealtimeService } from '../realtime/realtime.service';
 import { CreateDiaperEventDto } from './dto/create-diaper-event.dto';
 import { UpdateDiaperEventDto } from './dto/update-diaper-event.dto';
 import { DiaperService } from './diaper.service';
@@ -54,6 +55,7 @@ describe('DiaperService', () => {
       delete: jest.Mock;
     };
   };
+  let realtime: { broadcastEventChange: jest.Mock };
   let service: DiaperService;
 
   beforeEach(() => {
@@ -67,7 +69,11 @@ describe('DiaperService', () => {
         delete: jest.fn(),
       },
     };
-    service = new DiaperService(prisma as unknown as PrismaService);
+    realtime = { broadcastEventChange: jest.fn() };
+    service = new DiaperService(
+      prisma as unknown as PrismaService,
+      realtime as unknown as RealtimeService,
+    );
   });
 
   describe('create', () => {
@@ -166,6 +172,21 @@ describe('DiaperService', () => {
         include: { diaperDetail: true },
       });
     });
+
+    it('broadcasts a created event:changed message on success', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.create.mockResolvedValue(makeEvent());
+
+      await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, { diaperType: DiaperType.PEE });
+
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.DIAPER,
+        action: 'created',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
+    });
   });
 
   describe('list', () => {
@@ -238,6 +259,13 @@ describe('DiaperService', () => {
         where: { id: EVENT_ID },
         data: { occurredAt: new Date('2026-01-01T09:00:00.000Z'), diaperDetail: undefined },
         include: { diaperDetail: true },
+      });
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.DIAPER,
+        action: 'updated',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
       });
     });
 
@@ -322,6 +350,13 @@ describe('DiaperService', () => {
 
       expect(prisma.event.delete).toHaveBeenCalledWith({ where: { id: EVENT_ID } });
       expect(prisma.event.delete).toHaveBeenCalledTimes(1);
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.DIAPER,
+        action: 'deleted',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
     });
 
     it('throws NotFoundException when scoped to a different child/household', async () => {
@@ -331,6 +366,7 @@ describe('DiaperService', () => {
         NotFoundException,
       );
       expect(prisma.event.delete).not.toHaveBeenCalled();
+      expect(realtime.broadcastEventChange).not.toHaveBeenCalled();
     });
   });
 });

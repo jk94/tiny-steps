@@ -10,6 +10,7 @@ import type { FeedingEventFormOutput } from '../components/FeedingEventForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapFeedingError } from '../feeding/mapFeedingError';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 export function FeedingEventEdit() {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export function FeedingEventEdit() {
     childId: string;
     eventId: string;
   }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

@@ -10,6 +10,7 @@ import type { SleepEventFormOutput } from '../components/SleepEventForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapSleepError } from '../sleep/mapSleepError';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 export function SleepEventEdit() {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export function SleepEventEdit() {
     childId: string;
     eventId: string;
   }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

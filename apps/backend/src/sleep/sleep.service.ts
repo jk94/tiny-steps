@@ -8,6 +8,7 @@ import {
 import { Child, Event, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
 import { UpdateSleepEventDto } from './dto/update-sleep-event.dto';
 
@@ -55,10 +56,18 @@ function toSummary(event: Event): SleepEventSummary {
  * Unlike `FeedingService`, there is no detail table to join/include
  * anywhere: Sleep is a pure base-`Event` type (see ADR-0006's addendum),
  * so every read/write here operates on `Event` alone.
+ *
+ * Every mutating method (`create`/`update`/`remove`/`stop`) broadcasts an
+ * `event:changed` message to the household's WebSocket room via
+ * `RealtimeService` after the write succeeds — same rationale as
+ * `FeedingService`'s identical doc comment.
  */
 @Injectable()
 export class SleepService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(
     householdId: string,
@@ -109,6 +118,14 @@ export class SleepService {
         startedAt,
         endedAt,
       },
+    });
+
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.SLEEP,
+      action: 'created',
+      eventId: event.id,
+      childId,
+      householdId,
     });
 
     return toSummary(event);
@@ -178,6 +195,14 @@ export class SleepService {
       data: eventData,
     });
 
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.SLEEP,
+      action: 'updated',
+      eventId,
+      childId,
+      householdId,
+    });
+
     return toSummary(updated);
   }
 
@@ -195,6 +220,16 @@ export class SleepService {
       data: { endedAt: new Date() },
     });
 
+    // Collapsed into the generic 'updated' action — same rationale as
+    // FeedingService.stop's identical doc comment.
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.SLEEP,
+      action: 'updated',
+      eventId,
+      childId,
+      householdId,
+    });
+
     return toSummary(updated);
   }
 
@@ -203,6 +238,14 @@ export class SleepService {
     // No cascade concern here, unlike FeedingService.remove — there's no
     // detail table row to clean up.
     await this.prisma.event.delete({ where: { id: eventId } });
+
+    this.realtime.broadcastEventChange(householdId, {
+      type: EventType.SLEEP,
+      action: 'deleted',
+      eventId,
+      childId,
+      householdId,
+    });
   }
 
   private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
