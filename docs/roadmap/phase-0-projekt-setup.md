@@ -44,11 +44,11 @@ Keine – dies ist die Startphase.
 - [x] Beispiel-Konfigurationsdatei (`config.example.yml`) für Homelab-Nutzer
 
 ### CI-Grundgerüst
-- ~~CI-Pipeline für Lint, Test, Build (Backend & Frontend)~~ — bewusst zurückgestellt: es ist noch keine Git-Hosting-Plattform/kein Remote gewählt, daher kein CI-Workflow in dieser Phase.
+- [x] CI-Pipeline für Lint, Test, Build (Backend & Frontend) — ursprünglich zurückgestellt (es war noch keine Git-Hosting-Plattform/kein Remote gewählt), nachträglich umgesetzt via `.github/workflows/ci.yml` (GitHub Actions: Jobs für Lint/Format, Backend, Frontend sowie einen Docker-Build inkl. optionalem Push nach GHCR als Platzhalter-Registry bei Push auf `main`).
 
 ## Definition of Done
 
 - `docker compose up` startet die App (Backend + ausgeliefertes Frontend) lauffähig
 - Health-Check-Endpoint ist erreichbar
 - Prisma-Migrationen laufen gegen SQLite durch
-- ~~CI-Pipeline ist grün auf dem initialen Commit~~ (zurückgestellt, siehe oben)
+- CI-Pipeline ist grün (nachträglich umgesetzt, siehe oben — nicht mehr auf dem initialen Commit, sondern ab Einführung von `.github/workflows/ci.yml`)
