@@ -7,10 +7,12 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { InviteGenerator } from '../components/InviteGenerator';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapHouseholdError } from '../household/mapHouseholdError';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 export function HouseholdDetail() {
   const { t } = useTranslation();
   const { householdId } = useParams<{ householdId: string }>();
+  useHouseholdRoom(householdId);
   const { data, isLoading, error } = useQuery({
     queryKey: ['households', householdId],
     queryFn: () => fetchHousehold(householdId!),

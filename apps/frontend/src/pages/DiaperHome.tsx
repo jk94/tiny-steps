@@ -7,6 +7,7 @@ import { DiaperEventList } from '../components/DiaperEventList';
 import { DiaperQuickEntry } from '../components/DiaperQuickEntry';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /**
  * Per-child quick-entry screen — the simplest of the three Home pages: no
@@ -18,6 +19,7 @@ import { LoadingIndicator } from '../components/LoadingIndicator';
 export function DiaperHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],

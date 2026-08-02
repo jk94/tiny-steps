@@ -8,10 +8,12 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 export function ChildCreate() {
   const { t } = useTranslation();
   const { householdId } = useParams<{ householdId: string }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
 
   const householdQuery = useQuery({

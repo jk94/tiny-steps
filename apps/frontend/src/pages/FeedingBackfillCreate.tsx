@@ -4,11 +4,13 @@ import { createFeedingEvent } from '../api/feeding-api';
 import { FeedingEventForm } from '../components/FeedingEventForm';
 import type { FeedingEventFormOutput } from '../components/FeedingEventForm';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /** Manual backfill create page — wraps `FeedingEventForm` in create mode. */
 export function FeedingBackfillCreate() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
 
   const handleSubmit = async (output: FeedingEventFormOutput) => {

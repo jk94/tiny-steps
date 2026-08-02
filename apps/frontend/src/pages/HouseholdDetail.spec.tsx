@@ -10,6 +10,7 @@ import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/household-api');
 vi.mock('../api/child-api');
+vi.mock('../realtime/useHouseholdRoom');
 
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedChildApi = vi.mocked(childApi);

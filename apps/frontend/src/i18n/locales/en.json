@@ -7,7 +7,11 @@
     "householdsLink": "Households"
   },
   "layout": {
-    "logoutButton": "Log out"
+    "logoutButton": "Log out",
+    "connectionStatus": {
+      "connected": "Connected",
+      "disconnected": "Disconnected"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

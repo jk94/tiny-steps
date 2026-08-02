@@ -9,6 +9,7 @@ import { SleepEventList } from '../components/SleepEventList';
 import { SleepQuickEntry } from '../components/SleepQuickEntry';
 import { SleepTimer } from '../components/SleepTimer';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /**
  * Per-child quick-entry/timer start screen. On mount, fetches the active
@@ -21,6 +22,7 @@ import { LoadingIndicator } from '../components/LoadingIndicator';
 export function SleepHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],

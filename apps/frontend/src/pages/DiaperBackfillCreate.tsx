@@ -4,11 +4,13 @@ import { createDiaperEvent } from '../api/diaper-api';
 import { DiaperEventForm } from '../components/DiaperEventForm';
 import type { DiaperEventFormOutput } from '../components/DiaperEventForm';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /** Manual backfill create page — wraps `DiaperEventForm` in create mode. */
 export function DiaperBackfillCreate() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
 
   const handleSubmit = async (output: DiaperEventFormOutput) => {

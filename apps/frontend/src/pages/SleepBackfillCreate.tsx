@@ -4,11 +4,13 @@ import { createSleepEvent } from '../api/sleep-api';
 import { SleepEventForm } from '../components/SleepEventForm';
 import type { SleepEventFormOutput } from '../components/SleepEventForm';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /** Manual backfill create page — wraps `SleepEventForm` in create mode. */
 export function SleepBackfillCreate() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
   const navigate = useNavigate();
 
   const handleSubmit = async (output: SleepEventFormOutput) => {
