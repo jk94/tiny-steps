@@ -46,6 +46,9 @@ export function ChildList({ householdId, role }: ChildListProps) {
                 />
                 <span>{child.name}</span>
               </Link>
+              <Link to={`/households/${householdId}/children/${child.id}/feeding`}>
+                {t('child.list.feedingLink')}
+              </Link>
             </li>
           ))}
         </ul>

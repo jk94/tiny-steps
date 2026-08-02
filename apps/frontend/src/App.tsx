@@ -10,6 +10,9 @@ import { HouseholdCreate } from './pages/HouseholdCreate';
 import { HouseholdDetail } from './pages/HouseholdDetail';
 import { ChildCreate } from './pages/ChildCreate';
 import { ChildEdit } from './pages/ChildEdit';
+import { FeedingHome } from './pages/FeedingHome';
+import { FeedingBackfillCreate } from './pages/FeedingBackfillCreate';
+import { FeedingEventEdit } from './pages/FeedingEventEdit';
 import { InviteAccept } from './pages/InviteAccept';
 
 function App() {
@@ -23,6 +26,18 @@ function App() {
           <Route path="households/:householdId" element={<HouseholdDetail />} />
           <Route path="households/:householdId/children/new" element={<ChildCreate />} />
           <Route path="households/:householdId/children/:childId" element={<ChildEdit />} />
+          <Route
+            path="households/:householdId/children/:childId/feeding"
+            element={<FeedingHome />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/feeding/new"
+            element={<FeedingBackfillCreate />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/feeding/:eventId/edit"
+            element={<FeedingEventEdit />}
+          />
         </Route>
         <Route element={<GuestOnlyRoute />}>
           <Route path="login" element={<Login />} />
