@@ -1,4 +1,4 @@
-# ADR-0005: i18n infrastructure (German/English), brought forward from Phase 6
+# ADR-0005: i18n infrastructure (German/English), brought forward from Phase 7
 
 ## Status
 
@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 PRD section 4.2 places "Mehrsprachigkeit" (multi-language support) under Version 2.0, i.e.
-explicitly post-MVP. [Roadmap Phase 6](../roadmap/phase-6-v2-erweiterungen.md) breaks that into three
+explicitly post-MVP. [Roadmap Phase 7](../roadmap/phase-7-v2-erweiterungen.md) breaks that into three
 sub-items: i18n infrastructure, translating the existing UI text, and a language switcher in user
 settings.
 
@@ -132,7 +132,7 @@ importing the singleton directly in the component, for consistency with how the 
 tree consumes i18n.
 
 This is explicitly a **placeholder** — it belongs in a real settings area once one exists (tracked
-under Phase 6's "Sprachumschaltung in den Nutzereinstellungen" item, which stays open; no settings
+under Phase 7's "Sprachumschaltung in den Nutzereinstellungen" item, which stays open; no settings
 screen exists yet). It lives in `Layout.tsx` for now purely because that's the only screen every route
 currently shares.
 
@@ -182,9 +182,9 @@ style nitpick.
 
 ## Related
 
-- [Phase 6 roadmap](../roadmap/phase-6-v2-erweiterungen.md) — "Mehrsprachigkeit", the original,
+- [Phase 7 roadmap](../roadmap/phase-7-v2-erweiterungen.md) — "Mehrsprachigkeit", the original,
   post-MVP home of this work; its infrastructure and existing-UI-text sub-items are marked done here,
-  ahead of the rest of Phase 6.
+  ahead of the rest of Phase 7.
 - [Phase 1 roadmap](../roadmap/phase-1-auth-multiuser.md) — where this sub-step actually landed,
   ahead of the local login/registration UI sub-step.
 - `apps/frontend/src/i18n/` — implementation (`index.ts`, `resources.ts`, `i18next.d.ts`,

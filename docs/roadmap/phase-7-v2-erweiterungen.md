@@ -1,4 +1,4 @@
-# Phase 6: Version 2.0 – Erweiterungen
+# Phase 7: Version 2.0 – Erweiterungen
 
 **Bezug im PRD:** Abschnitt 4.2 (Version 2.0 nach MVP)
 
@@ -8,7 +8,7 @@ Funktionsumfang über den MVP hinaus erweitern: Wachstum, Meilensteine, Medikame
 
 ## Voraussetzungen
 
-MVP (Phasen 0–5) ist produktiv im Einsatz und stabil.
+MVP (Phasen 0–5) ist produktiv im Einsatz und stabil. Phase 6 (Design-System & UX) ist abgeschlossen, da die hier neu hinzukommenden UIs (Wachstum, Meilensteine, Medikamente/Impfungen, Rollenzuweisung) auf dem dort etablierten Design-System aufbauen sollen.
 
 ## Aufgaben
 
