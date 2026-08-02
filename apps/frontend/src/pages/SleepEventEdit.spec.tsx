@@ -80,11 +80,14 @@ describe('SleepEventEdit', () => {
     // Not hardcoding a local-time string here, since the UTC<->local
     // conversion depends on the test runner's timezone — instead assert
     // the field is non-empty and round-trips back to the fetched ISO value.
-    const startedAtField = await screen.findByLabelText('Start time (optional)');
-    expect(startedAtField).not.toHaveValue('');
-    expect(new Date((startedAtField as HTMLInputElement).value).toISOString()).toBe(
-      event.startedAt,
+    // There is no separate "Start time" field to assert on — `startedAt`
+    // is mirrored from `occurredAt` on submit, see `SleepEventForm`.
+    const occurredAtField = await screen.findByLabelText('Time');
+    expect(occurredAtField).not.toHaveValue('');
+    expect(new Date((occurredAtField as HTMLInputElement).value).toISOString()).toBe(
+      event.occurredAt,
     );
+    expect(screen.queryByLabelText('Start time (optional)')).not.toBeInTheDocument();
     expect(screen.getByLabelText('End time (optional)')).toHaveValue('');
   });
 

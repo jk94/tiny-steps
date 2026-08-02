@@ -72,7 +72,6 @@ export function SleepEventEdit() {
         mode="edit"
         initialValues={{
           occurredAt: event.occurredAt,
-          startedAt: event.startedAt ?? undefined,
           endedAt: event.endedAt ?? undefined,
         }}
         onSubmit={handleSubmit}

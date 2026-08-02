@@ -297,7 +297,6 @@
     },
     "fields": {
       "occurredAtLabel": "Zeitpunkt",
-      "startedAtLabel": "Startzeit (optional)",
       "endedAtLabel": "Endzeit (optional)"
     },
     "validation": {

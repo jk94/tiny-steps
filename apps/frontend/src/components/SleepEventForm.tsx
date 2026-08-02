@@ -31,7 +31,6 @@ type FieldErrorKeys = {
 /** All fields as `datetime-local`-input-friendly strings, mirroring the form's own state shape. */
 export interface SleepEventFormInitialValues {
   occurredAt: string;
-  startedAt?: string;
   endedAt?: string;
 }
 
@@ -53,14 +52,20 @@ export interface SleepEventFormProps {
  * timer dated in the past, which is `SleepQuickEntry`'s job, not this
  * form's. Edit mode stays exempt so an in-progress timer (`endedAt: null`)
  * remains editable.
+ *
+ * There is no separate `startedAt` input: unlike Feeding (where a bottle's
+ * point-in-time and a breastfeeding timer's start are genuinely distinct),
+ * Sleep's `occurredAt` and `startedAt` always mean the same moment. Showing
+ * both invited them to drift apart (e.g. a backfill leaving `startedAt`
+ * empty while setting an inconsistent `occurredAt`/`endedAt`), which could
+ * persist a negative-duration event. `occurredAt` is the sole "when did
+ * this start" field the user sees; `startedAt` is always mirrored from it
+ * on submit, in both create and edit mode.
  */
 export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventFormProps) {
   const { t } = useTranslation();
   const [occurredAt, setOccurredAt] = useState(
     initialValues?.occurredAt ? isoToDatetimeLocalValue(initialValues.occurredAt) : '',
-  );
-  const [startedAt, setStartedAt] = useState(
-    initialValues?.startedAt ? isoToDatetimeLocalValue(initialValues.startedAt) : '',
   );
   const [endedAt, setEndedAt] = useState(
     initialValues?.endedAt ? isoToDatetimeLocalValue(initialValues.endedAt) : '',
@@ -91,7 +96,7 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
       // existing running timer legitimately has `endedAt: null` and must
       // stay editable without forcing an end time.
       errors.endedAt = 'sleep.validation.endedAtRequired';
-    } else if (startedAt && endedAt && endedAt < startedAt) {
+    } else if (occurredAt && endedAt && endedAt < occurredAt) {
       errors.endedAt = 'sleep.validation.endedBeforeStarted';
     }
 
@@ -112,12 +117,14 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
     setFormErrorKey(null);
     setIsSubmitting(true);
     try {
+      const occurredAtIso = datetimeLocalValueToIso(occurredAt);
+      // `startedAt` always mirrors `occurredAt` — there's no separate UI
+      // field for it (see this form's doc comment) — so an edit that only
+      // changes `occurredAt` can't leave `startedAt` stale relative to it.
       const output: SleepEventFormOutput = {
-        occurredAt: datetimeLocalValueToIso(occurredAt),
+        occurredAt: occurredAtIso,
+        startedAt: occurredAtIso,
       };
-      if (startedAt) {
-        output.startedAt = datetimeLocalValueToIso(startedAt);
-      }
       if (endedAt) {
         output.endedAt = datetimeLocalValueToIso(endedAt);
       }
@@ -163,21 +170,6 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
             <ErrorMessage message={t(fieldErrorKeys.occurredAt)} />
           </div>
         )}
-      </div>
-
-      <div className="sleep-event-form__field">
-        <label htmlFor="sleep-started-at">{t('sleep.fields.startedAtLabel')}</label>
-        <input
-          id="sleep-started-at"
-          type="datetime-local"
-          max={nowAsDatetimeLocalValue()}
-          value={startedAt}
-          onChange={(event) => {
-            setStartedAt(event.target.value);
-            clearFieldError('endedAt');
-          }}
-          disabled={isSubmitting}
-        />
       </div>
 
       <div className="sleep-event-form__field">
