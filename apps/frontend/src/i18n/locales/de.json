@@ -241,6 +241,7 @@
       "amountRequired": "Bitte gib eine Menge in ml ein.",
       "amountOutOfRange": "Die Menge muss zwischen 1 und 2000 ml liegen.",
       "endedBeforeStarted": "Die Endzeit darf nicht vor der Startzeit liegen.",
+      "endedAtRequired": "Bitte gib eine Endzeit ein.",
       "noteTooLong": "Die Notiz darf höchstens 500 Zeichen lang sein."
     },
     "errors": {

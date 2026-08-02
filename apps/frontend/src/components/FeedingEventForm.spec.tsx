@@ -118,11 +118,31 @@ describe('FeedingEventForm (create mode)', () => {
     await user.selectOptions(screen.getByLabelText('Feeding type'), 'Breastfeeding');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByLabelText('Right'));
+    fireEvent.change(screen.getByLabelText('End time (optional)'), {
+      target: { value: '2026-01-01T10:20' },
+    });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ feedingType: 'BREAST', side: 'RIGHT' }),
     );
+  });
+
+  it('blocks submission and shows a validation error when endedAt is missing for a BREAST backfill', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    renderForm('create', onSubmit);
+
+    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Breastfeeding');
+    fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
+    await user.click(screen.getByLabelText('Left'));
+    fireEvent.change(screen.getByLabelText('Start time (optional)'), {
+      target: { value: '2026-01-01T10:00' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    expect(screen.getByText('Please enter an end time.')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('shows the mapped error message when onSubmit rejects', async () => {

@@ -241,6 +241,7 @@
       "amountRequired": "Please enter an amount in ml.",
       "amountOutOfRange": "The amount must be between 1 and 2000 ml.",
       "endedBeforeStarted": "The end time can't be before the start time.",
+      "endedAtRequired": "Please enter an end time.",
       "noteTooLong": "The note must be at most 500 characters long."
     },
     "errors": {

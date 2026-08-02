@@ -32,7 +32,7 @@ type FieldErrorKeys = {
   occurredAt?: 'feeding.validation.occurredAtRequired' | 'feeding.validation.occurredAtFuture';
   side?: 'feeding.validation.sideRequired';
   amountMl?: 'feeding.validation.amountRequired' | 'feeding.validation.amountOutOfRange';
-  endedAt?: 'feeding.validation.endedBeforeStarted';
+  endedAt?: 'feeding.validation.endedBeforeStarted' | 'feeding.validation.endedAtRequired';
   note?: 'feeding.validation.noteTooLong';
 };
 
@@ -114,8 +114,19 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
       }
     }
 
-    if (feedingType === 'BREAST' && startedAt && endedAt && endedAt < startedAt) {
-      errors.endedAt = 'feeding.validation.endedBeforeStarted';
+    if (feedingType === 'BREAST') {
+      if (mode === 'create' && !endedAt) {
+        // Create mode is exclusively for backfilling *completed* feeds (see
+        // this form's own doc comment) — an omitted endedAt would otherwise
+        // reach `FeedingService.create` as `endedAt: null` and silently
+        // start a running timer dated in the past, which is
+        // `FeedingQuickEntry`'s job, not this form's. Edit mode is exempt:
+        // an existing running timer legitimately has `endedAt: null` and
+        // must stay editable without forcing an end time.
+        errors.endedAt = 'feeding.validation.endedAtRequired';
+      } else if (startedAt && endedAt && endedAt < startedAt) {
+        errors.endedAt = 'feeding.validation.endedBeforeStarted';
+      }
     }
 
     if (note.length > MAX_NOTE_LENGTH) {
