@@ -1,4 +1,4 @@
-import { IsEnum, IsISO8601, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsISO8601, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
 import { DiaperType } from '../diaper-type.enum';
 import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
 
@@ -27,8 +27,15 @@ export class UpdateDiaperEventDto {
   @IsNotFutureDate()
   occurredAt?: string;
 
+  // `string | null` (unlike `CreateDiaperEventDto.note`), because update
+  // needs to distinguish "don't touch this field" (key absent — `@IsOptional`
+  // lets that through) from "clear it" (explicit `null` — `@ValidateIf`
+  // bypasses `@IsString`/`@MaxLength` for that case, since neither should
+  // apply to `null`). See `DiaperService.update`, which relies on
+  // `dto.note !== undefined` to tell the two apart.
   @IsOptional()
+  @ValidateIf((dto: UpdateDiaperEventDto) => dto.note !== null)
   @IsString()
   @MaxLength(MAX_NOTE_LENGTH)
-  note?: string;
+  note?: string | null;
 }

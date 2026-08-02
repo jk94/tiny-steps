@@ -44,8 +44,15 @@ export interface CreateFeedingEventInput {
  * Request body for update — same fields as create minus `feedingType`
  * (immutable after creation, see `UpdateFeedingEventDto`). All optional,
  * genuinely partial: only changed fields need to be included.
+ *
+ * `note` is widened to `string | null` here (unlike
+ * `CreateFeedingEventInput.note`): omitting the key means "don't touch this
+ * field", while an explicit `null` means "clear it" — see
+ * `UpdateFeedingEventDto`.
  */
-export type UpdateFeedingEventInput = Omit<CreateFeedingEventInput, 'feedingType'>;
+export type UpdateFeedingEventInput = Omit<CreateFeedingEventInput, 'feedingType' | 'note'> & {
+  note?: string | null;
+};
 
 function feedingEventsPath(householdId: string, childId: string): string {
   return `/households/${householdId}/children/${childId}/feeding-events`;

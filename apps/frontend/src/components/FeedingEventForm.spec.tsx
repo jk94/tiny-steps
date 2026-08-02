@@ -158,6 +158,19 @@ describe('FeedingEventForm (create mode)', () => {
       "Couldn't save your changes. Please check the entered values.",
     );
   });
+
+  it('omits note entirely (not null) when left empty in create mode', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderForm('create', onSubmit);
+
+    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Solid food');
+    fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
+    await user.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    const [submittedOutput] = onSubmit.mock.calls[0] as [Record<string, unknown>];
+    expect('note' in submittedOutput).toBe(false);
+  });
 });
 
 describe('FeedingEventForm (edit mode)', () => {
@@ -183,5 +196,27 @@ describe('FeedingEventForm (edit mode)', () => {
     renderForm('edit', vi.fn(), initialValues);
 
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+  });
+
+  it('sends note: null (not omitted, not an empty string) when a pre-filled note is cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderForm('edit', onSubmit, { ...initialValues, note: 'Fussy during feed' });
+
+    await user.clear(screen.getByLabelText('Note (optional)'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ note: null }));
+  });
+
+  it('sends the trimmed note text when a pre-filled note is edited, not cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderForm('edit', onSubmit, { ...initialValues, note: 'Fussy' });
+
+    await user.type(screen.getByLabelText('Note (optional)'), ' during feed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ note: 'Fussy during feed' }));
   });
 });

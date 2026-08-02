@@ -34,8 +34,15 @@ export interface CreateDiaperEventInput {
  * Feeding, `diaperType` IS included here (editable via PATCH, see
  * `UpdateDiaperEventDto`'s doc comment). All fields optional, genuinely
  * partial: only changed fields need to be included.
+ *
+ * `note` is widened to `string | null` here (unlike
+ * `CreateDiaperEventInput.note`): omitting the key means "don't touch this
+ * field", while an explicit `null` means "clear it" — see
+ * `UpdateDiaperEventDto`.
  */
-export type UpdateDiaperEventInput = Partial<CreateDiaperEventInput>;
+export type UpdateDiaperEventInput = Omit<Partial<CreateDiaperEventInput>, 'note'> & {
+  note?: string | null;
+};
 
 function diaperEventsPath(householdId: string, childId: string): string {
   return `/households/${householdId}/children/${childId}/diaper-events`;

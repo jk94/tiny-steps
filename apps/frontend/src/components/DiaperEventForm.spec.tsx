@@ -110,6 +110,19 @@ describe('DiaperEventForm (create mode)', () => {
       "Couldn't save your changes. Please check the entered values.",
     );
   });
+
+  it('omits note entirely (not null) when left empty in create mode', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderForm('create', onSubmit);
+
+    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Pee');
+    fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
+    await user.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    const [submittedOutput] = onSubmit.mock.calls[0] as [Record<string, unknown>];
+    expect('note' in submittedOutput).toBe(false);
+  });
 });
 
 describe('DiaperEventForm (edit mode)', () => {
@@ -151,5 +164,29 @@ describe('DiaperEventForm (edit mode)', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ diaperType: 'BOTH' }));
+  });
+
+  it('sends note: null (not omitted, not an empty string) when a pre-filled note is cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderForm('edit', onSubmit, initialValues);
+
+    await user.clear(screen.getByLabelText('Consistency note (optional)'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ note: null }));
+  });
+
+  it('sends the edited note text when a pre-filled note is edited, not cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderForm('edit', onSubmit, initialValues);
+
+    await user.type(screen.getByLabelText('Consistency note (optional)'), ', slight rash');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ note: 'Loose stool, slight rash' }),
+    );
   });
 });

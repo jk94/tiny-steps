@@ -272,6 +272,23 @@ describe('DiaperService', () => {
       });
     });
 
+    it('clears an existing note when the DTO explicitly sends note: null', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findUnique.mockResolvedValue(makeEvent());
+      prisma.event.update.mockResolvedValue(makeEvent());
+
+      // Distinct from "leaves untouched fields alone" below, where `note`
+      // is simply absent from the DTO (left untouched) — here it is
+      // explicitly `null` (cleared).
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: null });
+
+      expect(prisma.event.update).toHaveBeenCalledWith({
+        where: { id: EVENT_ID },
+        data: { diaperDetail: { update: { note: null } } },
+        include: { diaperDetail: true },
+      });
+    });
+
     it('leaves untouched fields alone on a partial update', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.event.findUnique.mockResolvedValue(makeEvent());

@@ -47,7 +47,16 @@ export interface FeedingEventFormInitialValues {
   note?: string;
 }
 
-export type FeedingEventFormOutput = CreateFeedingEventInput;
+/**
+ * `note` is widened to `string | null` (unlike `CreateFeedingEventInput.note`)
+ * because edit mode needs to be able to send an explicit `null` to clear a
+ * previously-set note — see `handleSubmit` below and
+ * `UpdateFeedingEventInput`. Create mode never actually produces `null`
+ * here, only `undefined` (omitted) or a non-empty string.
+ */
+export type FeedingEventFormOutput = Omit<CreateFeedingEventInput, 'note'> & {
+  note?: string | null;
+};
 
 export interface FeedingEventFormProps {
   mode: 'create' | 'edit';
@@ -154,7 +163,13 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
         feedingType: feedingType as FeedingType,
         occurredAt: datetimeLocalValueToIso(occurredAt),
       };
-      if (note.trim().length > 0) {
+      if (mode === 'edit') {
+        // Edit mode must be able to signal "clear this note" — omitting
+        // the key here (like create mode does) would be indistinguishable
+        // from "leave it untouched" once serialized, so an explicit `null`
+        // is sent instead. See `UpdateFeedingEventDto`/`FeedingService.update`.
+        output.note = note.trim().length > 0 ? note : null;
+      } else if (note.trim().length > 0) {
         output.note = note;
       }
       if (feedingType === 'BREAST') {

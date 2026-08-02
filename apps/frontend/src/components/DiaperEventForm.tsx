@@ -38,7 +38,16 @@ export interface DiaperEventFormInitialValues {
   note?: string;
 }
 
-export type DiaperEventFormOutput = CreateDiaperEventInput;
+/**
+ * `note` is widened to `string | null` (unlike `CreateDiaperEventInput.note`)
+ * because edit mode needs to be able to send an explicit `null` to clear a
+ * previously-set note — see `handleSubmit` below and
+ * `UpdateDiaperEventInput`. Create mode never actually produces `null`
+ * here, only `undefined` (omitted) or a non-empty string.
+ */
+export type DiaperEventFormOutput = Omit<CreateDiaperEventInput, 'note'> & {
+  note?: string | null;
+};
 
 export interface DiaperEventFormProps {
   mode: 'create' | 'edit';
@@ -110,7 +119,13 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
         diaperType: diaperType as DiaperType,
         occurredAt: datetimeLocalValueToIso(occurredAt),
       };
-      if (note.trim().length > 0) {
+      if (mode === 'edit') {
+        // Edit mode must be able to signal "clear this note" — omitting
+        // the key here (like create mode does) would be indistinguishable
+        // from "leave it untouched" once serialized, so an explicit `null`
+        // is sent instead. See `UpdateDiaperEventDto`/`DiaperService.update`.
+        output.note = note.trim().length > 0 ? note : null;
+      } else if (note.trim().length > 0) {
         output.note = note;
       }
 

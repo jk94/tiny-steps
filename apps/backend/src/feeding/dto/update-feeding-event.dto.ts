@@ -7,6 +7,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { FeedingSide } from '../feeding-side.enum';
 import { IsEndNotBeforeStart } from '../validators/is-end-not-before-start.validator';
@@ -57,8 +58,15 @@ export class UpdateFeedingEventDto {
   @Max(MAX_AMOUNT_ML)
   amountMl?: number;
 
+  // `string | null` (unlike `CreateFeedingEventDto.note`), because update
+  // needs to distinguish "don't touch this field" (key absent — `@IsOptional`
+  // lets that through) from "clear it" (explicit `null` — `@ValidateIf`
+  // bypasses `@IsString`/`@MaxLength` for that case, since neither should
+  // apply to `null`). See `FeedingService.update`, which relies on
+  // `dto.note !== undefined` to tell the two apart.
   @IsOptional()
+  @ValidateIf((dto: UpdateFeedingEventDto) => dto.note !== null)
   @IsString()
   @MaxLength(MAX_NOTE_LENGTH)
-  note?: string;
+  note?: string | null;
 }

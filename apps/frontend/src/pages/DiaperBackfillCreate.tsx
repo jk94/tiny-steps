@@ -12,7 +12,12 @@ export function DiaperBackfillCreate() {
   const navigate = useNavigate();
 
   const handleSubmit = async (output: DiaperEventFormOutput) => {
-    await createDiaperEvent(householdId!, childId!, output);
+    // `DiaperEventFormOutput.note` is `string | null | undefined` because
+    // the same output type is shared with edit mode, but this page only
+    // ever renders the form in `mode="create"`, which never actually
+    // produces `null` (see `DiaperEventForm`) — normalize the type here
+    // to match `CreateDiaperEventInput.note` (`string | undefined`).
+    await createDiaperEvent(householdId!, childId!, { ...output, note: output.note ?? undefined });
     await queryClient.invalidateQueries({
       queryKey: ['households', householdId, 'children', childId, 'diaper-events'],
     });

@@ -12,7 +12,12 @@ export function FeedingBackfillCreate() {
   const navigate = useNavigate();
 
   const handleSubmit = async (output: FeedingEventFormOutput) => {
-    await createFeedingEvent(householdId!, childId!, output);
+    // `FeedingEventFormOutput.note` is `string | null | undefined` because
+    // the same output type is shared with edit mode, but this page only
+    // ever renders the form in `mode="create"`, which never actually
+    // produces `null` (see `FeedingEventForm`) — normalize the type here
+    // to match `CreateFeedingEventInput.note` (`string | undefined`).
+    await createFeedingEvent(householdId!, childId!, { ...output, note: output.note ?? undefined });
     await queryClient.invalidateQueries({
       queryKey: ['households', householdId, 'children', childId, 'feeding-events'],
     });
