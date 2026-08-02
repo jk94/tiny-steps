@@ -4,6 +4,7 @@ import { ChildModule } from '../child/child.module';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
 import { HouseholdModule } from '../household/household.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { RealtimeModule } from '../realtime/realtime.module';
 import { FeedingController } from './feeding.controller';
 import { FeedingService } from './feeding.service';
 
@@ -13,6 +14,9 @@ import { FeedingService } from './feeding.service';
   // /households/:householdId/children/:childId/feeding-events and reuse
   // the same membership check unmodified — see ChildModule's own doc
   // comment for the identical reasoning).
+  // RealtimeModule: exports RealtimeService, injected into FeedingService
+  // so create/update/remove/stop can broadcast a change to the household's
+  // WebSocket room (see FeedingService's own doc comment).
   // ChildModule currently provides no functional wiring here: it doesn't
   // export ChildService (or any provider), so FeedingService can't and
   // doesn't inject it — instead it re-implements the same child/household
@@ -28,7 +32,7 @@ import { FeedingService } from './feeding.service';
   // PrismaModule is `@Global()` already, but imported explicitly here for
   // clarity/consistency, mirroring HouseholdModule's/ChildModule's own doc
   // comments.
-  imports: [PrismaModule, AuthModule, HouseholdModule, ChildModule],
+  imports: [PrismaModule, AuthModule, HouseholdModule, ChildModule, RealtimeModule],
   controllers: [FeedingController],
   // HouseholdMembershipGuard is re-declared as a provider here (not just
   // pulled in via HouseholdModule's export): NestJS resolves a guard

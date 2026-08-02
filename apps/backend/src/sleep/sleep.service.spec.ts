@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import type { RealtimeService } from '../realtime/realtime.service';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
 import { UpdateSleepEventDto } from './dto/update-sleep-event.dto';
 import { SleepService } from './sleep.service';
@@ -49,6 +50,7 @@ describe('SleepService', () => {
       delete: jest.Mock;
     };
   };
+  let realtime: { broadcastEventChange: jest.Mock };
   let service: SleepService;
 
   beforeEach(() => {
@@ -63,7 +65,11 @@ describe('SleepService', () => {
         delete: jest.fn(),
       },
     };
-    service = new SleepService(prisma as unknown as PrismaService);
+    realtime = { broadcastEventChange: jest.fn() };
+    service = new SleepService(
+      prisma as unknown as PrismaService,
+      realtime as unknown as RealtimeService,
+    );
   });
 
   describe('create', () => {
@@ -90,6 +96,13 @@ describe('SleepService', () => {
       expect(createArgs.data.type).toBe(EventType.SLEEP);
       expect(createArgs.data.startedAt).toBeInstanceOf(Date);
       expect(createArgs.data.endedAt).toBeNull();
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.SLEEP,
+        action: 'created',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
     });
 
     it('creates a backfilled entry with explicit startedAt/endedAt, skipping the timer-conflict check', async () => {
@@ -257,6 +270,13 @@ describe('SleepService', () => {
         where: { id: EVENT_ID },
         data: { endedAt: new Date('2026-01-02T06:30:00.000Z') },
       });
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.SLEEP,
+        action: 'updated',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
     });
 
     it('re-checks endedAt >= startedAt against the merged existing row (400) when only endedAt is patched', async () => {
@@ -321,6 +341,15 @@ describe('SleepService', () => {
         where: { id: EVENT_ID },
         data: { endedAt: expect.any(Date) },
       });
+      // Collapsed into the generic 'updated' action, per RealtimeService's
+      // payload doc comment.
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.SLEEP,
+        action: 'updated',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
       expect(result.durationSeconds).toBe(900);
     });
 
@@ -357,6 +386,13 @@ describe('SleepService', () => {
 
       expect(prisma.event.delete).toHaveBeenCalledWith({ where: { id: EVENT_ID } });
       expect(prisma.event.delete).toHaveBeenCalledTimes(1);
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.SLEEP,
+        action: 'deleted',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
     });
 
     it('throws NotFoundException when scoped to a different child/household', async () => {
@@ -366,6 +402,7 @@ describe('SleepService', () => {
         NotFoundException,
       );
       expect(prisma.event.delete).not.toHaveBeenCalled();
+      expect(realtime.broadcastEventChange).not.toHaveBeenCalled();
     });
   });
 

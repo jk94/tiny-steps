@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import type { RealtimeService } from '../realtime/realtime.service';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
 import { FeedingService } from './feeding.service';
@@ -58,6 +59,7 @@ describe('FeedingService', () => {
       delete: jest.Mock;
     };
   };
+  let realtime: { broadcastEventChange: jest.Mock };
   let service: FeedingService;
 
   beforeEach(() => {
@@ -72,7 +74,11 @@ describe('FeedingService', () => {
         delete: jest.fn(),
       },
     };
-    service = new FeedingService(prisma as unknown as PrismaService);
+    realtime = { broadcastEventChange: jest.fn() };
+    service = new FeedingService(
+      prisma as unknown as PrismaService,
+      realtime as unknown as RealtimeService,
+    );
   });
 
   describe('create', () => {
@@ -266,6 +272,21 @@ describe('FeedingService', () => {
         include: { feedingDetail: true },
       });
     });
+
+    it('broadcasts a created event:changed message on success', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.create.mockResolvedValue(makeEvent());
+
+      await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, { feedingType: FeedingType.SOLID });
+
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.FEEDING,
+        action: 'created',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
+    });
   });
 
   describe('list', () => {
@@ -395,6 +416,13 @@ describe('FeedingService', () => {
         where: { id: EVENT_ID },
         data: { feedingDetail: { update: { amountMl: 120 } } },
         include: { feedingDetail: true },
+      });
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.FEEDING,
+        action: 'updated',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
       });
     });
 
@@ -553,6 +581,15 @@ describe('FeedingService', () => {
         data: { endedAt: expect.any(Date) },
         include: { feedingDetail: true },
       });
+      // Collapsed into the generic 'updated' action, per RealtimeService's
+      // payload doc comment.
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.FEEDING,
+        action: 'updated',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
       expect(result.durationSeconds).toBe(900);
     });
 
@@ -605,6 +642,13 @@ describe('FeedingService', () => {
 
       expect(prisma.event.delete).toHaveBeenCalledWith({ where: { id: EVENT_ID } });
       expect(prisma.event.delete).toHaveBeenCalledTimes(1);
+      expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+        type: EventType.FEEDING,
+        action: 'deleted',
+        eventId: EVENT_ID,
+        childId: CHILD_ID,
+        householdId: HOUSEHOLD_ID,
+      });
     });
 
     it('throws NotFoundException when scoped to a different child/household', async () => {
@@ -614,6 +658,7 @@ describe('FeedingService', () => {
         NotFoundException,
       );
       expect(prisma.event.delete).not.toHaveBeenCalled();
+      expect(realtime.broadcastEventChange).not.toHaveBeenCalled();
     });
   });
 
