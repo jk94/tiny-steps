@@ -150,6 +150,24 @@ pattern already used for `toAllowedMimeType()` in `child.service.ts`.
   DTO, never deriving it from `startedAt`, so no code path currently performs a partial update that
   could cause drift; worth re-checking if `SleepDetail` update logic is written differently.
 
+## Addendum: Sleep needed no detail table
+
+When the Sleep sub-step (Phase 2) was implemented, it turned out **not** to need a `SleepDetail`
+table, contradicting this ADR's original expectation above. Sleep's actual scope (start/stop timer,
+manual backfill with start/end time, CRUD) has no field beyond what the base `Event` table already
+carries (`type = 'SLEEP'`, `occurredAt`, `startedAt`/`endedAt`, `childId`, `userId`) — unlike
+Feeding, there is no discriminant sub-type, no conditional field, and no note requirement in scope.
+Sleep is therefore a pure base-`Event` row with no detail table and no relation to one. This does not
+invalidate this ADR's core decision (a base `Event` + per-type detail table *where a type has
+type-specific data*) — it refines it: **a detail table is added only when a type actually has fields
+beyond what `Event` already carries**, not automatically for every new event type. `DiaperDetail`
+(still pending) is expected to need one after all, since Diaper does have type-specific fields
+(Pipi/Stuhlgang/beides + an optional consistency note) per PRD 4.1 — so it should still follow the
+original `FeedingDetail` pattern when implemented; only the blanket "every type gets a detail table"
+framing was wrong, not the pattern itself for types that need it. See
+`apps/backend/src/sleep/sleep.service.ts` for the resulting implementation (`Event`-only
+reads/writes, no join).
+
 ## Related
 
 - [Phase 2 roadmap](../roadmap/phase-2-tracking-kernfunktionen.md) — "Datenmodell" and "Backend:
@@ -162,5 +180,7 @@ pattern already used for `toAllowedMimeType()` in `child.service.ts`.
 - `apps/backend/src/feeding/` — implementation (`feeding.service.ts`, `feeding.controller.ts`,
   `feeding.module.ts`, `feeding-type.enum.ts`, `feeding-side.enum.ts`, `dto/create-feeding-event.dto.ts`,
   `dto/update-feeding-event.dto.ts`, `validators/is-end-not-before-start.validator.ts`).
+- `apps/backend/src/sleep/` — implementation of the Sleep sub-step (see Addendum above);
+  deliberately has no `sleep.detail`/`SleepDetail` file, unlike `feeding/`.
 - `apps/backend/src/event/event-type.enum.ts` — the shared `EventType` enum/cast function.
 - `apps/backend/prisma/schema.prisma` — `Event.startedAt`/`endedAt`, `FeedingDetail` model.
