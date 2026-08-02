@@ -1,9 +1,39 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+import { pwaManifest } from './pwa.config.ts';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // "PWA basics" slice of Phase 4 (see docs/adr/0008-pwa-basics-via-vite-plugin-pwa.md):
+    // installable app shell (manifest + service worker) via the `generateSW`
+    // strategy (the plugin's default `strategies`). Registration is done
+    // explicitly from app code (`src/pwa/registerServiceWorker.ts`), not
+    // auto-injected, hence `injectRegister: false`.
+    VitePWA({
+      registerType: 'prompt',
+      injectRegister: false,
+      manifest: pwaManifest,
+      includeAssets: [
+        'icons/app-icon.svg',
+        'icons/pwa-192x192.png',
+        'icons/pwa-512x512.png',
+        'icons/pwa-192x192-maskable.png',
+        'icons/pwa-512x512-maskable.png',
+        'apple-touch-icon.png',
+      ],
+      workbox: {
+        navigateFallback: 'index.html',
+        // API and WebSocket traffic must stay network-only — this slice is
+        // app-shell caching only, not offline data (that's a later,
+        // out-of-scope slice; see ADR-0008).
+        navigateFallbackDenylist: [/^\/api\//, /^\/health/],
+        cleanupOutdatedCaches: true,
+      },
+    }),
+  ],
   server: {
     proxy: {
       // Dev-only same-origin proxy to the backend (must be running via
