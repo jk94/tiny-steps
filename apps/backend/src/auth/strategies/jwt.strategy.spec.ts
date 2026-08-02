@@ -1,59 +1,51 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { Request } from 'express';
+import { AccessTokenVerifierService } from '../access-token-verifier.service';
+import type { AuthenticatedUser } from '../types/authenticated-request';
 import { JwtStrategy } from './jwt.strategy';
 
 describe('JwtStrategy', () => {
-  let prisma: { user: { findUnique: jest.Mock } };
+  let accessTokenVerifier: { verify: jest.Mock };
   let strategy: JwtStrategy;
 
   beforeEach(() => {
-    prisma = { user: { findUnique: jest.fn() } };
-    strategy = new JwtStrategy(prisma as unknown as PrismaService, {
+    accessTokenVerifier = { verify: jest.fn() };
+    strategy = new JwtStrategy(accessTokenVerifier as unknown as AccessTokenVerifierService, {
       accessSecret: 'a',
       refreshSecret: 'r',
     });
   });
 
-  it('returns the sanitized user (no passwordHash) for a valid payload with an existing DB row', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'user-1',
-      email: 'parent@example.com',
-      passwordHash: 'should-not-leak',
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-    });
+  function requestWithCookie(token: string | undefined): Request {
+    return { cookies: { access_token: token } } as unknown as Request;
+  }
 
-    const result = await strategy.validate({ sub: 'user-1' });
-
-    expect(result).toEqual({
+  it('delegates to AccessTokenVerifierService.verify() with the raw cookie token, returning its result', async () => {
+    const user: AuthenticatedUser = {
       id: 'user-1',
       email: 'parent@example.com',
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    });
-    expect(result).not.toHaveProperty('passwordHash');
+    };
+    accessTokenVerifier.verify.mockResolvedValue(user);
+
+    const result = await strategy.validate(requestWithCookie('a-raw-access-token'));
+
+    expect(accessTokenVerifier.verify).toHaveBeenCalledWith('a-raw-access-token');
+    expect(result).toBe(user);
   });
 
-  it('rejects when the user no longer exists', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
-
-    await expect(strategy.validate({ sub: 'deleted-user' })).rejects.toBeInstanceOf(
+  it('rejects with UnauthorizedException, without calling verify(), when the access_token cookie is missing', async () => {
+    await expect(strategy.validate(requestWithCookie(undefined))).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+    expect(accessTokenVerifier.verify).not.toHaveBeenCalled();
   });
 
-  it('rejects a payload carrying a `purpose` claim (shaped like an oidc_txn token, not a real access token)', async () => {
-    await expect(strategy.validate({ sub: 'user-1', purpose: 'oidc-txn' })).rejects.toBeInstanceOf(
+  it('propagates rejection from AccessTokenVerifierService.verify()', async () => {
+    accessTokenVerifier.verify.mockRejectedValue(new UnauthorizedException('Invalid access token'));
+
+    await expect(strategy.validate(requestWithCookie('bad-token'))).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
-
-    expect(prisma.user.findUnique).not.toHaveBeenCalled();
-  });
-
-  it('rejects a payload without a string `sub`', async () => {
-    await expect(strategy.validate({ sub: undefined as unknown as string })).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
-
-    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 });
