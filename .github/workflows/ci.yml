@@ -123,6 +123,13 @@ jobs:
     timeout-minutes: 15
     # Don't spend time building an image if lint/tests/build already failed.
     needs: [lint, backend, frontend]
+    # Job-level (not workflow-level) so the other jobs keep minimal default
+    # permissions. Needed for docker/login-action + docker/build-push-action
+    # to actually push to GHCR with GITHUB_TOKEN (defaults to read-only
+    # otherwise, which would 403 on push).
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
