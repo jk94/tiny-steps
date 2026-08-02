@@ -176,6 +176,36 @@ describe('FeedingService', () => {
       expect(prisma.event.create).not.toHaveBeenCalled();
     });
 
+    it('throws BadRequestException (400) when endedAt is before an explicit startedAt for a BREAST feed', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      const dto: CreateFeedingEventDto = {
+        feedingType: FeedingType.BREAST,
+        side: FeedingSide.LEFT,
+        startedAt: '2026-01-01T08:00:00.000Z',
+        endedAt: '2026-01-01T06:00:00.000Z',
+      };
+
+      await expect(service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.event.create).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException (400) when startedAt is omitted and endedAt is before the effective startedAt derived from occurredAt for a BREAST feed', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      const dto: CreateFeedingEventDto = {
+        feedingType: FeedingType.BREAST,
+        side: FeedingSide.LEFT,
+        occurredAt: '2026-01-01T08:00:00.000Z',
+        endedAt: '2026-01-01T06:00:00.000Z',
+      };
+
+      await expect(service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.event.create).not.toHaveBeenCalled();
+    });
+
     it('creates a BOTTLE feed, persisting amountMl and discarding side', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.event.create.mockResolvedValue(

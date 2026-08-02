@@ -130,6 +130,32 @@ describe('SleepService', () => {
       );
       expect(prisma.event.create).not.toHaveBeenCalled();
     });
+
+    it('throws BadRequestException (400) when endedAt is before an explicit startedAt', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      const dto: CreateSleepEventDto = {
+        startedAt: '2026-01-01T08:00:00.000Z',
+        endedAt: '2026-01-01T06:00:00.000Z',
+      };
+
+      await expect(service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.event.create).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException (400) when startedAt is omitted and endedAt is before the effective startedAt derived from occurredAt', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      const dto: CreateSleepEventDto = {
+        occurredAt: '2026-01-01T08:00:00.000Z',
+        endedAt: '2026-01-01T06:00:00.000Z',
+      };
+
+      await expect(service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.event.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('list', () => {

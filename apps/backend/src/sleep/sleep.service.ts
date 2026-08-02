@@ -72,6 +72,15 @@ export class SleepService {
     const occurredAt = dto.occurredAt ? new Date(dto.occurredAt) : startedAt;
     const endedAt = dto.endedAt ? new Date(dto.endedAt) : null;
 
+    // Mirrors the re-check in `update()` — the DTO-level `@IsEndNotBeforeStart`
+    // only validates fields present in the request body, so a backfill that
+    // omits `startedAt` (derived here from `occurredAt`) can still combine
+    // with an explicit `endedAt` into a negative-duration event unless
+    // re-checked against the *effective* values computed above.
+    if (endedAt !== null && endedAt.getTime() < startedAt.getTime()) {
+      throw new BadRequestException('endedAt must not be before startedAt');
+    }
+
     // Prevents two caregivers starting two concurrent sleep timers for the
     // same child. Unconditional (no type-gating, unlike Feeding's BREAST-only
     // check) since Sleep has no non-timer sub-type to exempt — it only does
