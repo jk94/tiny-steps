@@ -136,8 +136,40 @@ model Event {
   // Placeholder string for now (Feeding/Sleep/Diaper/...); see PRD 4.1/5.2.
   type       String
   occurredAt DateTime
+  // Timer semantics, hoisted to the base Event (not just FeedingDetail)
+  // because they're shared across future timer-based event types (Sleep
+  // will be timer-based too). `startedAt` is set for timer-based events,
+  // null for point events (bottle, solid, future diaper). `endedAt` is null
+  // while a timer-based event is running, or always null for point events.
+  // `occurredAt` stays the single canonical non-null column used for
+  // sorting a mixed-type timeline, deliberately duplicating `startedAt` for
+  // timer events at creation time.
+  startedAt  DateTime?
+  endedAt    DateTime?
   createdAt  DateTime @default(now())
 
-  child Child @relation(fields: [childId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
+  child         Child          @relation(fields: [childId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  feedingDetail FeedingDetail?
+}
+
+model FeedingDetail {
+  eventId String @id
+  // FeedingType enum value (BREAST | BOTTLE | SOLID); see
+  // `src/feeding/feeding-type.enum.ts`. Kept as a plain `String`, not a
+  // Prisma `enum`, for the same reason as `Membership.role` — Prisma's
+  // `enum` type isn't supported on the SQLite connector. See
+  // `docs/adr/0002-application-level-household-roles-and-invites.md`.
+  feedingType String
+  // FeedingSide enum value (LEFT | RIGHT); only set when feedingType is
+  // BREAST.
+  side        String?
+  // Only set when feedingType is BOTTLE.
+  amountMl    Int?
+  // Free text, optional for all feeding types.
+  note        String?
+
+  // Cascade: deleting an Event auto-removes its FeedingDetail, no manual
+  // two-step delete needed in FeedingService.
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

@@ -125,6 +125,7 @@
       "title": "Children",
       "empty": "No child profiles have been created for this household yet.",
       "addLink": "Add child",
+      "feedingLink": "Feeding",
       "photoAlt": "Photo of {{name}}"
     },
     "create": {
@@ -163,6 +164,91 @@
       "notFound": "This child profile wasn't found.",
       "forbidden": "Only the household owner can perform this action.",
       "invalidInput": "Couldn't save your changes. Please check the name, birth date, and photo.",
+      "generic": "Something went wrong. Please try again later."
+    }
+  },
+  "feeding": {
+    "home": {
+      "title": "Feeding — {{name}}",
+      "backLink": "Back to household",
+      "backfillLink": "Add entry manually"
+    },
+    "quickEntry": {
+      "title": "Quick entry",
+      "breastLeftButton": "Breastfeed left",
+      "breastRightButton": "Breastfeed right",
+      "bottleButton": "Bottle",
+      "bottleAmountButton": "{{amount}} ml",
+      "solidButton": "Solid food"
+    },
+    "timer": {
+      "title": "Breastfeeding in progress",
+      "sideLeft": "Left side",
+      "sideRight": "Right side",
+      "stopButton": "Stop",
+      "stopButtonPending": "Stopping…"
+    },
+    "list": {
+      "title": "Recent feedings",
+      "empty": "No feeding entries recorded yet.",
+      "entryBreastLeft": "Breastfeeding (left)",
+      "entryBreastRight": "Breastfeeding (right)",
+      "entryBottle": "Bottle ({{amount}} ml)",
+      "entrySolid": "Solid food",
+      "durationMinutes": "{{minutes}} min"
+    },
+    "backfill": {
+      "title": "Add feeding entry",
+      "backLink": "Back to feeding"
+    },
+    "edit": {
+      "title": "Edit feeding entry",
+      "backLink": "Back to feeding",
+      "deleteButton": "Delete entry",
+      "deleteDialog": {
+        "title": "Delete feeding entry?",
+        "description": "This action can't be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "form": {
+      "submitButton": "Save entry",
+      "submitButtonPending": "Saving…",
+      "saveButton": "Save",
+      "saveButtonPending": "Saving…"
+    },
+    "fields": {
+      "feedingTypeLabel": "Feeding type",
+      "feedingTypePlaceholder": "Choose a type…",
+      "feedingTypeOptionBreast": "Breastfeeding",
+      "feedingTypeOptionBottle": "Bottle",
+      "feedingTypeOptionSolid": "Solid food",
+      "occurredAtLabel": "Time",
+      "startedAtLabel": "Start time (optional)",
+      "endedAtLabel": "End time (optional)",
+      "sideLabel": "Side",
+      "sideLeftOption": "Left",
+      "sideRightOption": "Right",
+      "amountLabel": "Amount (ml)",
+      "noteLabel": "Note (optional)"
+    },
+    "validation": {
+      "feedingTypeRequired": "Please choose a feeding type.",
+      "occurredAtRequired": "Please enter a time.",
+      "occurredAtFuture": "The time can't be in the future.",
+      "sideRequired": "Please choose a side.",
+      "amountRequired": "Please enter an amount in ml.",
+      "amountOutOfRange": "The amount must be between 1 and 2000 ml.",
+      "endedBeforeStarted": "The end time can't be before the start time.",
+      "endedAtRequired": "Please enter an end time.",
+      "noteTooLong": "The note must be at most 500 characters long."
+    },
+    "errors": {
+      "notFound": "This feeding entry wasn't found.",
+      "invalidInput": "Couldn't save your changes. Please check the entered values.",
+      "timerConflict": "A breastfeeding timer is already running for this child.",
+      "timerAlreadyStopped": "This timer has already been stopped.",
       "generic": "Something went wrong. Please try again later."
     }
   }

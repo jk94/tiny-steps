@@ -125,6 +125,7 @@
       "title": "Kinder",
       "empty": "Für diesen Haushalt sind noch keine Kind-Profile angelegt.",
       "addLink": "Kind hinzufügen",
+      "feedingLink": "Füttern",
       "photoAlt": "Foto von {{name}}"
     },
     "create": {
@@ -163,6 +164,91 @@
       "notFound": "Dieses Kind-Profil wurde nicht gefunden.",
       "forbidden": "Nur die haushaltführende Person darf diese Aktion ausführen.",
       "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe Name, Geburtsdatum und Foto.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
+  },
+  "feeding": {
+    "home": {
+      "title": "Füttern — {{name}}",
+      "backLink": "Zurück zum Haushalt",
+      "backfillLink": "Eintrag manuell hinzufügen"
+    },
+    "quickEntry": {
+      "title": "Schnelleingabe",
+      "breastLeftButton": "Stillen links",
+      "breastRightButton": "Stillen rechts",
+      "bottleButton": "Fläschchen",
+      "bottleAmountButton": "{{amount}} ml",
+      "solidButton": "Beikost"
+    },
+    "timer": {
+      "title": "Stillen läuft",
+      "sideLeft": "Linke Seite",
+      "sideRight": "Rechte Seite",
+      "stopButton": "Stopp",
+      "stopButtonPending": "Wird gestoppt…"
+    },
+    "list": {
+      "title": "Letzte Fütterungen",
+      "empty": "Es wurden noch keine Fütterungen erfasst.",
+      "entryBreastLeft": "Stillen (links)",
+      "entryBreastRight": "Stillen (rechts)",
+      "entryBottle": "Fläschchen ({{amount}} ml)",
+      "entrySolid": "Beikost",
+      "durationMinutes": "{{minutes}} Min."
+    },
+    "backfill": {
+      "title": "Fütterung nachtragen",
+      "backLink": "Zurück zum Füttern"
+    },
+    "edit": {
+      "title": "Fütterung bearbeiten",
+      "backLink": "Zurück zum Füttern",
+      "deleteButton": "Eintrag löschen",
+      "deleteDialog": {
+        "title": "Eintrag löschen?",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "form": {
+      "submitButton": "Eintrag speichern",
+      "submitButtonPending": "Wird gespeichert…",
+      "saveButton": "Speichern",
+      "saveButtonPending": "Wird gespeichert…"
+    },
+    "fields": {
+      "feedingTypeLabel": "Art der Fütterung",
+      "feedingTypePlaceholder": "Art wählen…",
+      "feedingTypeOptionBreast": "Stillen",
+      "feedingTypeOptionBottle": "Fläschchen",
+      "feedingTypeOptionSolid": "Beikost",
+      "occurredAtLabel": "Zeitpunkt",
+      "startedAtLabel": "Startzeit (optional)",
+      "endedAtLabel": "Endzeit (optional)",
+      "sideLabel": "Seite",
+      "sideLeftOption": "Links",
+      "sideRightOption": "Rechts",
+      "amountLabel": "Menge (ml)",
+      "noteLabel": "Notiz (optional)"
+    },
+    "validation": {
+      "feedingTypeRequired": "Bitte wähle eine Art der Fütterung.",
+      "occurredAtRequired": "Bitte gib einen Zeitpunkt ein.",
+      "occurredAtFuture": "Der Zeitpunkt darf nicht in der Zukunft liegen.",
+      "sideRequired": "Bitte wähle eine Seite.",
+      "amountRequired": "Bitte gib eine Menge in ml ein.",
+      "amountOutOfRange": "Die Menge muss zwischen 1 und 2000 ml liegen.",
+      "endedBeforeStarted": "Die Endzeit darf nicht vor der Startzeit liegen.",
+      "endedAtRequired": "Bitte gib eine Endzeit ein.",
+      "noteTooLong": "Die Notiz darf höchstens 500 Zeichen lang sein."
+    },
+    "errors": {
+      "notFound": "Dieser Fütterungs-Eintrag wurde nicht gefunden.",
+      "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe deine Angaben.",
+      "timerConflict": "Für dieses Kind läuft bereits ein Still-Timer.",
+      "timerAlreadyStopped": "Dieser Timer wurde bereits gestoppt.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   }
