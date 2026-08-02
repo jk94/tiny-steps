@@ -120,6 +120,24 @@ describe('ChildList', () => {
     expect(link).toHaveAttribute('href', '/households/h1/children/c1/diaper');
   });
 
+  it('renders a "Daily timeline" link per child, pointing at its timeline page', async () => {
+    mockedChildApi.listChildren.mockResolvedValueOnce([
+      {
+        id: 'c1',
+        householdId: 'h1',
+        name: 'Alex',
+        birthDate: '2020-01-01',
+        hasPhoto: false,
+        createdAt: '2020-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    renderChildList('OWNER');
+
+    const link = await screen.findByRole('link', { name: 'Daily timeline' });
+    expect(link).toHaveAttribute('href', '/households/h1/children/c1/timeline');
+  });
+
   it('shows the "add child" link for an OWNER', () => {
     mockedChildApi.listChildren.mockReturnValue(new Promise(() => {}));
 

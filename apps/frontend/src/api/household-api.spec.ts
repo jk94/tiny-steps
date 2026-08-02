@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as httpClient from './http-client';
-import { createHousehold, createInvite, fetchHousehold, listHouseholds } from './household-api';
+import {
+  createHousehold,
+  createInvite,
+  fetchHousehold,
+  listHouseholdMembers,
+  listHouseholds,
+} from './household-api';
 
 vi.mock('./http-client', async () => {
   const actual = await vi.importActual<typeof httpClient>('./http-client');
@@ -72,5 +78,15 @@ describe('household-api', () => {
 
     expect(mockedApiFetch).toHaveBeenCalledWith('/households/1/invites', { method: 'POST' });
     expect(result).toEqual(invite);
+  });
+
+  it('listHouseholdMembers GETs /households/:householdId/members', async () => {
+    const members = [{ userId: 'user-1', email: 'parent@example.com' }];
+    mockedApiFetch.mockResolvedValueOnce(members);
+
+    const result = await listHouseholdMembers('1');
+
+    expect(mockedApiFetch).toHaveBeenCalledWith('/households/1/members');
+    expect(result).toEqual(members);
   });
 });
