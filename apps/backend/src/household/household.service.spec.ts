@@ -70,4 +70,44 @@ describe('HouseholdService', () => {
       ]);
     });
   });
+
+  describe('listMembers', () => {
+    it('maps membership + user rows to { userId, email } pairs', async () => {
+      prisma.membership.findMany.mockResolvedValue([
+        {
+          id: 'membership-1',
+          userId: 'user-1',
+          householdId: 'household-1',
+          role: HouseholdRole.OWNER,
+          user: { id: 'user-1', email: 'owner@example.com' },
+        },
+        {
+          id: 'membership-2',
+          userId: 'user-2',
+          householdId: 'household-1',
+          role: HouseholdRole.CO_PARENT,
+          user: { id: 'user-2', email: 'co-parent@example.com' },
+        },
+      ]);
+
+      const result = await service.listMembers('household-1');
+
+      expect(prisma.membership.findMany).toHaveBeenCalledWith({
+        where: { householdId: 'household-1' },
+        include: { user: true },
+      });
+      expect(result).toEqual([
+        { userId: 'user-1', email: 'owner@example.com' },
+        { userId: 'user-2', email: 'co-parent@example.com' },
+      ]);
+    });
+
+    it('returns an empty array for a household with no members', async () => {
+      prisma.membership.findMany.mockResolvedValue([]);
+
+      const result = await service.listMembers('household-1');
+
+      expect(result).toEqual([]);
+    });
+  });
 });

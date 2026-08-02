@@ -8,7 +8,7 @@ import { HouseholdMembershipGuard } from './guards/household-membership.guard';
 import { RequireRole } from './guards/require-role.decorator';
 import { HouseholdRole, toHouseholdRole } from './household-role.enum';
 import { HouseholdService } from './household.service';
-import type { HouseholdSummary } from './household.service';
+import type { HouseholdMemberSummary, HouseholdSummary } from './household.service';
 import { InviteService } from './invite.service';
 import type { CreatedInvite } from './invite.service';
 import type { HouseholdScopedRequest } from './types/household-scoped-request';
@@ -54,6 +54,12 @@ export class HouseholdController {
       role: toHouseholdRole(membership.role),
       createdAt: membership.household.createdAt,
     };
+  }
+
+  @UseGuards(JwtAuthGuard, HouseholdMembershipGuard)
+  @Get(':householdId/members')
+  async listMembers(@Param('householdId') householdId: string): Promise<HouseholdMemberSummary[]> {
+    return this.householdService.listMembers(householdId);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)

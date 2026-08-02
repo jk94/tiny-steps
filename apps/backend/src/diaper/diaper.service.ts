@@ -28,13 +28,15 @@ export interface DiaperEventSummary {
   createdAt: Date;
 }
 
-function toSummary(event: EventWithDiaperDetail): DiaperEventSummary {
+// Exported so EventService.listDaily can reuse the exact same mapping
+// logic for the merged daily timeline — see EventService's own doc comment.
+export function toDiaperEventSummary(event: EventWithDiaperDetail): DiaperEventSummary {
   const detail = event.diaperDetail;
   if (!detail) {
     // Should be unreachable — every DIAPER Event is created together with
     // its DiaperDetail in the same `create` call (see `create()` below),
     // and `onDelete: Cascade` means it can't outlive its Event either.
-    // Defensive boundary mirroring `FeedingService.toSummary()`.
+    // Defensive boundary mirroring `FeedingService.toFeedingEventSummary()`.
     throw new Error(`DIAPER event ${event.id} is missing its DiaperDetail`);
   }
 
@@ -115,7 +117,7 @@ export class DiaperService {
       householdId,
     });
 
-    return toSummary(event);
+    return toDiaperEventSummary(event);
   }
 
   async list(householdId: string, childId: string): Promise<DiaperEventSummary[]> {
@@ -127,7 +129,7 @@ export class DiaperService {
       include: { diaperDetail: true },
     });
 
-    return events.map(toSummary);
+    return events.map(toDiaperEventSummary);
   }
 
   async findOne(
@@ -136,7 +138,7 @@ export class DiaperService {
     eventId: string,
   ): Promise<DiaperEventSummary> {
     const event = await this.findDiaperEventOrThrow(householdId, childId, eventId);
-    return toSummary(event);
+    return toDiaperEventSummary(event);
   }
 
   async update(
@@ -180,7 +182,7 @@ export class DiaperService {
       householdId,
     });
 
-    return toSummary(updated);
+    return toDiaperEventSummary(updated);
   }
 
   async remove(householdId: string, childId: string, eventId: string): Promise<void> {

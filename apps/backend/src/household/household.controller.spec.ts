@@ -12,12 +12,14 @@ const currentUser: AuthenticatedUser = {
 };
 
 describe('HouseholdController', () => {
-  let householdService: jest.Mocked<Pick<HouseholdService, 'create' | 'listForUser'>>;
+  let householdService: jest.Mocked<
+    Pick<HouseholdService, 'create' | 'listForUser' | 'listMembers'>
+  >;
   let inviteService: jest.Mocked<Pick<InviteService, 'create'>>;
   let controller: HouseholdController;
 
   beforeEach(() => {
-    householdService = { create: jest.fn(), listForUser: jest.fn() };
+    householdService = { create: jest.fn(), listForUser: jest.fn(), listMembers: jest.fn() };
     inviteService = { create: jest.fn() };
     controller = new HouseholdController(
       householdService as unknown as HouseholdService,
@@ -90,6 +92,26 @@ describe('HouseholdController', () => {
         role: HouseholdRole.CO_PARENT,
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
+    });
+  });
+
+  describe('listMembers', () => {
+    it('delegates to HouseholdService.listMembers with the householdId param', async () => {
+      const members = [{ userId: 'user-1', email: 'parent@example.com' }];
+      householdService.listMembers.mockResolvedValue(members);
+
+      const result = await controller.listMembers('household-1');
+
+      expect(householdService.listMembers).toHaveBeenCalledWith('household-1');
+      expect(result).toBe(members);
+    });
+
+    it('returns an empty array for a household with no members', async () => {
+      householdService.listMembers.mockResolvedValue([]);
+
+      const result = await controller.listMembers('household-1');
+
+      expect(result).toEqual([]);
     });
   });
 

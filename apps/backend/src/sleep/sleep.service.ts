@@ -22,12 +22,14 @@ export interface SleepEventSummary {
   endedAt: Date | null;
   // Derived at read time from endedAt - startedAt when both are present,
   // else null — never stored, so it can never drift from the two fields it
-  // is computed from. Same computation as FeedingService.toSummary.
+  // is computed from. Same computation as FeedingService.toFeedingEventSummary.
   durationSeconds: number | null;
   createdAt: Date;
 }
 
-function toSummary(event: Event): SleepEventSummary {
+// Exported so EventService.listDaily can reuse the exact same mapping
+// logic for the merged daily timeline — see EventService's own doc comment.
+export function toSleepEventSummary(event: Event): SleepEventSummary {
   const durationSeconds =
     event.startedAt && event.endedAt
       ? Math.round((event.endedAt.getTime() - event.startedAt.getTime()) / 1000)
@@ -128,7 +130,7 @@ export class SleepService {
       householdId,
     });
 
-    return toSummary(event);
+    return toSleepEventSummary(event);
   }
 
   async list(householdId: string, childId: string): Promise<SleepEventSummary[]> {
@@ -139,7 +141,7 @@ export class SleepService {
       orderBy: { occurredAt: 'desc' },
     });
 
-    return events.map(toSummary);
+    return events.map(toSleepEventSummary);
   }
 
   async findActiveTimer(householdId: string, childId: string): Promise<SleepEventSummary | null> {
@@ -149,12 +151,12 @@ export class SleepService {
       where: { childId, type: EventType.SLEEP, endedAt: null },
     });
 
-    return event ? toSummary(event) : null;
+    return event ? toSleepEventSummary(event) : null;
   }
 
   async findOne(householdId: string, childId: string, eventId: string): Promise<SleepEventSummary> {
     const event = await this.findSleepEventOrThrow(householdId, childId, eventId);
-    return toSummary(event);
+    return toSleepEventSummary(event);
   }
 
   async update(
@@ -203,7 +205,7 @@ export class SleepService {
       householdId,
     });
 
-    return toSummary(updated);
+    return toSleepEventSummary(updated);
   }
 
   async stop(householdId: string, childId: string, eventId: string): Promise<SleepEventSummary> {
@@ -230,7 +232,7 @@ export class SleepService {
       householdId,
     });
 
-    return toSummary(updated);
+    return toSleepEventSummary(updated);
   }
 
   async remove(householdId: string, childId: string, eventId: string): Promise<void> {

@@ -11,6 +11,17 @@ export interface HouseholdSummary {
   createdAt: Date;
 }
 
+/**
+ * Minimal per-member identity for resolving "who logged this event" in the
+ * daily timeline (see `TimelineEventList`) — `email` is the only
+ * user-identifying field this app has (no display-name field on `User`),
+ * which is fine for MVP.
+ */
+export interface HouseholdMemberSummary {
+  userId: string;
+  email: string;
+}
+
 @Injectable()
 export class HouseholdService {
   constructor(private readonly prisma: PrismaService) {}
@@ -37,6 +48,24 @@ export class HouseholdService {
       name: membership.household.name,
       role: toHouseholdRole(membership.role),
       createdAt: membership.household.createdAt,
+    }));
+  }
+
+  /**
+   * Lists every member of a household as `{ userId, email }` pairs. No role
+   * filtering here — the caller (`HouseholdController.listMembers`) is
+   * guarded by `HouseholdMembershipGuard` only, since any member may view the
+   * member list (same read-access rule as everywhere else in this codebase).
+   */
+  async listMembers(householdId: string): Promise<HouseholdMemberSummary[]> {
+    const memberships = await this.prisma.membership.findMany({
+      where: { householdId },
+      include: { user: true },
+    });
+
+    return memberships.map((membership) => ({
+      userId: membership.user.id,
+      email: membership.user.email,
     }));
   }
 }
