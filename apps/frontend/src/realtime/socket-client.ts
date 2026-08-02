@@ -6,11 +6,14 @@ import { io, type Socket } from 'socket.io-client';
  * `vi.mock('socket.io-client')` and assert on how `RealtimeProvider` uses
  * the returned socket, without ever attempting a real network connection.
  *
- * No explicit `url`/`path` option: defaults to the current origin's default
- * Socket.IO path (`/socket.io`), matching `RealtimeGateway`'s own defaults
- * on the backend (see its doc comment) and the dev-proxy entry in
- * `vite.config.ts`. Same-origin, so the httpOnly `access_token` cookie is
- * attached to the handshake automatically — no `withCredentials` needed.
+ * No explicit `url`: defaults to the current origin. `path: '/api/socket.io'`
+ * mirrors `RealtimeGateway`'s own path (see its doc comment) — the handshake
+ * must live under `/api` because that's the path the httpOnly `access_token`
+ * cookie is scoped to (`AuthCookieService`); a handshake outside `/api`
+ * would never carry it. Same-origin, so the cookie is attached to the
+ * handshake automatically once the path matches — no `withCredentials`
+ * needed. The dev-only Vite proxy (`vite.config.ts`) forwards this same
+ * path with `ws: true`.
  *
  * `autoConnect: false` — `RealtimeProvider` constructs this instance once
  * (regardless of auth state) and explicitly calls `.connect()`/
@@ -18,5 +21,5 @@ import { io, type Socket } from 'socket.io-client';
  * constructing a second instance (see its own doc comment for why).
  */
 export function createSocket(): Socket {
-  return io({ autoConnect: false });
+  return io({ autoConnect: false, path: '/api/socket.io' });
 }

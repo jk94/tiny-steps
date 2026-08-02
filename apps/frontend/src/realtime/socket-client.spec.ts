@@ -7,10 +7,10 @@ vi.mock('socket.io-client', () => ({
 }));
 
 describe('createSocket', () => {
-  it('calls io() with no explicit url/path (current origin default) and autoConnect disabled', () => {
+  it('calls io() with no explicit url (current origin default), the /api-scoped socket.io path, and autoConnect disabled', () => {
     const socket = createSocket();
 
-    expect(io).toHaveBeenCalledWith({ autoConnect: false });
+    expect(io).toHaveBeenCalledWith({ autoConnect: false, path: '/api/socket.io' });
     expect(socket).toEqual({ id: 'fake-socket' });
   });
 });

@@ -31,16 +31,29 @@ interface HouseholdRoomMessage {
 /**
  * Real-time transport for household-scoped event-change notifications (see
  * `RealtimeService.broadcastEventChange`). Attached to the same HTTP server
- * Nest already listens on — default Socket.IO path (`/socket.io`) and
- * namespace (`/`), no `cors` option: this app never enables CORS (see
- * `main.ts`'s doc comment) since the SPA and API are always served from the
- * same origin, and that reasoning applies here unchanged.
+ * Nest already listens on — default namespace (`/`), no `cors` option: this
+ * app never enables CORS (see `main.ts`'s doc comment) since the SPA and API
+ * are always served from the same origin, and that reasoning applies here
+ * unchanged.
+ *
+ * `path: '/api/socket.io'` (NOT Socket.IO's own default of `/socket.io`) is
+ * deliberate, not cosmetic: `AuthCookieService` scopes the `access_token`
+ * cookie to `path: '/api'` (reduces exposure — see its doc comment), and per
+ * RFC 6265 a browser only attaches a cookie to a request whose path is
+ * under the cookie's own path. A handshake against `/socket.io` (outside
+ * `/api`) would never carry the cookie at all — this bit the app in
+ * practice as `RealtimeGateway` logging "no access_token cookie on
+ * handshake" for every real browser connection. Moving the handshake itself
+ * under `/api` is what makes it eligible for the cookie, matching every
+ * other authenticated endpoint. The frontend's `createSocket()`
+ * (`apps/frontend/src/realtime/socket-client.ts`) and the dev-only Vite
+ * proxy (`apps/frontend/vite.config.ts`) both mirror this same path.
  *
  * Household "rooms" are joined per-active-route via the `joinHousehold`/
  * `leaveHousehold` messages below, NOT all-at-once at connection time —
  * see `useHouseholdRoom` on the frontend, which is the sole caller.
  */
-@WebSocketGateway()
+@WebSocketGateway({ path: '/api/socket.io' })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   private readonly logger = new Logger(RealtimeGateway.name);
 
