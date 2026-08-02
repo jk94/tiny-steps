@@ -1,5 +1,5 @@
 import { IsISO8601, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
-import { IsNotFutureDate } from '../validators/is-not-future-date.validator';
+import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
 
 /**
  * Text fields of a `multipart/form-data` update-child request (PATCH/

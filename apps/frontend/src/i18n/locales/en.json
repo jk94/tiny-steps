@@ -126,6 +126,7 @@
       "empty": "No child profiles have been created for this household yet.",
       "addLink": "Add child",
       "feedingLink": "Feeding",
+      "sleepLink": "Sleep",
       "photoAlt": "Photo of {{name}}"
     },
     "create": {
@@ -248,6 +249,66 @@
       "notFound": "This feeding entry wasn't found.",
       "invalidInput": "Couldn't save your changes. Please check the entered values.",
       "timerConflict": "A breastfeeding timer is already running for this child.",
+      "timerAlreadyStopped": "This timer has already been stopped.",
+      "generic": "Something went wrong. Please try again later."
+    }
+  },
+  "sleep": {
+    "home": {
+      "title": "Sleep — {{name}}",
+      "backLink": "Back to household",
+      "backfillLink": "Add entry manually"
+    },
+    "quickEntry": {
+      "title": "Quick entry",
+      "startButton": "Start sleep"
+    },
+    "timer": {
+      "title": "Sleep in progress",
+      "stopButton": "Stop",
+      "stopButtonPending": "Stopping…"
+    },
+    "list": {
+      "title": "Recent sleep entries",
+      "empty": "No sleep entries recorded yet.",
+      "entry": "Sleep",
+      "durationMinutes": "{{minutes}} min"
+    },
+    "backfill": {
+      "title": "Add sleep entry",
+      "backLink": "Back to sleep"
+    },
+    "edit": {
+      "title": "Edit sleep entry",
+      "backLink": "Back to sleep",
+      "deleteButton": "Delete entry",
+      "deleteDialog": {
+        "title": "Delete sleep entry?",
+        "description": "This action can't be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "form": {
+      "submitButton": "Save entry",
+      "submitButtonPending": "Saving…",
+      "saveButton": "Save",
+      "saveButtonPending": "Saving…"
+    },
+    "fields": {
+      "occurredAtLabel": "Time",
+      "endedAtLabel": "End time (optional)"
+    },
+    "validation": {
+      "occurredAtRequired": "Please enter a time.",
+      "occurredAtFuture": "The time can't be in the future.",
+      "endedBeforeStarted": "The end time can't be before the start time.",
+      "endedAtRequired": "Please enter an end time."
+    },
+    "errors": {
+      "notFound": "This sleep entry wasn't found.",
+      "invalidInput": "Couldn't save your changes. Please check the entered values.",
+      "timerConflict": "A sleep timer is already running for this child.",
       "timerAlreadyStopped": "This timer has already been stopped.",
       "generic": "Something went wrong. Please try again later."
     }

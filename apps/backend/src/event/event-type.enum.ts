@@ -1,7 +1,7 @@
 /**
  * Discriminates `Event.type` by the kind of tracking event it represents.
- * Only `FEEDING` is populated so far (see PRD 4.1/5.2) — `SLEEP`/`DIAPER`
- * are conceptually reserved for later phases, not added yet.
+ * `FEEDING` and `SLEEP` are populated so far (see PRD 4.1/5.2) — `DIAPER`
+ * is conceptually reserved for a later phase, not added yet.
  *
  * Persisted as a plain `String` column on `Event.type`, not a Prisma
  * `enum`, because Prisma's `enum` type is not supported on the SQLite
@@ -14,6 +14,7 @@
  */
 export enum EventType {
   FEEDING = 'FEEDING',
+  SLEEP = 'SLEEP',
 }
 
 /**

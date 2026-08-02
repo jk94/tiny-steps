@@ -1,0 +1,67 @@
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Link, useParams } from 'react-router';
+import { fetchChild } from '../api/child-api';
+import { fetchActiveSleepTimer } from '../api/sleep-api';
+import { mapChildError } from '../child/mapChildError';
+import { ErrorMessage } from '../components/ErrorMessage';
+import { SleepEventList } from '../components/SleepEventList';
+import { SleepQuickEntry } from '../components/SleepQuickEntry';
+import { SleepTimer } from '../components/SleepTimer';
+import { LoadingIndicator } from '../components/LoadingIndicator';
+
+/**
+ * Per-child quick-entry/timer start screen. On mount, fetches the active
+ * sleep timer (if any) from the server. If one is running, `<SleepTimer>`
+ * is rendered instead of `<SleepQuickEntry>` — this is how "timer survives
+ * app restart" is satisfied without any local persistence layer: the
+ * backend's `endedAt: null` row IS the running-timer state, a reload just
+ * re-fetches it. Mirrors `FeedingHome`.
+ */
+export function SleepHome() {
+  const { t } = useTranslation();
+  const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+
+  const childQuery = useQuery({
+    queryKey: ['households', householdId, 'children', childId],
+    queryFn: () => fetchChild(householdId!, childId!),
+    retry: false,
+    enabled: !!householdId && !!childId,
+  });
+
+  const activeTimerQuery = useQuery({
+    queryKey: ['households', householdId, 'children', childId, 'sleep-events', 'active-timer'],
+    queryFn: () => fetchActiveSleepTimer(householdId!, childId!),
+    retry: false,
+    enabled: !!householdId && !!childId,
+  });
+
+  if (childQuery.isLoading || activeTimerQuery.isLoading) {
+    return <LoadingIndicator />;
+  }
+
+  if (childQuery.error || !childQuery.data) {
+    return <ErrorMessage message={t(mapChildError(childQuery.error))} />;
+  }
+
+  const child = childQuery.data;
+
+  return (
+    <section>
+      <Link to={`/households/${householdId}`}>{t('sleep.home.backLink')}</Link>
+      <h1>{t('sleep.home.title', { name: child.name })}</h1>
+
+      {activeTimerQuery.data ? (
+        <SleepTimer householdId={householdId!} childId={childId!} event={activeTimerQuery.data} />
+      ) : (
+        <SleepQuickEntry householdId={householdId!} childId={childId!} />
+      )}
+
+      <Link to={`/households/${householdId}/children/${childId}/sleep/new`}>
+        {t('sleep.home.backfillLink')}
+      </Link>
+
+      <SleepEventList householdId={householdId!} childId={childId!} />
+    </section>
+  );
+}

@@ -97,6 +97,21 @@ export class FeedingService {
     const occurredAt = dto.occurredAt ? new Date(dto.occurredAt) : (startedAt ?? new Date());
     const endedAt = isBreast && dto.endedAt ? new Date(dto.endedAt) : null;
 
+    // Mirrors the re-check in `update()` — the DTO-level `@IsEndNotBeforeStart`
+    // only validates fields present in the request body, so a BREAST backfill
+    // that omits `startedAt` (derived here from `occurredAt`) can still
+    // combine with an explicit `endedAt` into a negative-duration event
+    // unless re-checked against the *effective* values computed above. Only
+    // relevant for BREAST — `startedAt`/`endedAt` are always null otherwise.
+    if (
+      isBreast &&
+      endedAt !== null &&
+      startedAt !== null &&
+      endedAt.getTime() < startedAt.getTime()
+    ) {
+      throw new BadRequestException('endedAt must not be before startedAt');
+    }
+
     // Prevents two caregivers starting two concurrent timers for the same
     // child. Deliberately does NOT trigger for a backfilled (already-
     // endedAt-set) BREAST entry, even if a timer happens to be running —

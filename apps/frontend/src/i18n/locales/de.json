@@ -126,6 +126,7 @@
       "empty": "Für diesen Haushalt sind noch keine Kind-Profile angelegt.",
       "addLink": "Kind hinzufügen",
       "feedingLink": "Füttern",
+      "sleepLink": "Schlaf",
       "photoAlt": "Foto von {{name}}"
     },
     "create": {
@@ -248,6 +249,66 @@
       "notFound": "Dieser Fütterungs-Eintrag wurde nicht gefunden.",
       "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe deine Angaben.",
       "timerConflict": "Für dieses Kind läuft bereits ein Still-Timer.",
+      "timerAlreadyStopped": "Dieser Timer wurde bereits gestoppt.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
+  },
+  "sleep": {
+    "home": {
+      "title": "Schlaf — {{name}}",
+      "backLink": "Zurück zum Haushalt",
+      "backfillLink": "Eintrag manuell hinzufügen"
+    },
+    "quickEntry": {
+      "title": "Schnelleingabe",
+      "startButton": "Schlaf starten"
+    },
+    "timer": {
+      "title": "Schlaf läuft",
+      "stopButton": "Stopp",
+      "stopButtonPending": "Wird gestoppt…"
+    },
+    "list": {
+      "title": "Letzte Schlafphasen",
+      "empty": "Es wurden noch keine Schlafphasen erfasst.",
+      "entry": "Schlaf",
+      "durationMinutes": "{{minutes}} Min."
+    },
+    "backfill": {
+      "title": "Schlaf nachtragen",
+      "backLink": "Zurück zum Schlaf"
+    },
+    "edit": {
+      "title": "Schlaf bearbeiten",
+      "backLink": "Zurück zum Schlaf",
+      "deleteButton": "Eintrag löschen",
+      "deleteDialog": {
+        "title": "Eintrag löschen?",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "form": {
+      "submitButton": "Eintrag speichern",
+      "submitButtonPending": "Wird gespeichert…",
+      "saveButton": "Speichern",
+      "saveButtonPending": "Wird gespeichert…"
+    },
+    "fields": {
+      "occurredAtLabel": "Zeitpunkt",
+      "endedAtLabel": "Endzeit (optional)"
+    },
+    "validation": {
+      "occurredAtRequired": "Bitte gib einen Zeitpunkt ein.",
+      "occurredAtFuture": "Der Zeitpunkt darf nicht in der Zukunft liegen.",
+      "endedBeforeStarted": "Die Endzeit darf nicht vor der Startzeit liegen.",
+      "endedAtRequired": "Bitte gib eine Endzeit ein."
+    },
+    "errors": {
+      "notFound": "Dieser Schlaf-Eintrag wurde nicht gefunden.",
+      "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe deine Angaben.",
+      "timerConflict": "Für dieses Kind läuft bereits ein Schlaf-Timer.",
       "timerAlreadyStopped": "Dieser Timer wurde bereits gestoppt.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
