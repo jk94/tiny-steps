@@ -10,12 +10,14 @@ Diese Roadmap unterteilt das [PRD](../../Baby%20Tracking%20App%20PRD.md) in nach
 | [1](phase-1-auth-multiuser.md) | Authentifizierung & Multiuser-Grundlage | MVP | Abgeschlossen |
 | [2](phase-2-tracking-kernfunktionen.md) | Tracking-Kernfunktionen | MVP | Fast abgeschlossen¹ |
 | [3](phase-3-sync-uebersicht.md) | Echtzeit-Sync & Übersicht | MVP | Abgeschlossen |
-| [4](phase-4-offline-pwa.md) | Offline-First & PWA | MVP | Offen |
+| [4](phase-4-offline-pwa.md) | Offline-First & PWA | MVP | Teilweise begonnen² |
 | [5](phase-5-export-wrapper-push.md) | Export, Nativer Wrapper & Push-Benachrichtigungen | MVP | Offen |
 | [6](phase-6-design-system-ux.md) | Design-System & moderne User Experience | Post-MVP | Offen |
 | [7](phase-7-v2-erweiterungen.md) | Version 2.0 – Erweiterungen | Post-MVP | Offen |
 
 ¹ Alle Aufgaben umgesetzt bis auf den manuellen UX-Review der 3-Sekunden/2-Taps-Vorgabe (siehe „UX-Validierung" in [Phase 2](phase-2-tracking-kernfunktionen.md)) — durch Tap-Zahl-Tests plausibilisiert, aber kein Ersatz für den echten manuellen Review.
+
+² Nur der „PWA"-Teil (Web App Manifest, Service Worker für App-Shell-Caching) ist umgesetzt (siehe [ADR-0008](../adr/0008-pwa-basics-via-vite-plugin-pwa.md)); die reale Installierbarkeits-Verifikation auf Android/iOS/Desktop-Browsern steht noch aus, ebenso wie die komplette „Lokale Datenhaltung"/„Synchronisation"-Aufgabe (IndexedDB, optimistisches UI, Sync-Queue, Konfliktbehandlung) samt der drei zugehörigen Tests in [Phase 4](phase-4-offline-pwa.md).
 
 Phasen 0–5 bilden zusammen den MVP (Abschnitt 4.1 und 6 des PRD). Phase 6 (Design-System & UX) ist eine
 zusätzliche, nicht direkt aus dem PRD abgeleitete Phase, die die bislang funktional, aber visuell rein

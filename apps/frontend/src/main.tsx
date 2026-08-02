@@ -6,8 +6,14 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './auth/AuthProvider.tsx';
 import { queryClient } from './lib/query-client.ts';
 import { RealtimeProvider } from './realtime/RealtimeProvider.tsx';
+import { registerServiceWorker } from './pwa/registerServiceWorker.ts';
 import './index.css';
 import App from './App.tsx';
+
+// Called once at module scope (not from a React useEffect) so it runs
+// exactly once per page load regardless of StrictMode's double-invocation
+// of effects — see the function's own doc comment.
+registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

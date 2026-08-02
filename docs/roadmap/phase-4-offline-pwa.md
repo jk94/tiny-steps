@@ -22,9 +22,10 @@ Phase 3 abgeschlossen (Echtzeit-Sync-Mechanismus steht, darauf baut die Offline-
 - [ ] Fehlerbehandlung bei fehlgeschlagenem Sync (z. B. Retry-Mechanismus)
 
 ### PWA
-- [ ] Web App Manifest (Icon, Name, Theme-Farbe, Start-URL)
-- [ ] Service Worker für Offline-Grundfunktion (App-Shell-Caching)
-- [ ] Installierbarkeit testen (Android/iOS/Desktop-Browser)
+- [x] Web App Manifest (Icon, Name, Theme-Farbe, Start-URL) — via `vite-plugin-pwa`, siehe [ADR-0008](../adr/0008-pwa-basics-via-vite-plugin-pwa.md)
+- [x] Service Worker für Offline-Grundfunktion (App-Shell-Caching) — `generateSW`-Strategie, API/Socket.IO-Pfade bewusst vom Caching ausgeschlossen (network-only), siehe ADR-0008
+- [ ] Installierbarkeit testen (Android/iOS/Desktop-Browser) — automatisierte Build-/Manifest-/Service-Worker-Prüfungen (`manifest.webmanifest`/`sw.js`/Icons werden korrekt gebaut und ausgeliefert) sind erledigt, der echte manuelle Installations-Check auf Android/iOS/Desktop-Browsern steht aber noch aus
+- [ ] Update-Prompt-UI für neue Service-Worker-Versionen — mit `registerType: 'prompt'` (siehe ADR-0008 Entscheidung (c)) bleibt ein neuer Service Worker nach jedem Redeploy im "waiting"-Zustand, bis Nutzer alle Tabs/Fenster der App schließen; installierte PWA-Nutzer laufen bis dahin auf dem alten App-Shell weiter. In ADR-0008 als künftige Erweiterung vorgesehen, aber noch nicht umgesetzt — relevant, sobald häufige Redeploys vor Abschluss der Offline-Daten-Slice erwartet werden
 
 ### Tests
 - [ ] Test: Eingabe ohne Netzwerkverbindung möglich, Daten gehen nicht verloren
