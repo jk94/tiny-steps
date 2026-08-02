@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Placeholder PWA icon (Phase 4 "PWA basics" slice, ADR-0008). No design
+    system exists yet (that's Phase 6) — this is intentionally a plain,
+    neutral shape + initial letter, expected to be swapped for real branding
+    later. Content is kept within a centered ~80% "safe zone" so the same
+    source works for both regular ("any") and maskable icon purposes without
+    being clipped when a platform applies a circular/rounded mask.
+  -->
+  <rect width="512" height="512" fill="#1e293b" />
+  <text
+    x="256"
+    y="256"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+    font-size="240"
+    font-weight="700"
+    fill="#f8fafc"
+  >B</text>
+</svg>
