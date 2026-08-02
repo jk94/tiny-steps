@@ -16,6 +16,9 @@ import { FeedingEventEdit } from './pages/FeedingEventEdit';
 import { SleepHome } from './pages/SleepHome';
 import { SleepBackfillCreate } from './pages/SleepBackfillCreate';
 import { SleepEventEdit } from './pages/SleepEventEdit';
+import { DiaperHome } from './pages/DiaperHome';
+import { DiaperBackfillCreate } from './pages/DiaperBackfillCreate';
+import { DiaperEventEdit } from './pages/DiaperEventEdit';
 import { InviteAccept } from './pages/InviteAccept';
 
 function App() {
@@ -49,6 +52,15 @@ function App() {
           <Route
             path="households/:householdId/children/:childId/sleep/:eventId/edit"
             element={<SleepEventEdit />}
+          />
+          <Route path="households/:householdId/children/:childId/diaper" element={<DiaperHome />} />
+          <Route
+            path="households/:householdId/children/:childId/diaper/new"
+            element={<DiaperBackfillCreate />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/diaper/:eventId/edit"
+            element={<DiaperEventEdit />}
           />
         </Route>
         <Route element={<GuestOnlyRoute />}>

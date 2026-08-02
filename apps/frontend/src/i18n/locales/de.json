@@ -127,6 +127,7 @@
       "addLink": "Kind hinzufügen",
       "feedingLink": "Füttern",
       "sleepLink": "Schlaf",
+      "diaperLink": "Windel",
       "photoAlt": "Foto von {{name}}"
     },
     "create": {
@@ -310,6 +311,67 @@
       "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe deine Angaben.",
       "timerConflict": "Für dieses Kind läuft bereits ein Schlaf-Timer.",
       "timerAlreadyStopped": "Dieser Timer wurde bereits gestoppt.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
+  },
+  "diaper": {
+    "home": {
+      "title": "Windel — {{name}}",
+      "backLink": "Zurück zum Haushalt",
+      "backfillLink": "Eintrag manuell hinzufügen"
+    },
+    "quickEntry": {
+      "title": "Schnelleingabe",
+      "peeButton": "Pipi",
+      "stoolButton": "Stuhlgang",
+      "bothButton": "Beides"
+    },
+    "list": {
+      "title": "Letzte Windeln",
+      "empty": "Es wurden noch keine Windeln erfasst.",
+      "entryPee": "Pipi",
+      "entryStool": "Stuhlgang",
+      "entryBoth": "Beides"
+    },
+    "backfill": {
+      "title": "Windel nachtragen",
+      "backLink": "Zurück zur Windel"
+    },
+    "edit": {
+      "title": "Windel bearbeiten",
+      "backLink": "Zurück zur Windel",
+      "deleteButton": "Eintrag löschen",
+      "deleteDialog": {
+        "title": "Windel-Eintrag löschen?",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "form": {
+      "submitButton": "Eintrag speichern",
+      "submitButtonPending": "Wird gespeichert…",
+      "saveButton": "Speichern",
+      "saveButtonPending": "Wird gespeichert…"
+    },
+    "fields": {
+      "diaperTypeLabel": "Art der Windel",
+      "diaperTypePlaceholder": "Art wählen…",
+      "diaperTypeOptionPee": "Pipi",
+      "diaperTypeOptionStool": "Stuhlgang",
+      "diaperTypeOptionBoth": "Beides",
+      "occurredAtLabel": "Zeitpunkt",
+      "noteLabel": "Konsistenz-Notiz (optional)"
+    },
+    "validation": {
+      "diaperTypeRequired": "Bitte wähle eine Art der Windel.",
+      "occurredAtRequired": "Bitte gib einen Zeitpunkt ein.",
+      "occurredAtFuture": "Der Zeitpunkt darf nicht in der Zukunft liegen.",
+      "noteTooLong": "Die Notiz darf höchstens 500 Zeichen lang sein."
+    },
+    "errors": {
+      "notFound": "Dieser Windel-Eintrag wurde nicht gefunden.",
+      "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe deine Angaben.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   }
