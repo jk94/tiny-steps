@@ -102,6 +102,10 @@ export class FeedingService {
     // endedAt-set) BREAST entry, even if a timer happens to be running —
     // only a create that would itself result in `endedAt === null` counts
     // as "starting/resuming a running timer".
+    // Known, accepted non-atomicity: this check-then-create isn't wrapped
+    // in a transaction/unique constraint, so two concurrent requests could
+    // theoretically both pass it — not fixed, SQLite serializes writes in
+    // practice and the risk is negligible for a self-hosted family app.
     if (isBreast && endedAt === null) {
       const runningTimer = await this.prisma.event.findFirst({
         where: {
