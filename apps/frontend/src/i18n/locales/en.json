@@ -127,6 +127,7 @@
       "addLink": "Add child",
       "feedingLink": "Feeding",
       "sleepLink": "Sleep",
+      "diaperLink": "Diaper",
       "photoAlt": "Photo of {{name}}"
     },
     "create": {
@@ -310,6 +311,67 @@
       "invalidInput": "Couldn't save your changes. Please check the entered values.",
       "timerConflict": "A sleep timer is already running for this child.",
       "timerAlreadyStopped": "This timer has already been stopped.",
+      "generic": "Something went wrong. Please try again later."
+    }
+  },
+  "diaper": {
+    "home": {
+      "title": "Diaper — {{name}}",
+      "backLink": "Back to household",
+      "backfillLink": "Add entry manually"
+    },
+    "quickEntry": {
+      "title": "Quick entry",
+      "peeButton": "Pee",
+      "stoolButton": "Stool",
+      "bothButton": "Both"
+    },
+    "list": {
+      "title": "Recent diaper changes",
+      "empty": "No diaper changes recorded yet.",
+      "entryPee": "Pee",
+      "entryStool": "Stool",
+      "entryBoth": "Both"
+    },
+    "backfill": {
+      "title": "Add diaper entry",
+      "backLink": "Back to diaper"
+    },
+    "edit": {
+      "title": "Edit diaper entry",
+      "backLink": "Back to diaper",
+      "deleteButton": "Delete entry",
+      "deleteDialog": {
+        "title": "Delete diaper entry?",
+        "description": "This action can't be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "form": {
+      "submitButton": "Save entry",
+      "submitButtonPending": "Saving…",
+      "saveButton": "Save",
+      "saveButtonPending": "Saving…"
+    },
+    "fields": {
+      "diaperTypeLabel": "Diaper type",
+      "diaperTypePlaceholder": "Choose a type…",
+      "diaperTypeOptionPee": "Pee",
+      "diaperTypeOptionStool": "Stool",
+      "diaperTypeOptionBoth": "Both",
+      "occurredAtLabel": "Time",
+      "noteLabel": "Consistency note (optional)"
+    },
+    "validation": {
+      "diaperTypeRequired": "Please choose a diaper type.",
+      "occurredAtRequired": "Please enter a time.",
+      "occurredAtFuture": "The time can't be in the future.",
+      "noteTooLong": "The note must be at most 500 characters long."
+    },
+    "errors": {
+      "notFound": "This diaper entry wasn't found.",
+      "invalidInput": "Couldn't save your changes. Please check the entered values.",
       "generic": "Something went wrong. Please try again later."
     }
   }

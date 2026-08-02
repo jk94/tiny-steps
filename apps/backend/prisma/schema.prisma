@@ -151,6 +151,7 @@ model Event {
   child         Child          @relation(fields: [childId], references: [id])
   user          User           @relation(fields: [userId], references: [id])
   feedingDetail FeedingDetail?
+  diaperDetail  DiaperDetail?
 }
 
 model FeedingDetail {
@@ -171,5 +172,21 @@ model FeedingDetail {
 
   // Cascade: deleting an Event auto-removes its FeedingDetail, no manual
   // two-step delete needed in FeedingService.
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model DiaperDetail {
+  eventId String @id
+  // DiaperType enum value (PEE | STOOL | BOTH); see
+  // `src/diaper/diaper-type.enum.ts`. Plain `String`, not a Prisma `enum`,
+  // same reason as `FeedingDetail.feedingType` — see ADR-0002.
+  diaperType String
+  // Optional consistency note; free text, meaningful for every diaperType
+  // (unlike FeedingDetail's side/amountMl, there is no diaperType this
+  // field is irrelevant for).
+  note       String?
+
+  // Cascade: deleting an Event auto-removes its DiaperDetail, same pattern
+  // as FeedingDetail — no manual two-step delete in DiaperService.
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

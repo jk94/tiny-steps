@@ -168,6 +168,31 @@ framing was wrong, not the pattern itself for types that need it. See
 `apps/backend/src/sleep/sleep.service.ts` for the resulting implementation (`Event`-only
 reads/writes, no join).
 
+## Addendum: Diaper confirms the detail-table pattern
+
+The Diaper sub-step (Phase 2, the third and final MVP event type) was implemented per this ADR's
+original pattern and the Sleep addendum's refined framing: `DiaperDetail` was added as a 1:1 detail
+table because Diaper has real per-instance fields (`diaperType`: `PEE`/`STOOL`/`BOTH`, plus an
+optional consistency `note`) beyond what the base `Event` table already carries — unlike Sleep,
+which needed no detail table at all (see the Sleep addendum above). This confirms the refined rule
+holds for a third event type, not just the two it was originally stated for.
+
+One genuinely new deviation worth recording: unlike `FeedingDetail`'s conditionally-relevant fields
+(`side`/`amountMl`, each gated by `feedingType` — only meaningful for one sub-type), `DiaperDetail.note`
+is relevant unconditionally for every `diaperType`. There is no `diaperType` this field is irrelevant
+for, so there is no risk of a field being orphaned by a type change. Because of that,
+`DiaperDetail.diaperType` was deliberately kept **editable via `PATCH`** (`UpdateDiaperEventDto`),
+unlike `FeedingDetail.feedingType`, which `UpdateFeedingEventDto` makes immutable specifically to
+avoid the ambiguity of what happens to `side`/`amountMl` when the type changes mid-edit. This is a
+small, deliberate deviation from the "type is immutable after creation" pattern Feeding established —
+recorded here since it contradicts that pattern for a reason specific to Diaper's field shape
+(no type-gated field means no orphaning risk), not an oversight.
+
+See `apps/backend/src/diaper/diaper.service.ts` for the resulting implementation (`Event` +
+`DiaperDetail` join, same shape as `FeedingDetail`, no timer semantics used — `startedAt`/`endedAt`
+stay always null for `DIAPER` events, since Diaper is a pure point event like Feeding's
+`BOTTLE`/`SOLID` sub-types, never timer-based like Feeding's `BREAST` sub-type or Sleep).
+
 ## Related
 
 - [Phase 2 roadmap](../roadmap/phase-2-tracking-kernfunktionen.md) — "Datenmodell" and "Backend:
@@ -182,5 +207,9 @@ reads/writes, no join).
   `dto/update-feeding-event.dto.ts`, `validators/is-end-not-before-start.validator.ts`).
 - `apps/backend/src/sleep/` — implementation of the Sleep sub-step (see Addendum above);
   deliberately has no `sleep.detail`/`SleepDetail` file, unlike `feeding/`.
+- `apps/backend/src/diaper/` — implementation of the Diaper sub-step (see Addendum above);
+  `diaper.service.ts`, `diaper.controller.ts`, `diaper.module.ts`, `diaper-type.enum.ts`,
+  `dto/create-diaper-event.dto.ts`, `dto/update-diaper-event.dto.ts`.
 - `apps/backend/src/event/event-type.enum.ts` — the shared `EventType` enum/cast function.
-- `apps/backend/prisma/schema.prisma` — `Event.startedAt`/`endedAt`, `FeedingDetail` model.
+- `apps/backend/prisma/schema.prisma` — `Event.startedAt`/`endedAt`, `FeedingDetail`/`DiaperDetail`
+  models.

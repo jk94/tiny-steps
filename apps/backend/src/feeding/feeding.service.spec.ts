@@ -398,6 +398,43 @@ describe('FeedingService', () => {
       });
     });
 
+    it('clears an existing note when the DTO explicitly sends note: null', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      const existing = makeEvent({
+        feedingDetail: {
+          eventId: EVENT_ID,
+          feedingType: FeedingType.BOTTLE,
+          side: null,
+          amountMl: 90,
+          note: 'Spit up a little',
+        },
+      });
+      prisma.event.findUnique.mockResolvedValue(existing);
+      prisma.event.update.mockResolvedValue(
+        makeEvent({
+          feedingDetail: {
+            eventId: EVENT_ID,
+            feedingType: FeedingType.BOTTLE,
+            side: null,
+            amountMl: 90,
+            note: null,
+          },
+        }),
+      );
+
+      // Distinct from the "merges partial fields" test above, where `note`
+      // is simply absent from the DTO (left untouched) — here it is
+      // explicitly `null` (cleared).
+      const dto: UpdateFeedingEventDto = { note: null };
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+
+      expect(prisma.event.update).toHaveBeenCalledWith({
+        where: { id: EVENT_ID },
+        data: { feedingDetail: { update: { note: null } } },
+        include: { feedingDetail: true },
+      });
+    });
+
     it('discards side for a BOTTLE event even if the DTO includes it', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       const existing = makeEvent({
