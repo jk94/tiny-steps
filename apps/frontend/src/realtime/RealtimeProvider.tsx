@@ -75,6 +75,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({
         queryKey: ['households', payload.householdId, 'children', payload.childId, segment],
       });
+      // Type-independent invalidation, in addition to the per-type one
+      // above: `invalidateQueries` matches by key-prefix by default, so this
+      // partial key also invalidates the daily-timeline/stats queries (see
+      // `event-api.ts`) for whatever date is currently mounted — those
+      // aren't scoped to a single event type, so they can't be reached by
+      // the per-type segment alone.
+      void queryClient.invalidateQueries({
+        queryKey: ['households', payload.householdId, 'children', payload.childId, 'events'],
+      });
     };
 
     socket.on('connect', handleConnect);

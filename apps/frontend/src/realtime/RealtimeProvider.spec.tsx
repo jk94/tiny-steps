@@ -172,6 +172,28 @@ describe('RealtimeProvider / useRealtimeConnection', () => {
     });
   });
 
+  it('also invalidates the type-independent events query-key family on event:changed, so the daily timeline/stats stay live', () => {
+    mockAuth(true);
+    const { socket: fakeSocket, trigger } = createFakeSocket();
+    mockedCreateSocket.mockReturnValue(fakeSocket as never);
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderRealtimeConnection();
+    act(() =>
+      trigger('event:changed', {
+        type: 'DIAPER',
+        action: 'created',
+        eventId: 'event-1',
+        childId: 'child-1',
+        householdId: 'household-1',
+      }),
+    );
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['households', 'household-1', 'children', 'child-1', 'events'],
+    });
+  });
+
   it('disconnects (without discarding) the socket when auth flips to unauthenticated (logout)', () => {
     mockAuth(true);
     const { socket: fakeSocket } = createFakeSocket();

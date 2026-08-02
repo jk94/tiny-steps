@@ -35,7 +35,10 @@ export interface FeedingEventSummary {
   createdAt: Date;
 }
 
-function toSummary(event: EventWithFeedingDetail): FeedingEventSummary {
+// Exported (not just used internally) so `EventService.listDaily` can reuse
+// the exact same mapping logic for the merged daily timeline instead of
+// reimplementing duration derivation — see EventService's own doc comment.
+export function toFeedingEventSummary(event: EventWithFeedingDetail): FeedingEventSummary {
   const detail = event.feedingDetail;
   if (!detail) {
     // Should be unreachable — every FEEDING Event is created together with
@@ -174,7 +177,7 @@ export class FeedingService {
       householdId,
     });
 
-    return toSummary(event);
+    return toFeedingEventSummary(event);
   }
 
   async list(householdId: string, childId: string): Promise<FeedingEventSummary[]> {
@@ -186,7 +189,7 @@ export class FeedingService {
       include: { feedingDetail: true },
     });
 
-    return events.map(toSummary);
+    return events.map(toFeedingEventSummary);
   }
 
   async findActiveTimer(householdId: string, childId: string): Promise<FeedingEventSummary | null> {
@@ -202,7 +205,7 @@ export class FeedingService {
       include: { feedingDetail: true },
     });
 
-    return event ? toSummary(event) : null;
+    return event ? toFeedingEventSummary(event) : null;
   }
 
   async findOne(
@@ -211,7 +214,7 @@ export class FeedingService {
     eventId: string,
   ): Promise<FeedingEventSummary> {
     const event = await this.findFeedingEventOrThrow(householdId, childId, eventId);
-    return toSummary(event);
+    return toFeedingEventSummary(event);
   }
 
   async update(
@@ -221,7 +224,7 @@ export class FeedingService {
     dto: UpdateFeedingEventDto,
   ): Promise<FeedingEventSummary> {
     const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId);
-    // Guaranteed non-null by findFeedingEventOrThrow/toSummary's own
+    // Guaranteed non-null by findFeedingEventOrThrow/toFeedingEventSummary's own
     // invariant check.
     const existingFeedingType = toFeedingType(existing.feedingDetail!.feedingType);
 
@@ -281,7 +284,7 @@ export class FeedingService {
       householdId,
     });
 
-    return toSummary(updated);
+    return toFeedingEventSummary(updated);
   }
 
   async stop(householdId: string, childId: string, eventId: string): Promise<FeedingEventSummary> {
@@ -312,7 +315,7 @@ export class FeedingService {
       householdId,
     });
 
-    return toSummary(updated);
+    return toFeedingEventSummary(updated);
   }
 
   async remove(householdId: string, childId: string, eventId: string): Promise<void> {

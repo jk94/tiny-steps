@@ -132,6 +132,7 @@
       "feedingLink": "Feeding",
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
+      "timelineLink": "Daily timeline",
       "photoAlt": "Photo of {{name}}"
     },
     "create": {
@@ -377,6 +378,41 @@
       "notFound": "This diaper entry wasn't found.",
       "invalidInput": "Couldn't save your changes. Please check the entered values.",
       "generic": "Something went wrong. Please try again later."
+    }
+  },
+  "timeline": {
+    "title": "Daily timeline — {{name}}",
+    "backLink": "Back to household",
+    "filter": {
+      "feedingLabel": "Feeding",
+      "sleepLabel": "Sleep",
+      "diaperLabel": "Diaper"
+    },
+    "list": {
+      "empty": "No entries for this day yet.",
+      "loggedBy": "Logged by {{user}}",
+      "entryBreastLeft": "Breastfeeding (left)",
+      "entryBreastRight": "Breastfeeding (right)",
+      "entryBottle": "Bottle ({{amount}} ml)",
+      "entrySolid": "Solid food",
+      "entrySleep": "Sleep",
+      "entryDiaperPee": "Pee",
+      "entryDiaperStool": "Stool",
+      "entryDiaperBoth": "Both",
+      "durationMinutes": "{{minutes}} min"
+    }
+  },
+  "stats": {
+    "title": "Statistics",
+    "sleepHoursToday": "Sleep today: {{hours}}h",
+    "feedingCountToday": "Feedings today: {{count}}",
+    "timeSince": {
+      "feedingTitle": "Last feeding",
+      "sleepTitle": "Last sleep",
+      "diaperTitle": "Last diaper change",
+      "noEntries": "No entries yet",
+      "minutesAgo": "{{minutes}} min ago",
+      "hoursAgo": "{{hours}}h ago"
     }
   }
 }

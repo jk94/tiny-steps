@@ -132,6 +132,7 @@
       "feedingLink": "Füttern",
       "sleepLink": "Schlaf",
       "diaperLink": "Windel",
+      "timelineLink": "Tagesübersicht",
       "photoAlt": "Foto von {{name}}"
     },
     "create": {
@@ -377,6 +378,41 @@
       "notFound": "Dieser Windel-Eintrag wurde nicht gefunden.",
       "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe deine Angaben.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    }
+  },
+  "timeline": {
+    "title": "Tagesübersicht — {{name}}",
+    "backLink": "Zurück zum Haushalt",
+    "filter": {
+      "feedingLabel": "Füttern",
+      "sleepLabel": "Schlaf",
+      "diaperLabel": "Windel"
+    },
+    "list": {
+      "empty": "Für diesen Tag liegen noch keine Einträge vor.",
+      "loggedBy": "Erfasst von {{user}}",
+      "entryBreastLeft": "Stillen (links)",
+      "entryBreastRight": "Stillen (rechts)",
+      "entryBottle": "Fläschchen ({{amount}} ml)",
+      "entrySolid": "Beikost",
+      "entrySleep": "Schlaf",
+      "entryDiaperPee": "Pipi",
+      "entryDiaperStool": "Stuhlgang",
+      "entryDiaperBoth": "Beides",
+      "durationMinutes": "{{minutes}} Min."
+    }
+  },
+  "stats": {
+    "title": "Statistiken",
+    "sleepHoursToday": "Schlaf heute: {{hours}} Std.",
+    "feedingCountToday": "Fütterungen heute: {{count}}",
+    "timeSince": {
+      "feedingTitle": "Letzte Fütterung",
+      "sleepTitle": "Letzter Schlaf",
+      "diaperTitle": "Letzter Windelwechsel",
+      "noEntries": "Noch keine Einträge",
+      "minutesAgo": "vor {{minutes}} Min.",
+      "hoursAgo": "vor {{hours}} Std."
     }
   }
 }

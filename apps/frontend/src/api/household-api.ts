@@ -17,6 +17,16 @@ export interface CreatedInvite {
   expiresAt: string;
 }
 
+/**
+ * Mirrors the backend's `HouseholdMemberSummary` (see
+ * `apps/backend/src/household/household.service.ts`) — `email` is the only
+ * user-identifying field this app has (no display-name field on `User`).
+ */
+export interface HouseholdMemberSummary {
+  userId: string;
+  email: string;
+}
+
 export function createHousehold(name: string): Promise<HouseholdSummary> {
   return apiFetch<HouseholdSummary>('/households', {
     method: 'POST',
@@ -36,4 +46,8 @@ export function createInvite(householdId: string): Promise<CreatedInvite> {
   return apiFetch<CreatedInvite>(`/households/${householdId}/invites`, {
     method: 'POST',
   });
+}
+
+export function listHouseholdMembers(householdId: string): Promise<HouseholdMemberSummary[]> {
+  return apiFetch<HouseholdMemberSummary[]>(`/households/${householdId}/members`);
 }

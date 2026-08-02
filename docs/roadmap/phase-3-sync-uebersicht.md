@@ -24,15 +24,15 @@ Phase 2 abgeschlossen (Event-Typen sind erfassbar).
 - [x] Verbindungsstatus-Anzeige (verbunden/getrennt) — Indikator in `Layout.tsx`
 
 ### Tages-Timeline
-- [ ] Chronologische Ansicht aller Ereignisse eines Tages für ein Kind
-- [ ] Filterbarkeit nach Event-Typ (optional für MVP, falls Kapazität vorhanden)
-- [ ] Anzeige, welcher Nutzer den Eintrag erfasst hat
+- [x] Chronologische Ansicht aller Ereignisse eines Tages für ein Kind — neues `EventModule` (`apps/backend/src/event/`, `GET .../events/daily`) merged Feeding/Sleep/Diaper serverseitig sortiert nach `occurredAt`; Frontend-Seite `DailyTimeline` (`apps/frontend/src/pages/DailyTimeline.tsx`) mit `TimelineEventList`
+- [x] Filterbarkeit nach Event-Typ — umgesetzt (war für MVP optional), rein clientseitig via `TimelineFilter`, kein Backend-Parameter/Query-Key-Einfluss
+- [x] Anzeige, welcher Nutzer den Eintrag erfasst hat — `TimelineEventList` löst `userId` gegen die neue `GET /households/:householdId/members`-Route auf (E-Mail-Adresse, da `User` kein Anzeigename-Feld hat); Fallback auf die rohe `userId`, falls der Nutzer nicht in der Mitgliederliste auftaucht
 
 ### Statistiken
-- [ ] Berechnung: Schlafstunden pro Tag
-- [ ] Berechnung: Anzahl Fütterungen pro Tag
-- [ ] Berechnung: Zeit seit letztem Ereignis (je Event-Typ)
-- [ ] UI-Komponente „Letzte Fütterung vor X Stunden“ (bzw. analog für Schlaf/Windel)
+- [x] Berechnung: Schlafstunden pro Tag — `EventService.getStatsSummary` (`GET .../events/stats`), summiert nur abgeschlossene Schlaf-Sessions (`endedAt !== null`) im angefragten Tag, gerundet auf eine Nachkommastelle
+- [x] Berechnung: Anzahl Fütterungen pro Tag — `feedingCountToday` im selben Endpunkt
+- [x] Berechnung: Zeit seit letztem Ereignis (je Event-Typ) — `lastEventAt` je Typ ist bewusst NICHT auf den angefragten Tag beschränkt, sondern „zuletzt jemals" (unabhängige `findFirst`-Abfragen pro Typ), damit die Kennzahl auch dann sinnvoll bleibt, wenn das letzte Ereignis nicht mehr am aktuellen Tag liegt
+- [x] UI-Komponente „Letzte Fütterung vor X Stunden“ (bzw. analog für Schlaf/Windel) — `TimeSinceCard` (dreifach in `DailyStatsSummary`), aktualisiert die Anzeige per `useTick`-Intervall (30s) rein über die Wanduhr, ganz ohne neue Serverdaten
 
 ### Tests
 - [x] E2E-Test: Zwei Nutzer im selben Haushalt sehen einen neuen Eintrag ohne manuellen Reload (Erfolgskriterium PRD Abschnitt 6)
