@@ -22,9 +22,9 @@ Phase 3 abgeschlossen (Echtzeit-Sync-Mechanismus steht, darauf baut die Offline-
 - [ ] Fehlerbehandlung bei fehlgeschlagenem Sync (z. B. Retry-Mechanismus)
 
 ### PWA
-- [ ] Web App Manifest (Icon, Name, Theme-Farbe, Start-URL)
-- [ ] Service Worker für Offline-Grundfunktion (App-Shell-Caching)
-- [ ] Installierbarkeit testen (Android/iOS/Desktop-Browser)
+- [x] Web App Manifest (Icon, Name, Theme-Farbe, Start-URL) — via `vite-plugin-pwa`, siehe [ADR-0008](../adr/0008-pwa-basics-via-vite-plugin-pwa.md)
+- [x] Service Worker für Offline-Grundfunktion (App-Shell-Caching) — `generateSW`-Strategie, API/Socket.IO-Pfade bewusst vom Caching ausgeschlossen (network-only), siehe ADR-0008
+- [ ] Installierbarkeit testen (Android/iOS/Desktop-Browser) — automatisierte Build-/Manifest-/Service-Worker-Prüfungen (`manifest.webmanifest`/`sw.js`/Icons werden korrekt gebaut und ausgeliefert) sind erledigt, der echte manuelle Installations-Check auf Android/iOS/Desktop-Browsern steht aber noch aus
 
 ### Tests
 - [ ] Test: Eingabe ohne Netzwerkverbindung möglich, Daten gehen nicht verloren
