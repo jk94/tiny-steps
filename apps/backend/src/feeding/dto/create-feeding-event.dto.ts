@@ -12,7 +12,7 @@ import {
 import { FeedingSide } from '../feeding-side.enum';
 import { FeedingType } from '../feeding-type.enum';
 import { IsEndNotBeforeStart } from '../validators/is-end-not-before-start.validator';
-import { IsNotFutureDate } from '../validators/is-not-future-date.validator';
+import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
 
 const MIN_AMOUNT_ML = 1;
 const MAX_AMOUNT_ML = 2000;
