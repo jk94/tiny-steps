@@ -5,14 +5,29 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { SleepHome } from './SleepHome';
 import * as childApi from '../api/child-api';
 import * as sleepApi from '../api/sleep-api';
+import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
 vi.mock('../api/sleep-api');
+vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedChildApi = vi.mocked(childApi);
 const mockedSleepApi = vi.mocked(sleepApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
+
+function mockAuthUser() {
+  mockedUseAuth.mockReturnValue({
+    user: { id: 'u1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -53,6 +68,7 @@ function renderSleepHome() {
 describe('SleepHome', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockAuthUser();
     mockedChildApi.fetchChild.mockResolvedValue(child);
     mockedSleepApi.listSleepEvents.mockResolvedValue([]);
   });

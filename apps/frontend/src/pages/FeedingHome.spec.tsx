@@ -5,14 +5,29 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { FeedingHome } from './FeedingHome';
 import * as childApi from '../api/child-api';
 import * as feedingApi from '../api/feeding-api';
+import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
 vi.mock('../api/feeding-api');
+vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedChildApi = vi.mocked(childApi);
 const mockedFeedingApi = vi.mocked(feedingApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
+
+function mockAuthUser() {
+  mockedUseAuth.mockReturnValue({
+    user: { id: 'u1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -60,6 +75,7 @@ function renderFeedingHome() {
 describe('FeedingHome', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockAuthUser();
     mockedChildApi.fetchChild.mockResolvedValue(child);
     mockedFeedingApi.listFeedingEvents.mockResolvedValue([]);
   });

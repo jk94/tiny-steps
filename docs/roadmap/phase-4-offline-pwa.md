@@ -13,8 +13,8 @@ Phase 3 abgeschlossen (Echtzeit-Sync-Mechanismus steht, darauf baut die Offline-
 ## Aufgaben
 
 ### Lokale Datenhaltung
-- [ ] IndexedDB-Layer im Frontend für lokale Zwischenspeicherung neuer/geänderter Einträge
-- [ ] Optimistisches UI-Update: neue Einträge werden sofort angezeigt, bevor der Server bestätigt hat
+- [x] IndexedDB-Layer im Frontend für lokale Zwischenspeicherung neuer/geänderter Einträge — generischer `pendingEvents`-Store (`apps/frontend/src/offline/pendingEvents.db.ts`) via `idb`, geteilt über alle drei Event-Typen
+- [x] Optimistisches UI-Update: neue Einträge werden sofort angezeigt, bevor der Server bestätigt hat — Create-Flows (QuickEntry + Backfill) schreiben write-through in IndexedDB und mergen ungespeicherte Einträge in Listen/Timeline (`createEventOptimistically`/`usePendingLocalEvents`/`mergeServerAndPendingEvents`); nur neue Einträge, Edits/Timer-Stopps bleiben ausgeklammert
 
 ### Synchronisation
 - [ ] Sync-Queue: bei fehlender Verbindung gesammelte Änderungen bei Reconnect an den Server senden
