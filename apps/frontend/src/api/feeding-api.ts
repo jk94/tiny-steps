@@ -1,3 +1,4 @@
+import { createEventOptimistically } from '../offline/createEventOptimistically';
 import { apiFetch } from './http-client';
 
 export type FeedingType = 'BREAST' | 'BOTTLE' | 'SOLID';
@@ -123,5 +124,61 @@ export function deleteFeedingEvent(
 ): Promise<void> {
   return apiFetch<void>(`${feedingEventsPath(householdId, childId)}/${eventId}`, {
     method: 'DELETE',
+  });
+}
+
+/**
+ * Synthesizes the optimistic row shown before the server confirms. Mirrors the
+ * backend's `startedAt`/`occurredAt` defaulting precedence (see
+ * `FeedingService.create`): only BREAST is timer-based, so `startedAt` defaults
+ * to `startedAt ?? occurredAt ?? now` for BREAST and is `null` otherwise;
+ * `occurredAt` defaults to `occurredAt ?? startedAt ?? now`. `durationSeconds`
+ * is null (no `endedAt` yet on a freshly-created entry).
+ */
+function buildOptimisticFeedingSummary(
+  localId: string,
+  childId: string,
+  userId: string,
+  input: CreateFeedingEventInput,
+): FeedingEventSummary {
+  const now = new Date().toISOString();
+  const isBreast = input.feedingType === 'BREAST';
+  const startedAt = isBreast ? (input.startedAt ?? input.occurredAt ?? now) : null;
+  const occurredAt = input.occurredAt ?? startedAt ?? now;
+  return {
+    id: localId,
+    childId,
+    userId,
+    type: 'FEEDING',
+    feedingType: input.feedingType,
+    occurredAt,
+    startedAt,
+    endedAt: null,
+    durationSeconds: null,
+    side: input.side ?? null,
+    amountMl: input.amountMl ?? null,
+    note: input.note ?? null,
+    createdAt: now,
+  };
+}
+
+/**
+ * Offline-aware wrapper around `createFeedingEvent`: buffers the new entry
+ * locally and shows it immediately, then fires the real request (see
+ * `createEventOptimistically`).
+ */
+export function createFeedingEventOptimistic(
+  householdId: string,
+  childId: string,
+  userId: string,
+  input: CreateFeedingEventInput,
+): Promise<FeedingEventSummary> {
+  return createEventOptimistically({
+    householdId,
+    childId,
+    eventType: 'FEEDING',
+    buildOptimisticSummary: (localId) =>
+      buildOptimisticFeedingSummary(localId, childId, userId, input),
+    apiCall: () => createFeedingEvent(householdId, childId, input),
   });
 }
