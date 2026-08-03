@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { createFeedingEvent } from '../api/feeding-api';
+import { createFeedingEventOptimistic } from '../api/feeding-api';
 import type { CreateFeedingEventInput } from '../api/feeding-api';
+import { useAuth } from '../auth/useAuth';
 import { mapFeedingError } from '../feeding/mapFeedingError';
 import { queryClient } from '../lib/query-client';
 import { ErrorMessage } from './ErrorMessage';
@@ -27,10 +28,13 @@ export interface FeedingQuickEntryProps {
  */
 export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [showBottlePresets, setShowBottlePresets] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: (input: CreateFeedingEventInput) => createFeedingEvent(householdId, childId, input),
+    // `user` is always non-null here — this component only renders behind `ProtectedRoute`.
+    mutationFn: (input: CreateFeedingEventInput) =>
+      createFeedingEventOptimistic(householdId, childId, user!.id, input),
     onSuccess: async () => {
       setShowBottlePresets(false);
       await Promise.all([

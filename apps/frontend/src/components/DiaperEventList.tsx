@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listDiaperEvents } from '../api/diaper-api';
 import type { DiaperEventSummary } from '../api/diaper-api';
+import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
 
 export interface DiaperEventListProps {
@@ -34,17 +36,27 @@ export function DiaperEventList({ householdId, childId }: DiaperEventListProps) 
     queryFn: () => listDiaperEvents(householdId, childId),
     retry: false,
   });
+  const pendingQuery = usePendingLocalEvents(householdId, childId, 'DIAPER');
+
+  // Merge in not-yet-confirmed local entries so a just-tapped event shows up
+  // immediately. All pending records here are DIAPER-typed (the query filters by
+  // type), so the narrowing cast back to DiaperEventSummary[] is sound.
+  const events = mergeServerAndPendingEvents(
+    data ?? [],
+    (pendingQuery.data ?? []).map((record) => record.summary),
+    'desc',
+  ) as DiaperEventSummary[];
 
   return (
     <section>
       <h2>{t('diaper.list.title')}</h2>
       {isLoading ? (
         <LoadingIndicator />
-      ) : !data || data.length === 0 ? (
+      ) : events.length === 0 ? (
         <p>{t('diaper.list.empty')}</p>
       ) : (
         <ul>
-          {data.map((event) => (
+          {events.map((event) => (
             <li key={event.id}>
               <Link to={`/households/${householdId}/children/${childId}/diaper/${event.id}/edit`}>
                 <span>{entryLabel(t, event)}</span>

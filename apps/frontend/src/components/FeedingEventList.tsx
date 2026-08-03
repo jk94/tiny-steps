@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listFeedingEvents } from '../api/feeding-api';
 import type { FeedingEventSummary } from '../api/feeding-api';
+import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
 
 export interface FeedingEventListProps {
@@ -35,17 +37,27 @@ export function FeedingEventList({ householdId, childId }: FeedingEventListProps
     queryFn: () => listFeedingEvents(householdId, childId),
     retry: false,
   });
+  const pendingQuery = usePendingLocalEvents(householdId, childId, 'FEEDING');
+
+  // Merge in not-yet-confirmed local entries so a just-tapped event shows up
+  // immediately. All pending records here are FEEDING-typed (the query filters
+  // by type), so the narrowing cast back to FeedingEventSummary[] is sound.
+  const events = mergeServerAndPendingEvents(
+    data ?? [],
+    (pendingQuery.data ?? []).map((record) => record.summary),
+    'desc',
+  ) as FeedingEventSummary[];
 
   return (
     <section>
       <h2>{t('feeding.list.title')}</h2>
       {isLoading ? (
         <LoadingIndicator />
-      ) : !data || data.length === 0 ? (
+      ) : events.length === 0 ? (
         <p>{t('feeding.list.empty')}</p>
       ) : (
         <ul>
-          {data.map((event) => (
+          {events.map((event) => (
             <li key={event.id}>
               <Link to={`/households/${householdId}/children/${childId}/feeding/${event.id}/edit`}>
                 <span>{entryLabel(t, event)}</span>

@@ -5,6 +5,8 @@ import { fetchDailyEvents } from '../api/event-api';
 import type { EventType, TimelineEventSummary } from '../api/event-api';
 import { listHouseholdMembers } from '../api/household-api';
 import type { HouseholdMemberSummary } from '../api/household-api';
+import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
 
 export interface TimelineEventListProps {
@@ -79,12 +81,20 @@ export function TimelineEventList({
     queryFn: () => listHouseholdMembers(householdId),
     retry: false,
   });
+  // No type filter — the timeline shows all three kinds. No `[from, to)`
+  // day-window filtering needed for the pending merge either: a record created
+  // "now" always falls inside today's window, the only day this renders.
+  const pendingQuery = usePendingLocalEvents(householdId, childId);
 
   if (eventsQuery.isLoading) {
     return <LoadingIndicator />;
   }
 
-  const events = (eventsQuery.data ?? []).filter((event) => enabledTypes.has(event.type));
+  const events = mergeServerAndPendingEvents(
+    eventsQuery.data ?? [],
+    (pendingQuery.data ?? []).map((record) => record.summary),
+    'asc',
+  ).filter((event) => enabledTypes.has(event.type));
 
   if (events.length === 0) {
     return <p>{t('timeline.list.empty')}</p>;

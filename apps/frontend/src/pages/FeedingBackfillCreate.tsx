@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
-import { createFeedingEvent } from '../api/feeding-api';
+import { createFeedingEventOptimistic } from '../api/feeding-api';
+import { useAuth } from '../auth/useAuth';
 import { FeedingEventForm } from '../components/FeedingEventForm';
 import type { FeedingEventFormOutput } from '../components/FeedingEventForm';
 import { queryClient } from '../lib/query-client';
@@ -9,6 +10,7 @@ import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 /** Manual backfill create page — wraps `FeedingEventForm` in create mode. */
 export function FeedingBackfillCreate() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
   useHouseholdRoom(householdId);
   const navigate = useNavigate();
@@ -19,7 +21,11 @@ export function FeedingBackfillCreate() {
     // ever renders the form in `mode="create"`, which never actually
     // produces `null` (see `FeedingEventForm`) — normalize the type here
     // to match `CreateFeedingEventInput.note` (`string | undefined`).
-    await createFeedingEvent(householdId!, childId!, { ...output, note: output.note ?? undefined });
+    // `user` is always non-null here — this page only renders behind `ProtectedRoute`.
+    await createFeedingEventOptimistic(householdId!, childId!, user!.id, {
+      ...output,
+      note: output.note ?? undefined,
+    });
     await queryClient.invalidateQueries({
       queryKey: ['households', householdId, 'children', childId, 'feeding-events'],
     });
