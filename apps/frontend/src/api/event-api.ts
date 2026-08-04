@@ -6,6 +6,19 @@ import type { SleepEventSummary } from './sleep-api';
 export type EventType = 'FEEDING' | 'SLEEP' | 'DIAPER';
 
 /**
+ * Maps an event type to the query-key segment its per-type components use
+ * (`['households', hId, 'children', cId, <segment>]`). Shared by the realtime
+ * broadcast invalidation (`RealtimeProvider`) and the offline sync-queue
+ * (`syncQueue.ts`), which both need to invalidate the same per-type query
+ * after a server-confirmed change.
+ */
+export const EVENT_TYPE_QUERY_KEY_SEGMENT: Record<EventType, string> = {
+  FEEDING: 'feeding-events',
+  SLEEP: 'sleep-events',
+  DIAPER: 'diaper-events',
+};
+
+/**
  * Mirrors the backend's `TimelineEventSummary` union (see
  * `apps/backend/src/event/event.service.ts`) — a plain discriminated union
  * of the three existing per-type summaries, discriminated by their shared

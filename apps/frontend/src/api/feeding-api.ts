@@ -180,5 +180,6 @@ export function createFeedingEventOptimistic(
     buildOptimisticSummary: (localId) =>
       buildOptimisticFeedingSummary(localId, childId, userId, input),
     apiCall: () => createFeedingEvent(householdId, childId, input),
+    createInput: input,
   });
 }

@@ -102,6 +102,50 @@ describe('pendingEvents.db', () => {
     expect(feedingOnly.map((record) => record.localId)).toEqual(['local-feeding']);
   });
 
+  it('listAllPendingEvents spans every household and child in the store', async () => {
+    await db.putPendingEvent(pendingRecord({ localId: 'local-mine' }));
+    await db.putPendingEvent(
+      pendingRecord({ localId: 'local-other-child', childId: 'other-child' }),
+    );
+    await db.putPendingEvent(
+      pendingRecord({ localId: 'local-other-household', householdId: 'other-household' }),
+    );
+
+    const all = await db.listAllPendingEvents();
+
+    expect(all.map((record) => record.localId).sort()).toEqual([
+      'local-mine',
+      'local-other-child',
+      'local-other-household',
+    ]);
+  });
+
+  it('markPendingEventRetryScheduled bumps retryCount and nextRetryAt in place, keeping the record failed', async () => {
+    await db.putPendingEvent(pendingRecord({ localId: 'local-1' }));
+
+    await db.markPendingEventRetryScheduled('local-1', 2, '2026-01-01T10:05:00.000Z');
+
+    const [record] = await db.listPendingEvents(HOUSEHOLD_ID, CHILD_ID);
+    expect(record.status).toBe('failed');
+    expect(record.retryCount).toBe(2);
+    expect(record.nextRetryAt).toBe('2026-01-01T10:05:00.000Z');
+  });
+
+  it('markPendingEventRetryScheduled leaves nextRetryAt undefined when omitted (abandoned record)', async () => {
+    await db.putPendingEvent(pendingRecord({ localId: 'local-1' }));
+
+    await db.markPendingEventRetryScheduled('local-1', 6);
+
+    const [record] = await db.listPendingEvents(HOUSEHOLD_ID, CHILD_ID);
+    expect(record.retryCount).toBe(6);
+    expect(record.nextRetryAt).toBeUndefined();
+  });
+
+  it('markPendingEventRetryScheduled is a no-op for an already-deleted record', async () => {
+    await expect(db.markPendingEventRetryScheduled('local-missing', 1)).resolves.toBeUndefined();
+    expect(await db.listPendingEvents(HOUSEHOLD_ID, CHILD_ID)).toHaveLength(0);
+  });
+
   it('returns every matching record without imposing an order', async () => {
     // Ordering is deliberately not this function's concern — the caller re-sorts
     // via `mergeServerAndPendingEvents`. So we only assert the full set is

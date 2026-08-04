@@ -17,9 +17,9 @@ Phase 3 abgeschlossen (Echtzeit-Sync-Mechanismus steht, darauf baut die Offline-
 - [x] Optimistisches UI-Update: neue Einträge werden sofort angezeigt, bevor der Server bestätigt hat — Create-Flows (QuickEntry + Backfill) schreiben write-through in IndexedDB und mergen ungespeicherte Einträge in Listen/Timeline (`createEventOptimistically`/`usePendingLocalEvents`/`mergeServerAndPendingEvents`); nur neue Einträge, Edits/Timer-Stopps bleiben ausgeklammert
 
 ### Synchronisation
-- [ ] Sync-Queue: bei fehlender Verbindung gesammelte Änderungen bei Reconnect an den Server senden
+- [x] Sync-Queue: bei fehlender Verbindung gesammelte Änderungen bei Reconnect an den Server senden — `drainPendingEventQueue` (`apps/frontend/src/offline/syncQueue.ts`) sendet gepufferte Creates beim Reconnect erneut, getriggert über `SyncQueueProvider` (`online`-Event + Socket.IO-`isConnected`); der exakte Request wird als `createInput` auf dem `pendingEvents`-Record persistiert
 - [ ] Konfliktbehandlung nach Last-Write-Wins-Prinzip, basierend auf dem Zeitstempel des Ereignisses
-- [ ] Fehlerbehandlung bei fehlgeschlagenem Sync (z. B. Retry-Mechanismus)
+- [x] Fehlerbehandlung bei fehlgeschlagenem Sync (z. B. Retry-Mechanismus) — exponentielles Backoff mit Deckel (max. 6 Versuche) in `syncQueue.ts`; retrybar nur bei Netzwerk-/5xx-Fehlern (4xx wird nicht wiederholt), eine Einzel-Fehlschlag reschedult sich autonom per Timer, Zustand persistiert via `retryCount`/`nextRetryAt` (`pendingEvents.db.ts`)
 
 ### PWA
 - [x] Web App Manifest (Icon, Name, Theme-Farbe, Start-URL) — via `vite-plugin-pwa`, siehe [ADR-0008](../adr/0008-pwa-basics-via-vite-plugin-pwa.md)
