@@ -91,9 +91,11 @@ export async function markPendingEventFailed(localId: string): Promise<void> {
 }
 
 /**
- * Lists locally-buffered events for a household+child, newest first, optionally
- * narrowed to a single `eventType` (per-type Home pages pass one; the daily
- * timeline passes none).
+ * Lists locally-buffered events for a household+child, optionally narrowed to a
+ * single `eventType` (per-type Home pages pass one; the daily timeline passes
+ * none). Returns records in the underlying index order — ordering the rendered
+ * list is `mergeServerAndPendingEvents`'s job (it re-sorts by `occurredAt`), so
+ * this read deliberately doesn't sort.
  */
 export async function listPendingEvents(
   householdId: string,
@@ -102,7 +104,7 @@ export async function listPendingEvents(
 ): Promise<PendingEventRecord[]> {
   const db = await getDb();
   const records = await db.getAllFromIndex(STORE_NAME, BY_CHILD_INDEX, [householdId, childId]);
-  const filtered =
-    eventType === undefined ? records : records.filter((record) => record.eventType === eventType);
-  return filtered.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  return eventType === undefined
+    ? records
+    : records.filter((record) => record.eventType === eventType);
 }

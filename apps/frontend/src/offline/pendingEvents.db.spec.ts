@@ -102,7 +102,10 @@ describe('pendingEvents.db', () => {
     expect(feedingOnly.map((record) => record.localId)).toEqual(['local-feeding']);
   });
 
-  it('returns records newest first by savedAt', async () => {
+  it('returns every matching record without imposing an order', async () => {
+    // Ordering is deliberately not this function's concern — the caller re-sorts
+    // via `mergeServerAndPendingEvents`. So we only assert the full set is
+    // returned, order-agnostically, rather than a particular sequence.
     await db.putPendingEvent(
       pendingRecord({ localId: 'local-older', savedAt: '2026-01-01T09:00:00.000Z' }),
     );
@@ -112,6 +115,6 @@ describe('pendingEvents.db', () => {
 
     const records = await db.listPendingEvents(HOUSEHOLD_ID, CHILD_ID);
 
-    expect(records.map((record) => record.localId)).toEqual(['local-newer', 'local-older']);
+    expect(records.map((record) => record.localId).sort()).toEqual(['local-newer', 'local-older']);
   });
 });
