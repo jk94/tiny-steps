@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { createSleepEvent } from '../api/sleep-api';
+import { createSleepEventOptimistic } from '../api/sleep-api';
+import { useAuth } from '../auth/useAuth';
 import { mapSleepError } from '../sleep/mapSleepError';
 import { queryClient } from '../lib/query-client';
 import { ErrorMessage } from './ErrorMessage';
@@ -23,9 +24,11 @@ export interface SleepQuickEntryProps {
  */
 export function SleepQuickEntry({ householdId, childId }: SleepQuickEntryProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const mutation = useMutation({
-    mutationFn: () => createSleepEvent(householdId, childId, {}),
+    // `user` is always non-null here — this component only renders behind `ProtectedRoute`.
+    mutationFn: () => createSleepEventOptimistic(householdId, childId, user!.id, {}),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['households', householdId, 'children', childId, 'sleep-events'],

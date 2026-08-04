@@ -5,7 +5,10 @@ import { fetchDailyEvents } from '../api/event-api';
 import type { EventType, TimelineEventSummary } from '../api/event-api';
 import { listHouseholdMembers } from '../api/household-api';
 import type { HouseholdMemberSummary } from '../api/household-api';
+import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
+import { OfflineStatusBadge } from './OfflineStatusBadge';
 
 export interface TimelineEventListProps {
   householdId: string;
@@ -79,12 +82,26 @@ export function TimelineEventList({
     queryFn: () => listHouseholdMembers(householdId),
     retry: false,
   });
+  // No type filter here — the timeline shows all three kinds; the enabled-types
+  // filter is applied to the merged result below. The pending records DO need
+  // the same `[from, to)` day-window filtering as the server query, though: a
+  // backfill create can carry an arbitrary past `occurredAt`, so a pending (or
+  // failed) backfill-for-another-day must not leak onto this day's timeline.
+  const pendingQuery = usePendingLocalEvents(householdId, childId);
 
   if (eventsQuery.isLoading) {
     return <LoadingIndicator />;
   }
 
-  const events = (eventsQuery.data ?? []).filter((event) => enabledTypes.has(event.type));
+  const pendingForThisDay = (pendingQuery.data ?? [])
+    .filter((record) => record.summary.occurredAt >= from && record.summary.occurredAt < to)
+    .map((record) => ({ summary: record.summary, status: record.status }));
+
+  const events = mergeServerAndPendingEvents(
+    eventsQuery.data ?? [],
+    pendingForThisDay,
+    'asc',
+  ).filter(({ summary }) => enabledTypes.has(summary.type));
 
   if (events.length === 0) {
     return <p>{t('timeline.list.empty')}</p>;
@@ -92,22 +109,25 @@ export function TimelineEventList({
 
   return (
     <ul>
-      {events.map((event) => (
-        <li key={event.id}>
-          <span>{entryLabel(t, event)}</span>
-          <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleTimeString()}</time>
-          {event.type !== 'DIAPER' && event.durationSeconds !== null && (
+      {events.map(({ summary, localStatus }) => (
+        <li key={summary.id}>
+          <span>{entryLabel(t, summary)}</span>
+          <time dateTime={summary.occurredAt}>
+            {new Date(summary.occurredAt).toLocaleTimeString()}
+          </time>
+          {summary.type !== 'DIAPER' && summary.durationSeconds !== null && (
             <span>
               {t('timeline.list.durationMinutes', {
-                minutes: Math.round(event.durationSeconds / 60),
+                minutes: Math.round(summary.durationSeconds / 60),
               })}
             </span>
           )}
           <span>
             {t('timeline.list.loggedBy', {
-              user: resolveUserLabel(event.userId, membersQuery.data),
+              user: resolveUserLabel(summary.userId, membersQuery.data),
             })}
           </span>
+          <OfflineStatusBadge status={localStatus} />
         </li>
       ))}
     </ul>

@@ -46,3 +46,4 @@ Proposed | Accepted | Deprecated | Superseded by ADR-NNNN
 | [0006](0006-event-base-table-with-per-type-detail-tables.md) | `Event` base table with per-type detail tables, starting with `FeedingDetail` | Accepted |
 | [0007](0007-websocket-realtime-sync.md) | WebSocket real-time sync via Socket.IO, room-per-route, thin broadcast payload | Accepted |
 | [0008](0008-pwa-basics-via-vite-plugin-pwa.md) | PWA basics via `vite-plugin-pwa` (`generateSW`), app-shell-only scope | Accepted |
+| [0009](0009-indexeddb-optimistic-create-engine.md) | IndexedDB write-through and a shared optimistic-create engine for new entries | Accepted |

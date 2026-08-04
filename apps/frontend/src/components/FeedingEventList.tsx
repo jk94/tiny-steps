@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listFeedingEvents } from '../api/feeding-api';
 import type { FeedingEventSummary } from '../api/feeding-api';
+import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
+import { OfflineStatusBadge } from './OfflineStatusBadge';
 
 export interface FeedingEventListProps {
   householdId: string;
@@ -35,28 +38,45 @@ export function FeedingEventList({ householdId, childId }: FeedingEventListProps
     queryFn: () => listFeedingEvents(householdId, childId),
     retry: false,
   });
+  const pendingQuery = usePendingLocalEvents(householdId, childId, 'FEEDING');
+
+  // Merge in not-yet-confirmed local entries so a just-tapped event shows up
+  // immediately. All pending records here are FEEDING-typed (the query filters
+  // by type), so narrowing each buffered summary back to FeedingEventSummary is
+  // sound.
+  const events = mergeServerAndPendingEvents(
+    data ?? [],
+    (pendingQuery.data ?? []).map((record) => ({
+      summary: record.summary as FeedingEventSummary,
+      status: record.status,
+    })),
+    'desc',
+  );
 
   return (
     <section>
       <h2>{t('feeding.list.title')}</h2>
       {isLoading ? (
         <LoadingIndicator />
-      ) : !data || data.length === 0 ? (
+      ) : events.length === 0 ? (
         <p>{t('feeding.list.empty')}</p>
       ) : (
         <ul>
-          {data.map((event) => (
-            <li key={event.id}>
-              <Link to={`/households/${householdId}/children/${childId}/feeding/${event.id}/edit`}>
-                <span>{entryLabel(t, event)}</span>
-                <span>{new Date(event.occurredAt).toLocaleString()}</span>
-                {event.durationSeconds !== null && (
+          {events.map(({ summary, localStatus }) => (
+            <li key={summary.id}>
+              <Link
+                to={`/households/${householdId}/children/${childId}/feeding/${summary.id}/edit`}
+              >
+                <span>{entryLabel(t, summary)}</span>
+                <span>{new Date(summary.occurredAt).toLocaleString()}</span>
+                {summary.durationSeconds !== null && (
                   <span>
                     {t('feeding.list.durationMinutes', {
-                      minutes: Math.round(event.durationSeconds / 60),
+                      minutes: Math.round(summary.durationSeconds / 60),
                     })}
                   </span>
                 )}
+                <OfflineStatusBadge status={localStatus} />
               </Link>
             </li>
           ))}

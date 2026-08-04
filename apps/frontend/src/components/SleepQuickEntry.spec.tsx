@@ -4,15 +4,31 @@ import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SleepQuickEntry } from './SleepQuickEntry';
 import * as sleepApi from '../api/sleep-api';
+import * as useAuthModule from '../auth/useAuth';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
+vi.mock('../auth/useAuth');
 
 const mockedSleepApi = vi.mocked(sleepApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
+const USER_ID = 'u1';
+
+function mockAuthUser() {
+  mockedUseAuth.mockReturnValue({
+    user: { id: USER_ID, email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 const summary: sleepApi.SleepEventSummary = {
   id: 'e1',
@@ -37,6 +53,7 @@ function renderQuickEntry() {
 describe('SleepQuickEntry', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockAuthUser();
   });
 
   afterEach(() => {
@@ -45,18 +62,23 @@ describe('SleepQuickEntry', () => {
   });
 
   it('creates a sleep entry with a single tap', async () => {
-    mockedSleepApi.createSleepEvent.mockResolvedValueOnce(summary);
+    mockedSleepApi.createSleepEventOptimistic.mockResolvedValueOnce(summary);
     const user = userEvent.setup();
     renderQuickEntry();
 
     await user.click(screen.getByRole('button', { name: 'Start sleep' }));
 
-    expect(mockedSleepApi.createSleepEvent).toHaveBeenCalledTimes(1);
-    expect(mockedSleepApi.createSleepEvent).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, {});
+    expect(mockedSleepApi.createSleepEventOptimistic).toHaveBeenCalledTimes(1);
+    expect(mockedSleepApi.createSleepEventOptimistic).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      USER_ID,
+      {},
+    );
   });
 
   it('invalidates the sleep-events queries on success', async () => {
-    mockedSleepApi.createSleepEvent.mockResolvedValueOnce(summary);
+    mockedSleepApi.createSleepEventOptimistic.mockResolvedValueOnce(summary);
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const user = userEvent.setup();
     renderQuickEntry();
@@ -69,7 +91,7 @@ describe('SleepQuickEntry', () => {
   });
 
   it('shows a mapped error message when create fails with a 409 (timer conflict)', async () => {
-    mockedSleepApi.createSleepEvent.mockRejectedValueOnce(new ApiError(409, {}));
+    mockedSleepApi.createSleepEventOptimistic.mockRejectedValueOnce(new ApiError(409, {}));
     const user = userEvent.setup();
     renderQuickEntry();
 

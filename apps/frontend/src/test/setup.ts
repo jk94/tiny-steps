@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import 'fake-indexeddb/auto'; // side-effect: jsdom has no native IndexedDB; the offline layer (woven into component/page specs via the optimistic adapters) needs one
 import { afterEach, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '../i18n'; // side-effect: initializes the i18next singleton — nothing else in the test import graph does this, since no test imports main.tsx

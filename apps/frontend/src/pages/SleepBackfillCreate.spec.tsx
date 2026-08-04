@@ -5,12 +5,29 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { SleepBackfillCreate } from './SleepBackfillCreate';
 import * as sleepApi from '../api/sleep-api';
+import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
+vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedSleepApi = vi.mocked(sleepApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
+
+const USER_ID = 'u1';
+
+function mockAuthUser() {
+  mockedUseAuth.mockReturnValue({
+    user: { id: USER_ID, email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -51,6 +68,7 @@ function renderBackfillCreate() {
 describe('SleepBackfillCreate', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockAuthUser();
   });
 
   afterEach(() => {
@@ -66,7 +84,7 @@ describe('SleepBackfillCreate', () => {
   });
 
   it('creates the entry, invalidates the sleep-events query, and navigates back to sleep home', async () => {
-    mockedSleepApi.createSleepEvent.mockResolvedValueOnce(created);
+    mockedSleepApi.createSleepEventOptimistic.mockResolvedValueOnce(created);
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const user = userEvent.setup();
 
@@ -78,9 +96,10 @@ describe('SleepBackfillCreate', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
-    expect(mockedSleepApi.createSleepEvent).toHaveBeenCalledWith(
+    expect(mockedSleepApi.createSleepEventOptimistic).toHaveBeenCalledWith(
       HOUSEHOLD_ID,
       CHILD_ID,
+      USER_ID,
       expect.objectContaining({ occurredAt: new Date('2026-01-01T20:00').toISOString() }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith({

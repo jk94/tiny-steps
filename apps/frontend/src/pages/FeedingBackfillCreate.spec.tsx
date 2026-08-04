@@ -5,12 +5,29 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { FeedingBackfillCreate } from './FeedingBackfillCreate';
 import * as feedingApi from '../api/feeding-api';
+import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/feeding-api');
+vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedFeedingApi = vi.mocked(feedingApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
+
+const USER_ID = 'u1';
+
+function mockAuthUser() {
+  mockedUseAuth.mockReturnValue({
+    user: { id: USER_ID, email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -57,6 +74,7 @@ function renderBackfillCreate() {
 describe('FeedingBackfillCreate', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockAuthUser();
   });
 
   afterEach(() => {
@@ -72,7 +90,7 @@ describe('FeedingBackfillCreate', () => {
   });
 
   it('creates the entry, invalidates the feeding-events query, and navigates back to feeding home', async () => {
-    mockedFeedingApi.createFeedingEvent.mockResolvedValueOnce(created);
+    mockedFeedingApi.createFeedingEventOptimistic.mockResolvedValueOnce(created);
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const user = userEvent.setup();
 
@@ -82,9 +100,10 @@ describe('FeedingBackfillCreate', () => {
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: '2026-01-01T10:00' } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
-    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledWith(
+    expect(mockedFeedingApi.createFeedingEventOptimistic).toHaveBeenCalledWith(
       HOUSEHOLD_ID,
       CHILD_ID,
+      USER_ID,
       expect.objectContaining({ feedingType: 'SOLID' }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith({

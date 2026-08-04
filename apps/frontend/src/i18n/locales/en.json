@@ -2,6 +2,14 @@
   "common": {
     "loading": "Loading…"
   },
+  "offline": {
+    "status": {
+      "pending": "Saving…",
+      "pendingLabel": "Not yet saved to the server",
+      "failed": "Not saved",
+      "failedLabel": "Saving failed — this entry hasn't reached the server yet"
+    }
+  },
   "nav": {
     "dashboardLink": "Dashboard",
     "householdsLink": "Households"

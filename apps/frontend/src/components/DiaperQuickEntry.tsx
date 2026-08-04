@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { createDiaperEvent } from '../api/diaper-api';
+import { createDiaperEventOptimistic } from '../api/diaper-api';
 import type { CreateDiaperEventInput } from '../api/diaper-api';
+import { useAuth } from '../auth/useAuth';
 import { mapDiaperError } from '../diaper/mapDiaperError';
 import { queryClient } from '../lib/query-client';
 import { ErrorMessage } from './ErrorMessage';
@@ -23,9 +24,12 @@ export interface DiaperQuickEntryProps {
  */
 export function DiaperQuickEntry({ householdId, childId }: DiaperQuickEntryProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const mutation = useMutation({
-    mutationFn: (input: CreateDiaperEventInput) => createDiaperEvent(householdId, childId, input),
+    // `user` is always non-null here — this component only renders behind `ProtectedRoute`.
+    mutationFn: (input: CreateDiaperEventInput) =>
+      createDiaperEventOptimistic(householdId, childId, user!.id, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['households', householdId, 'children', childId, 'diaper-events'],

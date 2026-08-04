@@ -1,3 +1,4 @@
+import { createEventOptimistically } from '../offline/createEventOptimistically';
 import { apiFetch } from './http-client';
 
 export type DiaperType = 'PEE' | 'STOOL' | 'BOTH';
@@ -93,5 +94,51 @@ export function deleteDiaperEvent(
 ): Promise<void> {
   return apiFetch<void>(`${diaperEventsPath(householdId, childId)}/${eventId}`, {
     method: 'DELETE',
+  });
+}
+
+/**
+ * Synthesizes the optimistic row shown before the server confirms. Mirrors the
+ * backend's defaulting precedence (see `DiaperService.create`): `occurredAt`
+ * defaults to `occurredAt ?? now`. Diaper is always a point event (never
+ * timer-based), so there are no `startedAt`/`endedAt`/`durationSeconds` fields.
+ */
+function buildOptimisticDiaperSummary(
+  localId: string,
+  childId: string,
+  userId: string,
+  input: CreateDiaperEventInput,
+): DiaperEventSummary {
+  const now = new Date().toISOString();
+  return {
+    id: localId,
+    childId,
+    userId,
+    type: 'DIAPER',
+    diaperType: input.diaperType,
+    occurredAt: input.occurredAt ?? now,
+    note: input.note ?? null,
+    createdAt: now,
+  };
+}
+
+/**
+ * Offline-aware wrapper around `createDiaperEvent`: buffers the new entry
+ * locally and shows it immediately, then fires the real request (see
+ * `createEventOptimistically`).
+ */
+export function createDiaperEventOptimistic(
+  householdId: string,
+  childId: string,
+  userId: string,
+  input: CreateDiaperEventInput,
+): Promise<DiaperEventSummary> {
+  return createEventOptimistically({
+    householdId,
+    childId,
+    eventType: 'DIAPER',
+    buildOptimisticSummary: (localId) =>
+      buildOptimisticDiaperSummary(localId, childId, userId, input),
+    apiCall: () => createDiaperEvent(householdId, childId, input),
   });
 }

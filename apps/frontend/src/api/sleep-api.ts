@@ -1,3 +1,4 @@
+import { createEventOptimistically } from '../offline/createEventOptimistically';
 import { apiFetch } from './http-client';
 
 /**
@@ -102,5 +103,55 @@ export function deleteSleepEvent(
 ): Promise<void> {
   return apiFetch<void>(`${sleepEventsPath(householdId, childId)}/${eventId}`, {
     method: 'DELETE',
+  });
+}
+
+/**
+ * Synthesizes the optimistic row shown before the server confirms. Mirrors the
+ * backend's defaulting precedence (see `SleepService.create`): `startedAt`
+ * defaults to `startedAt ?? occurredAt ?? now`, `occurredAt` to
+ * `occurredAt ?? startedAt`. Sleep has no type branching. `durationSeconds` is
+ * null (no `endedAt` yet on a freshly-created entry).
+ */
+function buildOptimisticSleepSummary(
+  localId: string,
+  childId: string,
+  userId: string,
+  input: CreateSleepEventInput,
+): SleepEventSummary {
+  const now = new Date().toISOString();
+  const startedAt = input.startedAt ?? input.occurredAt ?? now;
+  const occurredAt = input.occurredAt ?? startedAt;
+  return {
+    id: localId,
+    childId,
+    userId,
+    type: 'SLEEP',
+    occurredAt,
+    startedAt,
+    endedAt: null,
+    durationSeconds: null,
+    createdAt: now,
+  };
+}
+
+/**
+ * Offline-aware wrapper around `createSleepEvent`: buffers the new entry locally
+ * and shows it immediately, then fires the real request (see
+ * `createEventOptimistically`).
+ */
+export function createSleepEventOptimistic(
+  householdId: string,
+  childId: string,
+  userId: string,
+  input: CreateSleepEventInput,
+): Promise<SleepEventSummary> {
+  return createEventOptimistically({
+    householdId,
+    childId,
+    eventType: 'SLEEP',
+    buildOptimisticSummary: (localId) =>
+      buildOptimisticSleepSummary(localId, childId, userId, input),
+    apiCall: () => createSleepEvent(householdId, childId, input),
   });
 }

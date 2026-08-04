@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listDiaperEvents } from '../api/diaper-api';
 import type { DiaperEventSummary } from '../api/diaper-api';
+import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
+import { OfflineStatusBadge } from './OfflineStatusBadge';
 
 export interface DiaperEventListProps {
   householdId: string;
@@ -34,21 +37,36 @@ export function DiaperEventList({ householdId, childId }: DiaperEventListProps) 
     queryFn: () => listDiaperEvents(householdId, childId),
     retry: false,
   });
+  const pendingQuery = usePendingLocalEvents(householdId, childId, 'DIAPER');
+
+  // Merge in not-yet-confirmed local entries so a just-tapped event shows up
+  // immediately. All pending records here are DIAPER-typed (the query filters by
+  // type), so narrowing each buffered summary back to DiaperEventSummary is
+  // sound.
+  const events = mergeServerAndPendingEvents(
+    data ?? [],
+    (pendingQuery.data ?? []).map((record) => ({
+      summary: record.summary as DiaperEventSummary,
+      status: record.status,
+    })),
+    'desc',
+  );
 
   return (
     <section>
       <h2>{t('diaper.list.title')}</h2>
       {isLoading ? (
         <LoadingIndicator />
-      ) : !data || data.length === 0 ? (
+      ) : events.length === 0 ? (
         <p>{t('diaper.list.empty')}</p>
       ) : (
         <ul>
-          {data.map((event) => (
-            <li key={event.id}>
-              <Link to={`/households/${householdId}/children/${childId}/diaper/${event.id}/edit`}>
-                <span>{entryLabel(t, event)}</span>
-                <span>{new Date(event.occurredAt).toLocaleString()}</span>
+          {events.map(({ summary, localStatus }) => (
+            <li key={summary.id}>
+              <Link to={`/households/${householdId}/children/${childId}/diaper/${summary.id}/edit`}>
+                <span>{entryLabel(t, summary)}</span>
+                <span>{new Date(summary.occurredAt).toLocaleString()}</span>
+                <OfflineStatusBadge status={localStatus} />
               </Link>
             </li>
           ))}

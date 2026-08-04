@@ -4,15 +4,31 @@ import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { FeedingQuickEntry } from './FeedingQuickEntry';
 import * as feedingApi from '../api/feeding-api';
+import * as useAuthModule from '../auth/useAuth';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/feeding-api');
+vi.mock('../auth/useAuth');
 
 const mockedFeedingApi = vi.mocked(feedingApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
+const USER_ID = 'u1';
+
+function mockAuthUser() {
+  mockedUseAuth.mockReturnValue({
+    user: { id: USER_ID, email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 const summary: feedingApi.FeedingEventSummary = {
   id: 'e1',
@@ -41,6 +57,7 @@ function renderQuickEntry() {
 describe('FeedingQuickEntry', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockAuthUser();
   });
 
   afterEach(() => {
@@ -49,42 +66,57 @@ describe('FeedingQuickEntry', () => {
   });
 
   it('creates a BREAST/LEFT entry with a single tap', async () => {
-    mockedFeedingApi.createFeedingEvent.mockResolvedValueOnce(summary);
+    mockedFeedingApi.createFeedingEventOptimistic.mockResolvedValueOnce(summary);
     const user = userEvent.setup();
     renderQuickEntry();
 
     await user.click(screen.getByRole('button', { name: 'Breastfeed left' }));
 
-    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledTimes(1);
-    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, {
-      feedingType: 'BREAST',
-      side: 'LEFT',
-    });
+    expect(mockedFeedingApi.createFeedingEventOptimistic).toHaveBeenCalledTimes(1);
+    expect(mockedFeedingApi.createFeedingEventOptimistic).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      USER_ID,
+      {
+        feedingType: 'BREAST',
+        side: 'LEFT',
+      },
+    );
   });
 
   it('creates a BREAST/RIGHT entry with a single tap', async () => {
-    mockedFeedingApi.createFeedingEvent.mockResolvedValueOnce(summary);
+    mockedFeedingApi.createFeedingEventOptimistic.mockResolvedValueOnce(summary);
     const user = userEvent.setup();
     renderQuickEntry();
 
     await user.click(screen.getByRole('button', { name: 'Breastfeed right' }));
 
-    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, {
-      feedingType: 'BREAST',
-      side: 'RIGHT',
-    });
+    expect(mockedFeedingApi.createFeedingEventOptimistic).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      USER_ID,
+      {
+        feedingType: 'BREAST',
+        side: 'RIGHT',
+      },
+    );
   });
 
   it('creates a SOLID entry with a single tap', async () => {
-    mockedFeedingApi.createFeedingEvent.mockResolvedValueOnce(summary);
+    mockedFeedingApi.createFeedingEventOptimistic.mockResolvedValueOnce(summary);
     const user = userEvent.setup();
     renderQuickEntry();
 
     await user.click(screen.getByRole('button', { name: 'Solid food' }));
 
-    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, {
-      feedingType: 'SOLID',
-    });
+    expect(mockedFeedingApi.createFeedingEventOptimistic).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      USER_ID,
+      {
+        feedingType: 'SOLID',
+      },
+    );
   });
 
   it('does not call create on the first bottle tap, only reveals ml presets', async () => {
@@ -93,26 +125,31 @@ describe('FeedingQuickEntry', () => {
 
     await user.click(screen.getByRole('button', { name: 'Bottle' }));
 
-    expect(mockedFeedingApi.createFeedingEvent).not.toHaveBeenCalled();
+    expect(mockedFeedingApi.createFeedingEventOptimistic).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: '90 ml' })).toBeInTheDocument();
   });
 
   it('creates a BOTTLE entry with the chosen amount on the second tap', async () => {
-    mockedFeedingApi.createFeedingEvent.mockResolvedValueOnce(summary);
+    mockedFeedingApi.createFeedingEventOptimistic.mockResolvedValueOnce(summary);
     const user = userEvent.setup();
     renderQuickEntry();
 
     await user.click(screen.getByRole('button', { name: 'Bottle' }));
     await user.click(screen.getByRole('button', { name: '90 ml' }));
 
-    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, {
-      feedingType: 'BOTTLE',
-      amountMl: 90,
-    });
+    expect(mockedFeedingApi.createFeedingEventOptimistic).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      USER_ID,
+      {
+        feedingType: 'BOTTLE',
+        amountMl: 90,
+      },
+    );
   });
 
   it('invalidates the feeding-events queries on success', async () => {
-    mockedFeedingApi.createFeedingEvent.mockResolvedValueOnce(summary);
+    mockedFeedingApi.createFeedingEventOptimistic.mockResolvedValueOnce(summary);
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const user = userEvent.setup();
     renderQuickEntry();
@@ -125,7 +162,7 @@ describe('FeedingQuickEntry', () => {
   });
 
   it('shows a mapped error message when create fails with a 409 (timer conflict)', async () => {
-    mockedFeedingApi.createFeedingEvent.mockRejectedValueOnce(new ApiError(409, {}));
+    mockedFeedingApi.createFeedingEventOptimistic.mockRejectedValueOnce(new ApiError(409, {}));
     const user = userEvent.setup();
     renderQuickEntry();
 
