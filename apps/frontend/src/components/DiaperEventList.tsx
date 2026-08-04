@@ -7,6 +7,7 @@ import type { DiaperEventSummary } from '../api/diaper-api';
 import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
+import { OfflineStatusBadge } from './OfflineStatusBadge';
 
 export interface DiaperEventListProps {
   householdId: string;
@@ -40,12 +41,16 @@ export function DiaperEventList({ householdId, childId }: DiaperEventListProps) 
 
   // Merge in not-yet-confirmed local entries so a just-tapped event shows up
   // immediately. All pending records here are DIAPER-typed (the query filters by
-  // type), so the narrowing cast back to DiaperEventSummary[] is sound.
+  // type), so narrowing each buffered summary back to DiaperEventSummary is
+  // sound.
   const events = mergeServerAndPendingEvents(
     data ?? [],
-    (pendingQuery.data ?? []).map((record) => record.summary),
+    (pendingQuery.data ?? []).map((record) => ({
+      summary: record.summary as DiaperEventSummary,
+      status: record.status,
+    })),
     'desc',
-  ) as DiaperEventSummary[];
+  );
 
   return (
     <section>
@@ -56,11 +61,12 @@ export function DiaperEventList({ householdId, childId }: DiaperEventListProps) 
         <p>{t('diaper.list.empty')}</p>
       ) : (
         <ul>
-          {events.map((event) => (
-            <li key={event.id}>
-              <Link to={`/households/${householdId}/children/${childId}/diaper/${event.id}/edit`}>
-                <span>{entryLabel(t, event)}</span>
-                <span>{new Date(event.occurredAt).toLocaleString()}</span>
+          {events.map(({ summary, localStatus }) => (
+            <li key={summary.id}>
+              <Link to={`/households/${householdId}/children/${childId}/diaper/${summary.id}/edit`}>
+                <span>{entryLabel(t, summary)}</span>
+                <span>{new Date(summary.occurredAt).toLocaleString()}</span>
+                <OfflineStatusBadge status={localStatus} />
               </Link>
             </li>
           ))}

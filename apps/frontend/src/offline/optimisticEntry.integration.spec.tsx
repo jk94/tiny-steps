@@ -23,6 +23,7 @@ const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const BREAST_LEFT_ENTRY = 'Breastfeeding (left)';
 const EMPTY_MESSAGE = 'No feeding entries recorded yet.';
+const FAILED_BADGE_LABEL = "Saving failed — this entry hasn't reached the server yet";
 
 function mockAuthUser() {
   mockedUseAuth.mockReturnValue({
@@ -93,5 +94,9 @@ describe('optimistic feeding entry (integration)', () => {
     // The entry stays even though the request rejected — the whole point of the
     // local buffer is that the input isn't lost on a failed sync.
     expect(await screen.findByText(BREAST_LEFT_ENTRY)).toBeInTheDocument();
+
+    // ...and it must be visibly marked as failed, so the user isn't misled into
+    // thinking a not-actually-saved entry reached the server.
+    expect(await screen.findByLabelText(FAILED_BADGE_LABEL)).toBeInTheDocument();
   });
 });

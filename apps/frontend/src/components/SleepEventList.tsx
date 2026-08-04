@@ -6,6 +6,7 @@ import type { SleepEventSummary } from '../api/sleep-api';
 import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
+import { OfflineStatusBadge } from './OfflineStatusBadge';
 
 export interface SleepEventListProps {
   householdId: string;
@@ -29,12 +30,16 @@ export function SleepEventList({ householdId, childId }: SleepEventListProps) {
 
   // Merge in not-yet-confirmed local entries so a just-tapped event shows up
   // immediately. All pending records here are SLEEP-typed (the query filters by
-  // type), so the narrowing cast back to SleepEventSummary[] is sound.
+  // type), so narrowing each buffered summary back to SleepEventSummary is
+  // sound.
   const events = mergeServerAndPendingEvents(
     data ?? [],
-    (pendingQuery.data ?? []).map((record) => record.summary),
+    (pendingQuery.data ?? []).map((record) => ({
+      summary: record.summary as SleepEventSummary,
+      status: record.status,
+    })),
     'desc',
-  ) as SleepEventSummary[];
+  );
 
   return (
     <section>
@@ -45,18 +50,19 @@ export function SleepEventList({ householdId, childId }: SleepEventListProps) {
         <p>{t('sleep.list.empty')}</p>
       ) : (
         <ul>
-          {events.map((event) => (
-            <li key={event.id}>
-              <Link to={`/households/${householdId}/children/${childId}/sleep/${event.id}/edit`}>
+          {events.map(({ summary, localStatus }) => (
+            <li key={summary.id}>
+              <Link to={`/households/${householdId}/children/${childId}/sleep/${summary.id}/edit`}>
                 <span>{t('sleep.list.entry')}</span>
-                <span>{new Date(event.occurredAt).toLocaleString()}</span>
-                {event.durationSeconds !== null && (
+                <span>{new Date(summary.occurredAt).toLocaleString()}</span>
+                {summary.durationSeconds !== null && (
                   <span>
                     {t('sleep.list.durationMinutes', {
-                      minutes: Math.round(event.durationSeconds / 60),
+                      minutes: Math.round(summary.durationSeconds / 60),
                     })}
                   </span>
                 )}
+                <OfflineStatusBadge status={localStatus} />
               </Link>
             </li>
           ))}

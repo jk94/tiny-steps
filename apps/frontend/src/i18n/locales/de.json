@@ -2,6 +2,14 @@
   "common": {
     "loading": "Lädt…"
   },
+  "offline": {
+    "status": {
+      "pending": "Wird gespeichert…",
+      "pendingLabel": "Noch nicht auf dem Server gespeichert",
+      "failed": "Nicht gespeichert",
+      "failedLabel": "Speichern fehlgeschlagen – dieser Eintrag ist noch nicht auf dem Server angekommen"
+    }
+  },
   "nav": {
     "dashboardLink": "Dashboard",
     "householdsLink": "Haushalte"
