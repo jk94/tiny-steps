@@ -24,12 +24,25 @@ import { invalidatePendingEventsQuery } from './usePendingLocalEvents';
  * itself via a timer (see `runDrain`), so it eventually retries even without a
  * further external trigger.
  *
- * Delivery guarantee: at-least-once, deliberately. A resend can duplicate a
- * server-side event if the original POST actually succeeded but its response
- * never reached the client (so the buffered record was never deleted). This is
- * an accepted trade-off for this slice — de-duplicating would require either a
- * backend idempotency-key column (out of scope: no schema changes here) or
- * content-based dedup, which is effectively part of the deferred
+ * Delivery guarantee: at-least-once, deliberately. There are two ways a resend
+ * can duplicate a server-side event:
+ *   1. Response-lost: the original POST from `createEventOptimistically`
+ *      actually succeeded server-side, but its response never reached the
+ *      client (so the buffered record was never deleted) and a later drain
+ *      resends it.
+ *   2. In-flight overlap (the broader, more likely window): a record can still
+ *      be `status: 'pending'` with its *original* `apiCall()` from
+ *      `createEventOptimistically` still in flight — neither succeeded nor
+ *      failed yet — when a connectivity-change trigger (the `online` event or a
+ *      Socket.IO reconnect) fires a drain. The drain's eligibility filter only
+ *      checks `retryCount < MAX_RETRY_ATTEMPTS` and whether `nextRetryAt` is
+ *      due; it cannot tell "still in flight" from "genuinely failed / never
+ *      sent", so it may resend the record concurrently with its own original
+ *      request and double-post the same logical event even when the network
+ *      never actually dropped.
+ * This is an accepted trade-off for this slice — de-duplicating would require
+ * either a backend idempotency-key column (out of scope: no schema changes
+ * here) or content-based dedup, which is effectively part of the deferred
  * Last-Write-Wins conflict-resolution work. It is documented rather than
  * silently omitted.
  */
@@ -185,9 +198,17 @@ async function runDrain(): Promise<void> {
     .filter((record) => isRetryable(record) && isDue(record))
     .sort((a, b) => a.savedAt.localeCompare(b.savedAt));
   for (const record of due) {
-    const rescheduledAt = await resendPendingEvent(record);
-    if (rescheduledAt !== undefined) {
-      futureRetryTimes.push(rescheduledAt);
+    try {
+      const rescheduledAt = await resendPendingEvent(record);
+      if (rescheduledAt !== undefined) {
+        futureRetryTimes.push(rescheduledAt);
+      }
+    } catch (error) {
+      // A step other than the (already-caught) `createEvent` call threw — e.g.
+      // an IndexedDB delete/update or a query invalidation. Surface it but keep
+      // draining: one record's failure must not abort the rest of this pass.
+      // The record stays buffered and is reconsidered on the next trigger.
+      console.error('Failed to process a buffered event during sync-queue drain', error);
     }
   }
 
@@ -208,9 +229,18 @@ let drainPromise: Promise<void> | null = null;
  */
 export function drainPendingEventQueue(): Promise<void> {
   if (drainPromise === null) {
-    drainPromise = runDrain().finally(() => {
-      drainPromise = null;
-    });
+    drainPromise = runDrain()
+      // Catch here (at the source) rather than at every `void`-invoked call
+      // site, so a residual top-level failure — e.g. `listAllPendingEvents()`
+      // itself throwing — can never surface as an unhandled rejection. The
+      // returned promise always resolves; `.finally` still clears the
+      // single-flight guard so a future drain isn't permanently blocked.
+      .catch((error) => {
+        console.error('Offline sync-queue drain failed', error);
+      })
+      .finally(() => {
+        drainPromise = null;
+      });
   }
   return drainPromise;
 }

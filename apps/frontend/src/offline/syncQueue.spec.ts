@@ -157,6 +157,44 @@ describe('drainPendingEventQueue', () => {
     expect(mockedDb.markPendingEventRetryScheduled).not.toHaveBeenCalled();
   });
 
+  it('keeps draining the remaining due records when one record throws in a non-createEvent step', async () => {
+    // Two due records, oldest first. The first resends fine but its IndexedDB
+    // delete throws — that must not abort the pass; the second must still run.
+    const first = makeRecord({ localId: 'local-1', savedAt: '2026-01-01T09:00:00.000Z' });
+    const second = makeRecord({ localId: 'local-2', savedAt: '2026-01-01T10:00:00.000Z' });
+    mockedDb.listAllPendingEvents.mockResolvedValue([first, second]);
+    mockedFeedingApi.createFeedingEvent.mockResolvedValue(serverSummary);
+    mockedDb.deletePendingEvent.mockImplementation(async (localId) => {
+      if (localId === 'local-1') {
+        throw new Error('IndexedDB delete failed');
+      }
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await drainPendingEventQueue();
+
+    // Both records were resent — the first record's post-success failure did
+    // not stop the second from being processed.
+    expect(mockedFeedingApi.createFeedingEvent).toHaveBeenCalledTimes(2);
+    expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-2');
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves (never rejects) and clears the single-flight guard when an internal step throws', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockedDb.listAllPendingEvents.mockRejectedValueOnce(new Error('IndexedDB open failed'));
+
+    // A top-level failure must not surface as an unhandled rejection.
+    await expect(drainPendingEventQueue()).resolves.toBeUndefined();
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+
+    // The guard was cleared, so a subsequent drain runs a fresh pass rather than
+    // being permanently blocked by the earlier failure.
+    mockedDb.listAllPendingEvents.mockResolvedValue([]);
+    await expect(drainPendingEventQueue()).resolves.toBeUndefined();
+    expect(mockedDb.listAllPendingEvents).toHaveBeenCalledTimes(2);
+  });
+
   it('shares a single in-flight run between concurrent callers', async () => {
     let resolveList!: (records: PendingEventRecord[]) => void;
     mockedDb.listAllPendingEvents.mockReturnValue(
