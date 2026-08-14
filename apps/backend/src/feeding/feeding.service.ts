@@ -8,7 +8,9 @@ import {
 import { Child, Event, FeedingDetail, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
 import { RealtimeService } from '../realtime/realtime.service';
+import { StopEventDto } from '../event/dto/stop-event.dto';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
 import { FeedingSide, toFeedingSide } from './feeding-side.enum';
@@ -33,6 +35,10 @@ export interface FeedingEventSummary {
   amountMl: number | null;
   note: string | null;
   createdAt: Date;
+  // Server-side last-write timestamp (Prisma `@updatedAt`). Surfaced so the
+  // frontend can echo it back as the Last-Write-Wins baseline for offline
+  // edits/stops — see ADR-0011.
+  updatedAt: Date;
 }
 
 // Exported (not just used internally) so `EventService.listDaily` can reuse
@@ -68,6 +74,7 @@ export function toFeedingEventSummary(event: EventWithFeedingDetail): FeedingEve
     amountMl: detail.amountMl,
     note: detail.note,
     createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
   };
 }
 
@@ -224,6 +231,14 @@ export class FeedingService {
     dto: UpdateFeedingEventDto,
   ): Promise<FeedingEventSummary> {
     const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId);
+
+    // Last-Write-Wins: a buffered offline edit whose submit time predates the
+    // current server row loses to whoever wrote more recently — see ADR-0011.
+    // Checked before any write so the conflicting update is fully skipped.
+    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+      toFeedingEventSummary(existing),
+    );
+
     // Guaranteed non-null by findFeedingEventOrThrow/toFeedingEventSummary's own
     // invariant check.
     const existingFeedingType = toFeedingType(existing.feedingDetail!.feedingType);
@@ -271,6 +286,11 @@ export class FeedingService {
       where: { id: eventId },
       data: {
         ...eventData,
+        // Explicit LWW-timestamp bump: Prisma does NOT auto-apply `@updatedAt`
+        // when a nested detail-only update leaves the top-level Event `data`
+        // empty (a note/side/amount-only edit), so `updatedAt` would otherwise
+        // not advance — see ADR-0011 and event-updated-at.integration.spec.
+        updatedAt: new Date(),
         feedingDetail: Object.keys(detailData).length > 0 ? { update: detailData } : undefined,
       },
       include: { feedingDetail: true },
@@ -287,7 +307,12 @@ export class FeedingService {
     return toFeedingEventSummary(updated);
   }
 
-  async stop(householdId: string, childId: string, eventId: string): Promise<FeedingEventSummary> {
+  async stop(
+    householdId: string,
+    childId: string,
+    eventId: string,
+    dto: StopEventDto = {},
+  ): Promise<FeedingEventSummary> {
     const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId);
     const feedingType = toFeedingType(existing.feedingDetail!.feedingType);
 
@@ -297,6 +322,11 @@ export class FeedingService {
     if (existing.endedAt !== null) {
       throw new ConflictException('This feeding event has already been stopped');
     }
+
+    // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().
+    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+      toFeedingEventSummary(existing),
+    );
 
     const updated = await this.prisma.event.update({
       where: { id: eventId },

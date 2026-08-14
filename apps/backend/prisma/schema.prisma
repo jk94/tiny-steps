@@ -147,6 +147,12 @@ model Event {
   startedAt  DateTime?
   endedAt    DateTime?
   createdAt  DateTime @default(now())
+  // Server-side write timestamp, bumped by Prisma on every `event.update()`
+  // (including nested detail-only edits). Used as the Last-Write-Wins tiebreak
+  // for offline-buffered edits/timer-stops: a buffered write carrying a
+  // `clientTimestamp` older than this is rejected as a conflict — see
+  // ADR-0011 and the per-type services' `update()`/`stop()`.
+  updatedAt  DateTime @updatedAt
 
   child         Child          @relation(fields: [childId], references: [id])
   user          User           @relation(fields: [userId], references: [id])

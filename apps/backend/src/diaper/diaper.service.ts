@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Child, DiaperDetail, Event, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateDiaperEventDto } from './dto/create-diaper-event.dto';
 import { UpdateDiaperEventDto } from './dto/update-diaper-event.dto';
@@ -26,6 +27,9 @@ export interface DiaperEventSummary {
   occurredAt: Date;
   note: string | null;
   createdAt: Date;
+  // Server-side last-write timestamp (Prisma `@updatedAt`), the Last-Write-Wins
+  // baseline for offline edits — see ADR-0011 and FeedingEventSummary.
+  updatedAt: Date;
 }
 
 // Exported so EventService.listDaily can reuse the exact same mapping
@@ -49,6 +53,7 @@ export function toDiaperEventSummary(event: EventWithDiaperDetail): DiaperEventS
     occurredAt: event.occurredAt,
     note: detail.note,
     createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
   };
 }
 
@@ -147,7 +152,13 @@ export class DiaperService {
     eventId: string,
     dto: UpdateDiaperEventDto,
   ): Promise<DiaperEventSummary> {
-    await this.findDiaperEventOrThrow(householdId, childId, eventId);
+    const existing = await this.findDiaperEventOrThrow(householdId, childId, eventId);
+
+    // Last-Write-Wins: a buffered offline edit older than the current server
+    // row loses — see ADR-0011. Checked before any write.
+    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+      toDiaperEventSummary(existing),
+    );
 
     const eventData: Prisma.EventUpdateInput = {};
     if (dto.occurredAt !== undefined) {
@@ -169,6 +180,11 @@ export class DiaperService {
       where: { id: eventId },
       data: {
         ...eventData,
+        // Explicit LWW-timestamp bump: Prisma does NOT auto-apply `@updatedAt`
+        // for a nested detail-only update (a note/diaperType-only edit), so
+        // `updatedAt` would otherwise not advance — see ADR-0011 and
+        // event-updated-at.integration.spec.
+        updatedAt: new Date(),
         diaperDetail: Object.keys(detailData).length > 0 ? { update: detailData } : undefined,
       },
       include: { diaperDetail: true },

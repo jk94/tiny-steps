@@ -8,6 +8,8 @@ import {
 import { Child, Event, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
+import { StopEventDto } from '../event/dto/stop-event.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
 import { UpdateSleepEventDto } from './dto/update-sleep-event.dto';
@@ -25,6 +27,9 @@ export interface SleepEventSummary {
   // is computed from. Same computation as FeedingService.toFeedingEventSummary.
   durationSeconds: number | null;
   createdAt: Date;
+  // Server-side last-write timestamp (Prisma `@updatedAt`), the Last-Write-Wins
+  // baseline for offline edits/stops — see ADR-0011 and FeedingEventSummary.
+  updatedAt: Date;
 }
 
 // Exported so EventService.listDaily can reuse the exact same mapping
@@ -45,6 +50,7 @@ export function toSleepEventSummary(event: Event): SleepEventSummary {
     endedAt: event.endedAt,
     durationSeconds,
     createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
   };
 }
 
@@ -167,6 +173,12 @@ export class SleepService {
   ): Promise<SleepEventSummary> {
     const existing = await this.findSleepEventOrThrow(householdId, childId, eventId);
 
+    // Last-Write-Wins: a buffered offline edit older than the current server
+    // row loses — see ADR-0011. Checked before any write.
+    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+      toSleepEventSummary(existing),
+    );
+
     const eventData: Prisma.EventUpdateInput = {};
     if (dto.occurredAt !== undefined) {
       eventData.occurredAt = new Date(dto.occurredAt);
@@ -194,7 +206,9 @@ export class SleepService {
 
     const updated = await this.prisma.event.update({
       where: { id: eventId },
-      data: eventData,
+      // Explicit LWW-timestamp bump so an update always advances `updatedAt`,
+      // uniform with FeedingService/DiaperService — see ADR-0011.
+      data: { ...eventData, updatedAt: new Date() },
     });
 
     this.realtime.broadcastEventChange(householdId, {
@@ -208,7 +222,12 @@ export class SleepService {
     return toSleepEventSummary(updated);
   }
 
-  async stop(householdId: string, childId: string, eventId: string): Promise<SleepEventSummary> {
+  async stop(
+    householdId: string,
+    childId: string,
+    eventId: string,
+    dto: StopEventDto = {},
+  ): Promise<SleepEventSummary> {
     const existing = await this.findSleepEventOrThrow(householdId, childId, eventId);
 
     // No "wrong type" guard needed here, unlike FeedingService.stop — every
@@ -216,6 +235,11 @@ export class SleepService {
     if (existing.endedAt !== null) {
       throw new ConflictException('This sleep event has already been stopped');
     }
+
+    // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().
+    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+      toSleepEventSummary(existing),
+    );
 
     const updated = await this.prisma.event.update({
       where: { id: eventId },
