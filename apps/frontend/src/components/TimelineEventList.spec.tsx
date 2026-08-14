@@ -33,6 +33,7 @@ const feedingEvent: TimelineEventSummary = {
   amountMl: 90,
   note: null,
   createdAt: '2026-01-01T08:00:00.000Z',
+  updatedAt: '2026-01-01T08:00:00.000Z',
 };
 
 const sleepEvent: TimelineEventSummary = {
@@ -45,6 +46,7 @@ const sleepEvent: TimelineEventSummary = {
   endedAt: '2026-01-01T10:00:00.000Z',
   durationSeconds: 3600,
   createdAt: '2026-01-01T09:00:00.000Z',
+  updatedAt: '2026-01-01T09:00:00.000Z',
 };
 
 const diaperEvent: TimelineEventSummary = {
@@ -56,6 +58,7 @@ const diaperEvent: TimelineEventSummary = {
   occurredAt: '2026-01-01T11:00:00.000Z',
   note: null,
   createdAt: '2026-01-01T11:00:00.000Z',
+  updatedAt: '2026-01-01T11:00:00.000Z',
 };
 
 const members = [

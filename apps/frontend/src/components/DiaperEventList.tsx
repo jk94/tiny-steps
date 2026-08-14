@@ -48,6 +48,8 @@ export function DiaperEventList({ householdId, childId }: DiaperEventListProps) 
     (pendingQuery.data ?? []).map((record) => ({
       summary: record.summary as DiaperEventSummary,
       status: record.status,
+      operation: record.operation,
+      targetEventId: record.targetEventId,
     })),
     'desc',
   );

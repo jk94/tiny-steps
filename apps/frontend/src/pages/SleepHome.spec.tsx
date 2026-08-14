@@ -6,6 +6,11 @@ import { SleepHome } from './SleepHome';
 import * as childApi from '../api/child-api';
 import * as sleepApi from '../api/sleep-api';
 import * as useAuthModule from '../auth/useAuth';
+import {
+  deletePendingEvent,
+  listAllPendingEvents,
+  putPendingEvent,
+} from '../offline/pendingEvents.db';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
@@ -51,6 +56,7 @@ const runningTimer: sleepApi.SleepEventSummary = {
   endedAt: null,
   durationSeconds: null,
   createdAt: '2026-01-01T20:00:00.000Z',
+  updatedAt: '2026-01-01T20:00:00.000Z',
 };
 
 function renderSleepHome() {
@@ -73,9 +79,33 @@ describe('SleepHome', () => {
     mockedSleepApi.listSleepEvents.mockResolvedValue([]);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.resetAllMocks();
     queryClient.clear();
+    for (const record of await listAllPendingEvents()) {
+      await deletePendingEvent(record.localId);
+    }
+  });
+
+  it('shows the stopped/optimistic state instead of the ticking timer when a pending stop targets it (JC-2)', async () => {
+    mockedSleepApi.fetchActiveSleepTimer.mockResolvedValueOnce(runningTimer);
+    await putPendingEvent({
+      localId: 'local-stop',
+      householdId: HOUSEHOLD_ID,
+      childId: CHILD_ID,
+      eventType: 'SLEEP',
+      status: 'pending',
+      savedAt: '2026-01-01T20:05:00.000Z',
+      summary: { ...runningTimer, endedAt: '2026-01-01T20:05:00.000Z' },
+      operation: 'stop',
+      targetEventId: runningTimer.id,
+      updateInput: { clientTimestamp: '2026-01-01T20:05:00.000Z' },
+    });
+
+    renderSleepHome();
+
+    expect(await screen.findByText('Sleep stopped')).toBeInTheDocument();
+    expect(screen.queryByText('Sleep in progress')).not.toBeInTheDocument();
   });
 
   it('renders SleepQuickEntry when there is no active timer', async () => {

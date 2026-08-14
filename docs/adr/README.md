@@ -48,3 +48,4 @@ Proposed | Accepted | Deprecated | Superseded by ADR-NNNN
 | [0008](0008-pwa-basics-via-vite-plugin-pwa.md) | PWA basics via `vite-plugin-pwa` (`generateSW`), app-shell-only scope | Accepted |
 | [0009](0009-indexeddb-optimistic-create-engine.md) | IndexedDB write-through and a shared optimistic-create engine for new entries | Accepted |
 | [0010](0010-offline-sync-queue-reconnect-retry.md) | Offline sync-queue — reconnect-triggered resend with capped backoff, fixing the ghost-duplicate limitation | Accepted |
+| [0011](0011-offline-edit-stop-and-last-write-wins.md) | Offline-capable edit/timer-stop, and Last-Write-Wins conflict resolution | Accepted |

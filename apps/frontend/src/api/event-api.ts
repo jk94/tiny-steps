@@ -1,9 +1,28 @@
-import { apiFetch } from './http-client';
+import { ApiError, apiFetch } from './http-client';
 import type { DiaperEventSummary } from './diaper-api';
 import type { FeedingEventSummary } from './feeding-api';
 import type { SleepEventSummary } from './sleep-api';
 
 export type EventType = 'FEEDING' | 'SLEEP' | 'DIAPER';
+
+/** Response-body `code` the backend's `EventConflictException` sets — mirrors
+ * `EVENT_CONFLICT_CODE` in `apps/backend/src/event/event-conflict.exception.ts`. */
+const EVENT_CONFLICT_CODE = 'EVENT_CONFLICT';
+
+/**
+ * Whether an error is a Last-Write-Wins conflict (409 with a
+ * `{ code: 'EVENT_CONFLICT' }` body) rather than a plain timer conflict or any
+ * other failure. Lets the offline engine/sync-queue treat "your edit was
+ * overridden" distinctly from a retryable error — see ADR-0011.
+ */
+export function isEventConflictError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    typeof error.body === 'object' &&
+    error.body !== null &&
+    (error.body as { code?: unknown }).code === EVENT_CONFLICT_CODE
+  );
+}
 
 /**
  * Maps an event type to the query-key segment its per-type components use

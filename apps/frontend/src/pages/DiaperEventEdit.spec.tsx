@@ -43,6 +43,7 @@ const event: diaperApi.DiaperEventSummary = {
   occurredAt: '2026-01-01T10:00:00.000Z',
   note: null,
   createdAt: '2026-01-01T10:00:00.000Z',
+  updatedAt: '2026-01-01T10:00:00.000Z',
 };
 
 function renderDiaperEventEdit() {
@@ -83,9 +84,12 @@ describe('DiaperEventEdit', () => {
     expect(screen.getByLabelText('Diaper type')).toBeEnabled();
   });
 
-  it('submits a PATCH with the updated fields (including diaperType) and navigates back to diaper home', async () => {
+  it('submits an optimistic PATCH (with a clientTimestamp, incl. diaperType) and navigates back', async () => {
     mockedDiaperApi.fetchDiaperEvent.mockResolvedValueOnce(event);
-    mockedDiaperApi.updateDiaperEvent.mockResolvedValueOnce({ ...event, diaperType: 'BOTH' });
+    mockedDiaperApi.updateDiaperEventOptimistic.mockResolvedValueOnce({
+      ...event,
+      diaperType: 'BOTH',
+    });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const user = userEvent.setup();
 
@@ -94,11 +98,11 @@ describe('DiaperEventEdit', () => {
     await user.selectOptions(screen.getByLabelText('Diaper type'), 'Both');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(mockedDiaperApi.updateDiaperEvent).toHaveBeenCalledWith(
+    expect(mockedDiaperApi.updateDiaperEventOptimistic).toHaveBeenCalledWith(
       HOUSEHOLD_ID,
       CHILD_ID,
-      EVENT_ID,
-      expect.objectContaining({ diaperType: 'BOTH' }),
+      expect.objectContaining({ id: EVENT_ID }),
+      expect.objectContaining({ diaperType: 'BOTH', clientTimestamp: expect.any(String) }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'diaper-events'],
@@ -156,5 +160,17 @@ describe('DiaperEventEdit', () => {
     renderDiaperEventEdit();
 
     expect(await screen.findByText("This diaper entry wasn't found.")).toBeInTheDocument();
+  });
+
+  it('seeds the form from the cached list row when the direct fetch is unavailable offline (JC-5)', async () => {
+    queryClient.setQueryData(
+      ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'diaper-events'],
+      [event],
+    );
+    mockedDiaperApi.fetchDiaperEvent.mockRejectedValueOnce(new TypeError('offline'));
+
+    renderDiaperEventEdit();
+
+    expect(await screen.findByLabelText('Diaper type')).toHaveValue('PEE');
   });
 });

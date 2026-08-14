@@ -1,4 +1,5 @@
 import { createEventOptimistically } from '../offline/createEventOptimistically';
+import { updateEventOptimistically } from '../offline/updateEventOptimistically';
 import { apiFetch } from './http-client';
 
 export type DiaperType = 'PEE' | 'STOOL' | 'BOTH';
@@ -19,6 +20,8 @@ export interface DiaperEventSummary {
   occurredAt: string;
   note: string | null;
   createdAt: string;
+  /** Server-side last-write timestamp; the Last-Write-Wins baseline — see ADR-0011. */
+  updatedAt: string;
 }
 
 /**
@@ -43,6 +46,9 @@ export interface CreateDiaperEventInput {
  */
 export type UpdateDiaperEventInput = Omit<Partial<CreateDiaperEventInput>, 'note'> & {
   note?: string | null;
+  /** Wall-clock instant the edit was submitted; activates Last-Write-Wins
+   * server-side when present — see ADR-0011. */
+  clientTimestamp?: string;
 };
 
 function diaperEventsPath(householdId: string, childId: string): string {
@@ -119,6 +125,7 @@ function buildOptimisticDiaperSummary(
     occurredAt: input.occurredAt ?? now,
     note: input.note ?? null,
     createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -141,5 +148,46 @@ export function createDiaperEventOptimistic(
       buildOptimisticDiaperSummary(localId, childId, userId, input),
     apiCall: () => createDiaperEvent(householdId, childId, input),
     createInput: input,
+  });
+}
+
+/**
+ * Merges an edit's changed fields onto the current known summary to produce the
+ * row shown immediately (JC-2). A field absent from `input` is left untouched;
+ * an explicit `note: null` clears it. Diaper is a point event, so there's no
+ * duration to re-derive.
+ */
+export function buildOptimisticDiaperUpdateSummary(
+  current: DiaperEventSummary,
+  input: UpdateDiaperEventInput,
+): DiaperEventSummary {
+  return {
+    ...current,
+    diaperType: input.diaperType !== undefined ? input.diaperType : current.diaperType,
+    occurredAt: input.occurredAt ?? current.occurredAt,
+    note: input.note !== undefined ? (input.note ?? null) : current.note,
+  };
+}
+
+/**
+ * Offline-aware wrapper around `updateDiaperEvent`: buffers the edit locally and
+ * shows it immediately, then fires the PATCH (see `updateEventOptimistically`).
+ * `input` must already carry the `clientTimestamp` the caller captured at submit.
+ */
+export function updateDiaperEventOptimistic(
+  householdId: string,
+  childId: string,
+  current: DiaperEventSummary,
+  input: UpdateDiaperEventInput,
+): Promise<DiaperEventSummary> {
+  return updateEventOptimistically({
+    householdId,
+    childId,
+    eventType: 'DIAPER',
+    targetEventId: current.id,
+    operation: 'update',
+    buildOptimisticSummary: () => buildOptimisticDiaperUpdateSummary(current, input),
+    apiCall: () => updateDiaperEvent(householdId, childId, current.id, input),
+    updateInput: input,
   });
 }

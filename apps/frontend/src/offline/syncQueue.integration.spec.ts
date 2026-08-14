@@ -24,6 +24,7 @@ const serverSummary: FeedingEventSummary = {
   amountMl: null,
   note: null,
   createdAt: '2026-01-01T10:00:00.000Z',
+  updatedAt: '2026-01-01T10:00:00.000Z',
 };
 
 // The db module memoizes its open-connection promise, so a fresh IDBFactory

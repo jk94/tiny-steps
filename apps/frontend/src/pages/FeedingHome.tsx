@@ -9,6 +9,8 @@ import { FeedingEventList } from '../components/FeedingEventList';
 import { FeedingQuickEntry } from '../components/FeedingQuickEntry';
 import { FeedingTimer } from '../components/FeedingTimer';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /**
@@ -38,6 +40,8 @@ export function FeedingHome() {
     enabled: !!householdId && !!childId,
   });
 
+  const pendingQuery = usePendingLocalEvents(householdId!, childId!, 'FEEDING');
+
   if (childQuery.isLoading || activeTimerQuery.isLoading) {
     return <LoadingIndicator />;
   }
@@ -48,13 +52,29 @@ export function FeedingHome() {
 
   const child = childQuery.data;
 
+  // A locally-buffered timer-stop that hasn't synced yet: the server still
+  // reports the timer as running, but the user already stopped it, so show the
+  // stopped/optimistic state rather than the ticking timer (JC-2, step 20).
+  const activeTimer = activeTimerQuery.data;
+  const pendingStop = activeTimer
+    ? pendingQuery.data?.find(
+        (record) => record.operation === 'stop' && record.targetEventId === activeTimer.id,
+      )
+    : undefined;
+
   return (
     <section>
       <Link to={`/households/${householdId}`}>{t('feeding.home.backLink')}</Link>
       <h1>{t('feeding.home.title', { name: child.name })}</h1>
 
-      {activeTimerQuery.data ? (
-        <FeedingTimer householdId={householdId!} childId={childId!} event={activeTimerQuery.data} />
+      {activeTimer && pendingStop ? (
+        <section>
+          <p>
+            {t('feeding.timer.stopped')} <OfflineStatusBadge status={pendingStop.status} />
+          </p>
+        </section>
+      ) : activeTimer ? (
+        <FeedingTimer householdId={householdId!} childId={childId!} event={activeTimer} />
       ) : (
         <FeedingQuickEntry householdId={householdId!} childId={childId!} />
       )}

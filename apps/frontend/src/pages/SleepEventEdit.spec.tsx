@@ -44,6 +44,7 @@ const event: sleepApi.SleepEventSummary = {
   endedAt: null,
   durationSeconds: null,
   createdAt: '2026-01-01T20:00:00.000Z',
+  updatedAt: '2026-01-01T20:00:00.000Z',
 };
 
 function renderSleepEventEdit() {
@@ -92,9 +93,9 @@ describe('SleepEventEdit', () => {
     expect(screen.getByLabelText('End time (optional)')).toHaveValue('');
   });
 
-  it('submits a PATCH with the updated fields and navigates back to sleep home', async () => {
+  it('submits an optimistic PATCH (with a clientTimestamp) and navigates back to sleep home', async () => {
     mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
-    mockedSleepApi.updateSleepEvent.mockResolvedValueOnce({
+    mockedSleepApi.updateSleepEventOptimistic.mockResolvedValueOnce({
       ...event,
       endedAt: '2026-01-02T06:00:00.000Z',
       durationSeconds: 36000,
@@ -109,11 +110,14 @@ describe('SleepEventEdit', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(mockedSleepApi.updateSleepEvent).toHaveBeenCalledWith(
+    expect(mockedSleepApi.updateSleepEventOptimistic).toHaveBeenCalledWith(
       HOUSEHOLD_ID,
       CHILD_ID,
-      EVENT_ID,
-      expect.objectContaining({ endedAt: new Date('2026-01-02T06:00').toISOString() }),
+      expect.objectContaining({ id: EVENT_ID }),
+      expect.objectContaining({
+        endedAt: new Date('2026-01-02T06:00').toISOString(),
+        clientTimestamp: expect.any(String),
+      }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'sleep-events'],
@@ -161,5 +165,18 @@ describe('SleepEventEdit', () => {
         replace: true,
       },
     );
+  });
+
+  it('seeds the form from the cached list row when the direct fetch is unavailable offline (JC-5)', async () => {
+    queryClient.setQueryData(
+      ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'sleep-events'],
+      [event],
+    );
+    mockedSleepApi.fetchSleepEvent.mockRejectedValueOnce(new TypeError('offline'));
+
+    renderSleepEventEdit();
+
+    // The form (its Save button) renders from cache rather than the error state.
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 });

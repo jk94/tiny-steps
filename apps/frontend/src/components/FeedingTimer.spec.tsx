@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { FeedingTimer } from './FeedingTimer';
 import * as feedingApi from '../api/feeding-api';
-import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/feeding-api');
@@ -31,6 +30,7 @@ function makeRunningEvent(
     amountMl: null,
     note: null,
     createdAt: '2026-01-01T10:00:00.000Z',
+    updatedAt: '2026-01-01T10:00:00.000Z',
     ...overrides,
   };
 }
@@ -89,32 +89,26 @@ describe('FeedingTimer', () => {
       queryClient.clear();
     });
 
-    it('calls stopFeedingTimer and invalidates queries when Stop is clicked', async () => {
+    it('fires the optimistic stop with a captured clientTimestamp when Stop is clicked', async () => {
       const event = makeRunningEvent();
-      mockedFeedingApi.stopFeedingTimer.mockResolvedValueOnce({
+      mockedFeedingApi.stopFeedingTimerOptimistic.mockResolvedValueOnce({
         ...event,
         endedAt: '2026-01-01T10:05:00.000Z',
       });
-      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
       const user = userEvent.setup();
       renderTimer(event);
 
       await user.click(screen.getByRole('button', { name: 'Stop' }));
 
-      expect(mockedFeedingApi.stopFeedingTimer).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, 'e1');
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'feeding-events'],
-      });
-    });
-
-    it('shows a mapped error message when stop fails with a 409 (already stopped)', async () => {
-      mockedFeedingApi.stopFeedingTimer.mockRejectedValueOnce(new ApiError(409, {}));
-      const user = userEvent.setup();
-      renderTimer(makeRunningEvent());
-
-      await user.click(screen.getByRole('button', { name: 'Stop' }));
-
-      expect(await screen.findByText('This timer has already been stopped.')).toBeInTheDocument();
+      // The optimistic wrapper buffers the stop and drives the stopped-state
+      // swap / reconciliation (in FeedingHome + the engine); the timer just
+      // captures the Last-Write-Wins baseline and delegates.
+      expect(mockedFeedingApi.stopFeedingTimerOptimistic).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        expect.objectContaining({ id: 'e1' }),
+        expect.any(String),
+      );
     });
   });
 });
