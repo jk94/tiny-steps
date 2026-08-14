@@ -8,6 +8,10 @@
       "pendingLabel": "Noch nicht auf dem Server gespeichert",
       "failed": "Nicht gespeichert",
       "failedLabel": "Speichern fehlgeschlagen – dieser Eintrag ist noch nicht auf dem Server angekommen"
+    },
+    "conflict": {
+      "message": "Deine Änderung wurde überschrieben, weil dieser Eintrag zwischenzeitlich an anderer Stelle aktualisiert wurde.",
+      "dismiss": "Hinweis schließen"
     }
   },
   "nav": {
@@ -201,7 +205,8 @@
       "sideLeft": "Linke Seite",
       "sideRight": "Rechte Seite",
       "stopButton": "Stopp",
-      "stopButtonPending": "Wird gestoppt…"
+      "stopButtonPending": "Wird gestoppt…",
+      "stopped": "Stillen gestoppt"
     },
     "list": {
       "title": "Letzte Fütterungen",
@@ -280,7 +285,8 @@
     "timer": {
       "title": "Schlaf läuft",
       "stopButton": "Stopp",
-      "stopButtonPending": "Wird gestoppt…"
+      "stopButtonPending": "Wird gestoppt…",
+      "stopped": "Schlaf gestoppt"
     },
     "list": {
       "title": "Letzte Schlafphasen",

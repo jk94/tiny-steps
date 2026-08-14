@@ -32,6 +32,7 @@ const summary = {
   endedAt: null,
   durationSeconds: null,
   createdAt: '2026-01-01T20:00:00.000Z',
+  updatedAt: '2026-01-01T20:00:00.000Z',
 };
 
 describe('sleep-api', () => {

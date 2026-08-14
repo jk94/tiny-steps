@@ -95,7 +95,12 @@ export function TimelineEventList({
 
   const pendingForThisDay = (pendingQuery.data ?? [])
     .filter((record) => record.summary.occurredAt >= from && record.summary.occurredAt < to)
-    .map((record) => ({ summary: record.summary, status: record.status }));
+    .map((record) => ({
+      summary: record.summary,
+      status: record.status,
+      operation: record.operation,
+      targetEventId: record.targetEventId,
+    }));
 
   const events = mergeServerAndPendingEvents(
     eventsQuery.data ?? [],

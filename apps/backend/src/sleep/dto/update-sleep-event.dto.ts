@@ -32,4 +32,12 @@ export class UpdateSleepEventDto {
   @IsNotFutureDate()
   @IsEndNotBeforeStart('startedAt')
   endedAt?: string;
+
+  // Wall-clock instant this edit was submitted client-side. When present,
+  // `SleepService.update` applies Last-Write-Wins against the row's
+  // `updatedAt`; when absent, a normal online PATCH applies unconditionally as
+  // before — see ADR-0011. Not a business field, never persisted.
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  clientTimestamp?: string;
 }

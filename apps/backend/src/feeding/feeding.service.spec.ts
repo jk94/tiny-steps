@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { EventConflictException } from '../event/event-conflict.exception';
 import type { RealtimeService } from '../realtime/realtime.service';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
@@ -36,6 +37,7 @@ function makeEvent(overrides: Partial<Record<string, unknown>> = {}) {
     startedAt: null,
     endedAt: null,
     createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T10:00:00.000Z'),
     feedingDetail: {
       eventId: EVENT_ID,
       feedingType: FeedingType.SOLID,
@@ -58,6 +60,7 @@ describe('FeedingService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let realtime: { broadcastEventChange: jest.Mock };
   let service: FeedingService;
@@ -73,6 +76,10 @@ describe('FeedingService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      // Interactive transactions run the callback with a transaction client; the
+      // mock passes `prisma` itself as `tx`, so reads/writes hit the same mocked
+      // delegates and every existing assertion on `prisma.event.*` still applies.
+      $transaction: jest.fn((callback: (tx: typeof prisma) => unknown) => callback(prisma)),
     };
     realtime = { broadcastEventChange: jest.fn() };
     service = new FeedingService(
@@ -414,7 +421,7 @@ describe('FeedingService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { feedingDetail: { update: { amountMl: 120 } } },
+        data: { updatedAt: expect.any(Date), feedingDetail: { update: { amountMl: 120 } } },
         include: { feedingDetail: true },
       });
       expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
@@ -458,7 +465,7 @@ describe('FeedingService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { feedingDetail: { update: { note: null } } },
+        data: { updatedAt: expect.any(Date), feedingDetail: { update: { note: null } } },
         include: { feedingDetail: true },
       });
     });
@@ -483,7 +490,7 @@ describe('FeedingService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { feedingDetail: undefined },
+        data: { updatedAt: expect.any(Date), feedingDetail: undefined },
         include: { feedingDetail: true },
       });
     });
@@ -548,6 +555,53 @@ describe('FeedingService', () => {
       // compile error — verified structurally since `UpdateFeedingEventDto`
       // simply has no such property.
       expect('feedingType' in dto).toBe(false);
+    });
+
+    describe('Last-Write-Wins (clientTimestamp)', () => {
+      it('applies the update unconditionally when no clientTimestamp is supplied (regression)', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T12:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+        prisma.event.update.mockResolvedValue(existing);
+
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: 'x' });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('applies the update when clientTimestamp is newer than the server updatedAt', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T10:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+        prisma.event.update.mockResolvedValue(existing);
+
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          note: 'x',
+          clientTimestamp: '2026-01-01T11:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('throws EventConflictException carrying the current summary and skips the write when clientTimestamp is older', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T12:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+
+        const error = await service
+          .update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+            note: 'x',
+            clientTimestamp: '2026-01-01T11:00:00.000Z',
+          })
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(EventConflictException);
+        expect((error as EventConflictException).getResponse()).toMatchObject({
+          code: 'EVENT_CONFLICT',
+          currentEvent: expect.objectContaining({ id: EVENT_ID }),
+        });
+        expect(prisma.event.update).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -630,6 +684,113 @@ describe('FeedingService', () => {
       await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    describe('endedAt source', () => {
+      function makeRunningBreast(updatedAt = new Date('2026-01-01T10:00:00.000Z')) {
+        return makeEvent({
+          startedAt: new Date('2026-01-01T10:00:00.000Z'),
+          endedAt: null,
+          updatedAt,
+          feedingDetail: {
+            eventId: EVENT_ID,
+            feedingType: FeedingType.BREAST,
+            side: FeedingSide.LEFT,
+            amountMl: null,
+            note: null,
+          },
+        });
+      }
+
+      it('persists endedAt as the supplied clientTimestamp, not the wall clock, for a buffered offline stop', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeRunningBreast();
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        // A stop captured offline at 10:15 but only resent later must record
+        // 10:15 as endedAt — using `new Date()` here would inflate the duration.
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          clientTimestamp: '2026-01-01T10:15:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalledWith({
+          where: { id: EVENT_ID },
+          data: { endedAt: new Date('2026-01-01T10:15:00.000Z') },
+          include: { feedingDetail: true },
+        });
+      });
+
+      it('falls back to a freshly-generated Date for a plain online stop with no clientTimestamp', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeRunningBreast();
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        const before = Date.now();
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+        const after = Date.now();
+
+        const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
+        expect(endedAt).toBeInstanceOf(Date);
+        expect(endedAt.getTime()).toBeGreaterThanOrEqual(before);
+        expect(endedAt.getTime()).toBeLessThanOrEqual(after);
+      });
+    });
+
+    describe('Last-Write-Wins (clientTimestamp)', () => {
+      function makeRunningBreast(updatedAt: Date) {
+        return makeEvent({
+          startedAt: new Date('2026-01-01T10:00:00.000Z'),
+          endedAt: null,
+          updatedAt,
+          feedingDetail: {
+            eventId: EVENT_ID,
+            feedingType: FeedingType.BREAST,
+            side: FeedingSide.LEFT,
+            amountMl: null,
+            note: null,
+          },
+        });
+      }
+
+      it('stops unconditionally when no clientTimestamp is supplied (regression)', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeRunningBreast(new Date('2026-01-01T12:00:00.000Z'));
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('stops when clientTimestamp is newer than the server updatedAt', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeRunningBreast(new Date('2026-01-01T10:00:00.000Z'));
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          clientTimestamp: '2026-01-01T11:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('throws EventConflictException and skips the write when clientTimestamp is older', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        prisma.event.findUnique.mockResolvedValue(
+          makeRunningBreast(new Date('2026-01-01T12:00:00.000Z')),
+        );
+
+        await expect(
+          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+            clientTimestamp: '2026-01-01T11:00:00.000Z',
+          }),
+        ).rejects.toThrow(EventConflictException);
+        expect(prisma.event.update).not.toHaveBeenCalled();
+      });
     });
   });
 

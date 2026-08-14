@@ -2,13 +2,19 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
-import { deleteDiaperEvent, fetchDiaperEvent, updateDiaperEvent } from '../api/diaper-api';
+import {
+  deleteDiaperEvent,
+  fetchDiaperEvent,
+  updateDiaperEventOptimistic,
+} from '../api/diaper-api';
+import type { DiaperEventSummary } from '../api/diaper-api';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DiaperEventForm } from '../components/DiaperEventForm';
 import type { DiaperEventFormOutput } from '../components/DiaperEventForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapDiaperError } from '../diaper/mapDiaperError';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -23,44 +29,61 @@ export function DiaperEventEdit() {
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const listQueryKey = ['households', householdId, 'children', childId, 'diaper-events'];
+
+  // JC-5: seed initial form values from a pending local edit's overlay, then the
+  // cached list row, so the edit page renders offline (see FeedingEventEdit).
+  const pendingQuery = usePendingLocalEvents(householdId!, childId!, 'DIAPER');
+  const pendingOverlay = pendingQuery.data?.find((record) => record.targetEventId === eventId)
+    ?.summary as DiaperEventSummary | undefined;
+  const cachedFromList = queryClient
+    .getQueryData<DiaperEventSummary[]>(listQueryKey)
+    ?.find((event) => event.id === eventId);
+  const seededEvent = pendingOverlay ?? cachedFromList;
+
   const eventQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId, 'diaper-events', eventId],
     queryFn: () => fetchDiaperEvent(householdId!, childId!, eventId!),
     retry: false,
     enabled: !!householdId && !!childId && !!eventId,
+    initialData: seededEvent,
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteDiaperEvent(householdId!, childId!, eventId!),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['households', householdId, 'children', childId, 'diaper-events'],
-      });
+      await queryClient.invalidateQueries({ queryKey: listQueryKey });
       navigate(`/households/${householdId}/children/${childId}/diaper`, { replace: true });
     },
   });
 
-  if (eventQuery.isLoading) {
-    return <LoadingIndicator />;
-  }
-
-  if (eventQuery.error || !eventQuery.data) {
+  // See FeedingEventEdit: only an uncached offline cold-load has no data.
+  if (!eventQuery.data) {
+    if (eventQuery.isLoading) {
+      return <LoadingIndicator />;
+    }
     return <ErrorMessage message={t(mapDiaperError(eventQuery.error, 'update'))} />;
   }
 
   const event = eventQuery.data;
 
   const handleSubmit = async (output: DiaperEventFormOutput) => {
-    // Unlike Feeding's edit page, diaperType IS forwarded here — it's
-    // editable via PATCH (see UpdateDiaperEventDto's doc comment).
-    await updateDiaperEvent(householdId!, childId!, eventId!, {
-      diaperType: output.diaperType,
-      occurredAt: output.occurredAt,
-      note: output.note,
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ['households', householdId, 'children', childId, 'diaper-events'],
-    });
+    // Unlike Feeding's edit page, diaperType IS forwarded here — it's editable
+    // via PATCH (see UpdateDiaperEventDto). `clientTimestamp` is the
+    // Last-Write-Wins baseline (JC-1); the optimistic wrapper buffers + shows
+    // the edit immediately, conflicts/failures surface via the banner/list
+    // overlay (JC-2/JC-3).
+    try {
+      await updateDiaperEventOptimistic(householdId!, childId!, event, {
+        diaperType: output.diaperType,
+        occurredAt: output.occurredAt,
+        note: output.note,
+        clientTimestamp: new Date().toISOString(),
+      });
+    } catch {
+      // Buffered locally; surfaced via the list overlay / conflict banner.
+    }
+    await queryClient.invalidateQueries({ queryKey: listQueryKey });
     navigate(`/households/${householdId}/children/${childId}/diaper`, { replace: true });
   };
 

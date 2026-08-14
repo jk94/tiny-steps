@@ -48,6 +48,7 @@ const created: sleepApi.SleepEventSummary = {
   endedAt: '2026-01-02T06:00:00.000Z',
   durationSeconds: 36000,
   createdAt: '2026-01-01T20:00:00.000Z',
+  updatedAt: '2026-01-01T20:00:00.000Z',
 };
 
 function renderBackfillCreate() {

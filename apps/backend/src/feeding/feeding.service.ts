@@ -8,7 +8,9 @@ import {
 import { Child, Event, FeedingDetail, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
 import { RealtimeService } from '../realtime/realtime.service';
+import { StopEventDto } from '../event/dto/stop-event.dto';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
 import { FeedingSide, toFeedingSide } from './feeding-side.enum';
@@ -33,6 +35,10 @@ export interface FeedingEventSummary {
   amountMl: number | null;
   note: string | null;
   createdAt: Date;
+  // Server-side last-write timestamp (Prisma `@updatedAt`). Surfaced so the
+  // frontend can echo it back as the Last-Write-Wins baseline for offline
+  // edits/stops — see ADR-0011.
+  updatedAt: Date;
 }
 
 // Exported (not just used internally) so `EventService.listDaily` can reuse
@@ -68,6 +74,7 @@ export function toFeedingEventSummary(event: EventWithFeedingDetail): FeedingEve
     amountMl: detail.amountMl,
     note: detail.note,
     createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
   };
 }
 
@@ -223,59 +230,81 @@ export class FeedingService {
     eventId: string,
     dto: UpdateFeedingEventDto,
   ): Promise<FeedingEventSummary> {
-    const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId);
-    // Guaranteed non-null by findFeedingEventOrThrow/toFeedingEventSummary's own
-    // invariant check.
-    const existingFeedingType = toFeedingType(existing.feedingDetail!.feedingType);
+    // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
+    // it, and writing in one transaction stops two concurrent updates from
+    // both reading the same `updatedAt`, both passing the gate, and both
+    // writing (a lost-update race). All reads/writes below use `tx` so the
+    // check-then-act is serialized against other transactions — see ADR-0011.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId, tx);
 
-    const eventData: Prisma.EventUpdateInput = {};
-    if (dto.occurredAt !== undefined) {
-      eventData.occurredAt = new Date(dto.occurredAt);
-    }
-    if (dto.startedAt !== undefined) {
-      eventData.startedAt = new Date(dto.startedAt);
-    }
-    if (dto.endedAt !== undefined) {
-      eventData.endedAt = new Date(dto.endedAt);
-    }
+      // Last-Write-Wins: a buffered offline edit whose submit time predates the
+      // current server row loses to whoever wrote more recently — see ADR-0011.
+      // Checked before any write so the conflicting update is fully skipped.
+      assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+        toFeedingEventSummary(existing),
+      );
 
-    // The DTO-level `@IsEndNotBeforeStart` only sees fields present in THIS
-    // request body — a PATCH supplying only `endedAt` (or only
-    // `startedAt`) needs the merged effective values re-checked against
-    // what's already stored, which is only known here.
-    const effectiveStartedAt = (eventData.startedAt as Date | undefined) ?? existing.startedAt;
-    const effectiveEndedAt = (eventData.endedAt as Date | undefined) ?? existing.endedAt;
-    if (
-      effectiveStartedAt &&
-      effectiveEndedAt &&
-      effectiveEndedAt.getTime() < effectiveStartedAt.getTime()
-    ) {
-      throw new BadRequestException('endedAt must not be before startedAt');
-    }
+      // Guaranteed non-null by findFeedingEventOrThrow/toFeedingEventSummary's own
+      // invariant check.
+      const existingFeedingType = toFeedingType(existing.feedingDetail!.feedingType);
 
-    // feedingType is immutable, so which of side/amountMl are relevant is
-    // fixed by the existing row — a field irrelevant to it is silently
-    // discarded, same trusted-household-member rationale as `create()`.
-    const detailData: Prisma.FeedingDetailUpdateInput = {};
-    if (dto.side !== undefined && existingFeedingType === FeedingType.BREAST) {
-      detailData.side = dto.side;
-    }
-    if (dto.amountMl !== undefined && existingFeedingType === FeedingType.BOTTLE) {
-      detailData.amountMl = dto.amountMl;
-    }
-    if (dto.note !== undefined) {
-      detailData.note = dto.note;
-    }
+      const eventData: Prisma.EventUpdateInput = {};
+      if (dto.occurredAt !== undefined) {
+        eventData.occurredAt = new Date(dto.occurredAt);
+      }
+      if (dto.startedAt !== undefined) {
+        eventData.startedAt = new Date(dto.startedAt);
+      }
+      if (dto.endedAt !== undefined) {
+        eventData.endedAt = new Date(dto.endedAt);
+      }
 
-    const updated = await this.prisma.event.update({
-      where: { id: eventId },
-      data: {
-        ...eventData,
-        feedingDetail: Object.keys(detailData).length > 0 ? { update: detailData } : undefined,
-      },
-      include: { feedingDetail: true },
+      // The DTO-level `@IsEndNotBeforeStart` only sees fields present in THIS
+      // request body — a PATCH supplying only `endedAt` (or only
+      // `startedAt`) needs the merged effective values re-checked against
+      // what's already stored, which is only known here.
+      const effectiveStartedAt = (eventData.startedAt as Date | undefined) ?? existing.startedAt;
+      const effectiveEndedAt = (eventData.endedAt as Date | undefined) ?? existing.endedAt;
+      if (
+        effectiveStartedAt &&
+        effectiveEndedAt &&
+        effectiveEndedAt.getTime() < effectiveStartedAt.getTime()
+      ) {
+        throw new BadRequestException('endedAt must not be before startedAt');
+      }
+
+      // feedingType is immutable, so which of side/amountMl are relevant is
+      // fixed by the existing row — a field irrelevant to it is silently
+      // discarded, same trusted-household-member rationale as `create()`.
+      const detailData: Prisma.FeedingDetailUpdateInput = {};
+      if (dto.side !== undefined && existingFeedingType === FeedingType.BREAST) {
+        detailData.side = dto.side;
+      }
+      if (dto.amountMl !== undefined && existingFeedingType === FeedingType.BOTTLE) {
+        detailData.amountMl = dto.amountMl;
+      }
+      if (dto.note !== undefined) {
+        detailData.note = dto.note;
+      }
+
+      return tx.event.update({
+        where: { id: eventId },
+        data: {
+          ...eventData,
+          // Explicit LWW-timestamp bump: Prisma does NOT auto-apply `@updatedAt`
+          // when a nested detail-only update leaves the top-level Event `data`
+          // empty (a note/side/amount-only edit), so `updatedAt` would otherwise
+          // not advance — see ADR-0011 and event-updated-at.integration.spec.
+          updatedAt: new Date(),
+          feedingDetail: Object.keys(detailData).length > 0 ? { update: detailData } : undefined,
+        },
+        include: { feedingDetail: true },
+      });
     });
 
+    // Broadcast after the transaction commits, so a rolled-back write never
+    // triggers a phantom refetch on other clients.
     this.realtime.broadcastEventChange(householdId, {
       type: EventType.FEEDING,
       action: 'updated',
@@ -287,21 +316,43 @@ export class FeedingService {
     return toFeedingEventSummary(updated);
   }
 
-  async stop(householdId: string, childId: string, eventId: string): Promise<FeedingEventSummary> {
-    const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId);
-    const feedingType = toFeedingType(existing.feedingDetail!.feedingType);
+  async stop(
+    householdId: string,
+    childId: string,
+    eventId: string,
+    dto: StopEventDto = {},
+  ): Promise<FeedingEventSummary> {
+    // Same atomic read-check-write as update() — see its doc comment and
+    // ADR-0011.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId, tx);
+      const feedingType = toFeedingType(existing.feedingDetail!.feedingType);
 
-    if (feedingType !== FeedingType.BREAST) {
-      throw new ConflictException('Only breastfeeding events have a timer to stop');
-    }
-    if (existing.endedAt !== null) {
-      throw new ConflictException('This feeding event has already been stopped');
-    }
+      if (feedingType !== FeedingType.BREAST) {
+        throw new ConflictException('Only breastfeeding events have a timer to stop');
+      }
+      if (existing.endedAt !== null) {
+        throw new ConflictException('This feeding event has already been stopped');
+      }
 
-    const updated = await this.prisma.event.update({
-      where: { id: eventId },
-      data: { endedAt: new Date() },
-      include: { feedingDetail: true },
+      // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().
+      assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+        toFeedingEventSummary(existing),
+      );
+
+      // Persist the moment the timer was actually stopped, not when this write
+      // reached the server: a buffered offline stop carries the client-captured
+      // instant in `clientTimestamp`, and using `new Date()` on a delayed
+      // resend would inflate the recorded duration (e.g. a stop captured at
+      // 22:00 but resent at 07:00 the next morning). Falls back to now for a
+      // plain online stop with no timestamp — see ADR-0011.
+      const endedAt = dto.clientTimestamp ? new Date(dto.clientTimestamp) : new Date();
+
+      return tx.event.update({
+        where: { id: eventId },
+        data: { endedAt },
+        include: { feedingDetail: true },
+      });
     });
 
     // Collapsed into the generic 'updated' action — from a connected
@@ -333,8 +384,14 @@ export class FeedingService {
     });
   }
 
-  private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
-    const child = await this.prisma.child.findUnique({
+  private async findChildOrThrow(
+    householdId: string,
+    childId: string,
+    // Defaults to the top-level client; callers inside a `$transaction` pass
+    // `tx` so the read participates in the same transaction (see update()/stop()).
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<Child> {
+    const child = await client.child.findUnique({
       where: { id: childId, householdId },
     });
 
@@ -349,10 +406,11 @@ export class FeedingService {
     householdId: string,
     childId: string,
     eventId: string,
+    client: Prisma.TransactionClient = this.prisma,
   ): Promise<EventWithFeedingDetail> {
-    await this.findChildOrThrow(householdId, childId);
+    await this.findChildOrThrow(householdId, childId, client);
 
-    const event = await this.prisma.event.findUnique({
+    const event = await client.event.findUnique({
       where: { id: eventId, childId, type: EventType.FEEDING },
       include: { feedingDetail: true },
     });

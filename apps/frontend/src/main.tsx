@@ -7,6 +7,7 @@ import { AuthProvider } from './auth/AuthProvider.tsx';
 import { queryClient } from './lib/query-client.ts';
 import { RealtimeProvider } from './realtime/RealtimeProvider.tsx';
 import { SyncQueueProvider } from './offline/SyncQueueProvider.tsx';
+import { ConflictNoticeBanner } from './components/ConflictNoticeBanner.tsx';
 import { registerServiceWorker } from './pwa/registerServiceWorker.ts';
 import './index.css';
 import App from './App.tsx';
@@ -29,6 +30,9 @@ createRoot(document.getElementById('root')!).render(
                 queue off the socket's connectivity state (see its doc
                 comment). */}
             <SyncQueueProvider>
+              {/* App-root, non-blocking Last-Write-Wins conflict notices
+                  (see ConflictNoticeBanner / ADR-0011). */}
+              <ConflictNoticeBanner />
               <App />
             </SyncQueueProvider>
           </RealtimeProvider>

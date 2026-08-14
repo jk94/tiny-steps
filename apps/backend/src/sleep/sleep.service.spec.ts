@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { EventConflictException } from '../event/event-conflict.exception';
 import type { RealtimeService } from '../realtime/realtime.service';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
 import { UpdateSleepEventDto } from './dto/update-sleep-event.dto';
@@ -34,6 +35,7 @@ function makeEvent(overrides: Partial<Record<string, unknown>> = {}) {
     startedAt: new Date('2026-01-01T10:00:00.000Z'),
     endedAt: null,
     createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T10:00:00.000Z'),
     ...overrides,
   };
 }
@@ -49,6 +51,7 @@ describe('SleepService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let realtime: { broadcastEventChange: jest.Mock };
   let service: SleepService;
@@ -64,6 +67,10 @@ describe('SleepService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      // Interactive transactions run the callback with a transaction client; the
+      // mock passes `prisma` itself as `tx`, so reads/writes hit the same mocked
+      // delegates and every existing assertion on `prisma.event.*` still applies.
+      $transaction: jest.fn((callback: (tx: typeof prisma) => unknown) => callback(prisma)),
     };
     realtime = { broadcastEventChange: jest.fn() };
     service = new SleepService(
@@ -268,7 +275,7 @@ describe('SleepService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { endedAt: new Date('2026-01-02T06:30:00.000Z') },
+        data: { endedAt: new Date('2026-01-02T06:30:00.000Z'), updatedAt: expect.any(Date) },
       });
       expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
         type: EventType.SLEEP,
@@ -317,6 +324,50 @@ describe('SleepService', () => {
       await expect(service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {})).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    describe('Last-Write-Wins (clientTimestamp)', () => {
+      it('applies the update unconditionally when no clientTimestamp is supplied (regression)', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T12:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+        prisma.event.update.mockResolvedValue(existing);
+
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          occurredAt: '2026-01-01T09:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('applies the update when clientTimestamp is newer than the server updatedAt', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T10:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+        prisma.event.update.mockResolvedValue(existing);
+
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          occurredAt: '2026-01-01T09:00:00.000Z',
+          clientTimestamp: '2026-01-01T11:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('throws EventConflictException and skips the write when clientTimestamp is older', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        prisma.event.findUnique.mockResolvedValue(
+          makeEvent({ updatedAt: new Date('2026-01-01T12:00:00.000Z') }),
+        );
+
+        await expect(
+          service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+            occurredAt: '2026-01-01T09:00:00.000Z',
+            clientTimestamp: '2026-01-01T11:00:00.000Z',
+          }),
+        ).rejects.toThrow(EventConflictException);
+        expect(prisma.event.update).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -374,6 +425,87 @@ describe('SleepService', () => {
       await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    describe('endedAt source', () => {
+      it('persists endedAt as the supplied clientTimestamp, not the wall clock, for a buffered offline stop', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeEvent({
+          startedAt: new Date('2026-01-01T22:00:00.000Z'),
+          endedAt: null,
+          updatedAt: new Date('2026-01-01T22:00:00.000Z'),
+        });
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        // A sleep-timer stop captured offline at 22:00 but resent hours later
+        // must record 22:00 as endedAt — otherwise the night's sleep duration
+        // is inflated by the whole offline gap (the core bug this fix closes).
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          clientTimestamp: '2026-01-01T22:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalledWith({
+          where: { id: EVENT_ID },
+          data: { endedAt: new Date('2026-01-01T22:00:00.000Z') },
+        });
+      });
+
+      it('falls back to a freshly-generated Date for a plain online stop with no clientTimestamp', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeEvent({
+          startedAt: new Date('2026-01-01T20:00:00.000Z'),
+          endedAt: null,
+        });
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        const before = Date.now();
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+        const after = Date.now();
+
+        const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
+        expect(endedAt).toBeInstanceOf(Date);
+        expect(endedAt.getTime()).toBeGreaterThanOrEqual(before);
+        expect(endedAt.getTime()).toBeLessThanOrEqual(after);
+      });
+    });
+
+    describe('Last-Write-Wins (clientTimestamp)', () => {
+      it('stops when clientTimestamp is newer than the server updatedAt', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeEvent({
+          startedAt: new Date('2026-01-01T20:00:00.000Z'),
+          endedAt: null,
+          updatedAt: new Date('2026-01-01T20:00:00.000Z'),
+        });
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          clientTimestamp: '2026-01-01T21:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('throws EventConflictException and skips the write when clientTimestamp is older', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        prisma.event.findUnique.mockResolvedValue(
+          makeEvent({
+            startedAt: new Date('2026-01-01T20:00:00.000Z'),
+            endedAt: null,
+            updatedAt: new Date('2026-01-01T22:00:00.000Z'),
+          }),
+        );
+
+        await expect(
+          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+            clientTimestamp: '2026-01-01T21:00:00.000Z',
+          }),
+        ).rejects.toThrow(EventConflictException);
+        expect(prisma.event.update).not.toHaveBeenCalled();
+      });
     });
   });
 

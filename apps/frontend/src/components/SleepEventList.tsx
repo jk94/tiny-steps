@@ -37,6 +37,8 @@ export function SleepEventList({ householdId, childId }: SleepEventListProps) {
     (pendingQuery.data ?? []).map((record) => ({
       summary: record.summary as SleepEventSummary,
       status: record.status,
+      operation: record.operation,
+      targetEventId: record.targetEventId,
     })),
     'desc',
   );

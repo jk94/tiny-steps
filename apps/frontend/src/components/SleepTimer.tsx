@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { stopSleepTimer } from '../api/sleep-api';
+import { stopSleepTimerOptimistic } from '../api/sleep-api';
 import type { SleepEventSummary } from '../api/sleep-api';
-import { mapSleepError } from '../sleep/mapSleepError';
-import { queryClient } from '../lib/query-client';
-import { ErrorMessage } from './ErrorMessage';
 
 const TICK_INTERVAL_MS = 1000;
 
@@ -53,13 +50,13 @@ export function SleepTimer({ householdId, childId, event }: SleepTimerProps) {
     return () => clearInterval(intervalId);
   }, [startedAtMs]);
 
+  // See FeedingTimer: the optimistic stop buffers a pending `'stop'` record and
+  // invalidates the pending query before the network call, so `SleepHome` swaps
+  // to its stopped/optimistic state immediately (JC-2); reconciliation lives
+  // there and in the engine, so no error UI is needed here.
   const mutation = useMutation({
-    mutationFn: () => stopSleepTimer(householdId, childId, event.id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['households', householdId, 'children', childId, 'sleep-events'],
-      });
-    },
+    mutationFn: () =>
+      stopSleepTimerOptimistic(householdId, childId, event, new Date().toISOString()),
   });
 
   return (
@@ -69,7 +66,6 @@ export function SleepTimer({ householdId, childId, event }: SleepTimerProps) {
       <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
         {t(mutation.isPending ? 'sleep.timer.stopButtonPending' : 'sleep.timer.stopButton')}
       </button>
-      {mutation.isError && <ErrorMessage message={t(mapSleepError(mutation.error, 'stop'))} />}
     </section>
   );
 }

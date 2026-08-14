@@ -27,6 +27,7 @@ const summary: SleepEventSummary = {
   endedAt: null,
   durationSeconds: null,
   createdAt: new Date('2026-01-01T20:00:00.000Z'),
+  updatedAt: new Date('2026-01-01T20:00:00.000Z'),
 };
 
 const ROUTE_METHOD_NAMES = [
@@ -129,13 +130,22 @@ describe('SleepController', () => {
   });
 
   describe('stop', () => {
-    it('delegates to SleepService.stop with householdId, childId, eventId', async () => {
+    it('delegates to SleepService.stop with householdId, childId, eventId, and the (optional) body', async () => {
+      sleepService.stop.mockResolvedValue(summary);
+      const dto = { clientTimestamp: '2026-01-01T21:00:00.000Z' };
+
+      const result = await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+
+      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      expect(result).toBe(summary);
+    });
+
+    it('forwards an empty body for a plain online stop', async () => {
       sleepService.stop.mockResolvedValue(summary);
 
-      const result = await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+      await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {});
 
-      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
-      expect(result).toBe(summary);
+      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {});
     });
   });
 

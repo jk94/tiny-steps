@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { EventConflictException } from '../event/event-conflict.exception';
 import type { RealtimeService } from '../realtime/realtime.service';
 import { CreateDiaperEventDto } from './dto/create-diaper-event.dto';
 import { UpdateDiaperEventDto } from './dto/update-diaper-event.dto';
@@ -35,6 +36,7 @@ function makeEvent(overrides: Partial<Record<string, unknown>> = {}) {
     startedAt: null,
     endedAt: null,
     createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T10:00:00.000Z'),
     diaperDetail: {
       eventId: EVENT_ID,
       diaperType: DiaperType.PEE,
@@ -54,6 +56,7 @@ describe('DiaperService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let realtime: { broadcastEventChange: jest.Mock };
   let service: DiaperService;
@@ -68,6 +71,10 @@ describe('DiaperService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      // Interactive transactions run the callback with a transaction client; the
+      // mock passes `prisma` itself as `tx`, so reads/writes hit the same mocked
+      // delegates and every existing assertion on `prisma.event.*` still applies.
+      $transaction: jest.fn((callback: (tx: typeof prisma) => unknown) => callback(prisma)),
     };
     realtime = { broadcastEventChange: jest.fn() };
     service = new DiaperService(
@@ -257,7 +264,11 @@ describe('DiaperService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { occurredAt: new Date('2026-01-01T09:00:00.000Z'), diaperDetail: undefined },
+        data: {
+          occurredAt: new Date('2026-01-01T09:00:00.000Z'),
+          updatedAt: expect.any(Date),
+          diaperDetail: undefined,
+        },
         include: { diaperDetail: true },
       });
       expect(realtime.broadcastEventChange).toHaveBeenCalledWith(HOUSEHOLD_ID, {
@@ -278,7 +289,10 @@ describe('DiaperService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { diaperDetail: { update: { diaperType: DiaperType.STOOL } } },
+        data: {
+          updatedAt: expect.any(Date),
+          diaperDetail: { update: { diaperType: DiaperType.STOOL } },
+        },
         include: { diaperDetail: true },
       });
     });
@@ -295,7 +309,10 @@ describe('DiaperService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { diaperDetail: { update: { diaperType: DiaperType.BOTH, note: 'Needs cream' } } },
+        data: {
+          updatedAt: expect.any(Date),
+          diaperDetail: { update: { diaperType: DiaperType.BOTH, note: 'Needs cream' } },
+        },
         include: { diaperDetail: true },
       });
     });
@@ -312,7 +329,7 @@ describe('DiaperService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { diaperDetail: { update: { note: null } } },
+        data: { updatedAt: expect.any(Date), diaperDetail: { update: { note: null } } },
         include: { diaperDetail: true },
       });
     });
@@ -326,7 +343,7 @@ describe('DiaperService', () => {
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
-        data: { diaperDetail: { update: { note: 'Just a note' } } },
+        data: { updatedAt: expect.any(Date), diaperDetail: { update: { note: 'Just a note' } } },
         include: { diaperDetail: true },
       });
     });
@@ -338,6 +355,54 @@ describe('DiaperService', () => {
         NotFoundException,
       );
       expect(prisma.event.update).not.toHaveBeenCalled();
+    });
+
+    describe('Last-Write-Wins (clientTimestamp)', () => {
+      it('applies the update unconditionally when no clientTimestamp is supplied (regression)', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T12:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+        prisma.event.update.mockResolvedValue(existing);
+
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: 'x' });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('applies the update when clientTimestamp is newer than the server updatedAt', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const existing = makeEvent({ updatedAt: new Date('2026-01-01T10:00:00.000Z') });
+        prisma.event.findUnique.mockResolvedValue(existing);
+        prisma.event.update.mockResolvedValue(existing);
+
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          note: 'x',
+          clientTimestamp: '2026-01-01T11:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalled();
+      });
+
+      it('throws EventConflictException carrying the current summary and skips the write when clientTimestamp is older', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        prisma.event.findUnique.mockResolvedValue(
+          makeEvent({ updatedAt: new Date('2026-01-01T12:00:00.000Z') }),
+        );
+
+        const error = await service
+          .update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+            note: 'x',
+            clientTimestamp: '2026-01-01T11:00:00.000Z',
+          })
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(EventConflictException);
+        expect((error as EventConflictException).getResponse()).toMatchObject({
+          code: 'EVENT_CONFLICT',
+          currentEvent: expect.objectContaining({ id: EVENT_ID }),
+        });
+        expect(prisma.event.update).not.toHaveBeenCalled();
+      });
     });
   });
 

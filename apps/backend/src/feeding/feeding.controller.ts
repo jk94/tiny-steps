@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { StopEventDto } from '../event/dto/stop-event.dto';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
 import { FeedingService } from './feeding.service';
@@ -105,7 +106,8 @@ export class FeedingController {
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
     @Param('eventId') eventId: string,
+    @Body() dto: StopEventDto,
   ): Promise<FeedingEventSummary> {
-    return this.feedingService.stop(householdId, childId, eventId);
+    return this.feedingService.stop(householdId, childId, eventId, dto);
   }
 }

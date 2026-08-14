@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SleepTimer } from './SleepTimer';
 import * as sleepApi from '../api/sleep-api';
-import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
@@ -27,6 +26,7 @@ function makeRunningEvent(
     endedAt: null,
     durationSeconds: null,
     createdAt: '2026-01-01T20:00:00.000Z',
+    updatedAt: '2026-01-01T20:00:00.000Z',
     ...overrides,
   };
 }
@@ -79,32 +79,23 @@ describe('SleepTimer', () => {
       queryClient.clear();
     });
 
-    it('calls stopSleepTimer and invalidates queries when Stop is clicked', async () => {
+    it('fires the optimistic stop with a captured clientTimestamp when Stop is clicked', async () => {
       const event = makeRunningEvent();
-      mockedSleepApi.stopSleepTimer.mockResolvedValueOnce({
+      mockedSleepApi.stopSleepTimerOptimistic.mockResolvedValueOnce({
         ...event,
         endedAt: '2026-01-01T20:05:00.000Z',
       });
-      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
       const user = userEvent.setup();
       renderTimer(event);
 
       await user.click(screen.getByRole('button', { name: 'Stop' }));
 
-      expect(mockedSleepApi.stopSleepTimer).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, 'e1');
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'sleep-events'],
-      });
-    });
-
-    it('shows a mapped error message when stop fails with a 409 (already stopped)', async () => {
-      mockedSleepApi.stopSleepTimer.mockRejectedValueOnce(new ApiError(409, {}));
-      const user = userEvent.setup();
-      renderTimer(makeRunningEvent());
-
-      await user.click(screen.getByRole('button', { name: 'Stop' }));
-
-      expect(await screen.findByText('This timer has already been stopped.')).toBeInTheDocument();
+      expect(mockedSleepApi.stopSleepTimerOptimistic).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        expect.objectContaining({ id: 'e1' }),
+        expect.any(String),
+      );
     });
   });
 });

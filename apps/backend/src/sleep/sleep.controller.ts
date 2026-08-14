@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { StopEventDto } from '../event/dto/stop-event.dto';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
 import { UpdateSleepEventDto } from './dto/update-sleep-event.dto';
 import { SleepService } from './sleep.service';
@@ -105,7 +106,8 @@ export class SleepController {
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
     @Param('eventId') eventId: string,
+    @Body() dto: StopEventDto,
   ): Promise<SleepEventSummary> {
-    return this.sleepService.stop(householdId, childId, eventId);
+    return this.sleepService.stop(householdId, childId, eventId, dto);
   }
 }

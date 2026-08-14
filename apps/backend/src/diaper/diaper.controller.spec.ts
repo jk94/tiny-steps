@@ -27,6 +27,7 @@ const summary: DiaperEventSummary = {
   occurredAt: new Date('2026-01-01T10:00:00.000Z'),
   note: null,
   createdAt: new Date('2026-01-01T10:00:00.000Z'),
+  updatedAt: new Date('2026-01-01T10:00:00.000Z'),
 };
 
 const ROUTE_METHOD_NAMES = ['create', 'list', 'getOne', 'update', 'remove'] as const;

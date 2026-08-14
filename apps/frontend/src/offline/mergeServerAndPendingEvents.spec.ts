@@ -13,6 +13,7 @@ function diaperAt(id: string, occurredAt: string): DiaperEventSummary {
     occurredAt,
     note: null,
     createdAt: occurredAt,
+    updatedAt: occurredAt,
   };
 }
 
@@ -96,6 +97,66 @@ describe('mergeServerAndPendingEvents', () => {
       'mid-earlier',
       'early',
     ]);
+  });
+
+  it('overlays a matching server row with a pending update instead of adding a new row', () => {
+    const server = [diaperAt('e1', '2026-01-01T10:00:00.000Z')];
+    const edited = { ...diaperAt('e1', '2026-01-01T10:00:00.000Z'), note: 'edited offline' };
+    const pendingEvents = [
+      {
+        summary: edited,
+        status: 'pending' as LocalEventStatus,
+        operation: 'update' as const,
+        targetEventId: 'e1',
+      },
+    ];
+
+    const merged = mergeServerAndPendingEvents(server, pendingEvents, 'asc');
+
+    // Single row — the overlay replaced the server row's summary and carried its
+    // buffer status, rather than being unioned as a second row.
+    expect(merged).toHaveLength(1);
+    expect(merged[0].summary.note).toBe('edited offline');
+    expect(merged[0].localStatus).toBe('pending');
+  });
+
+  it('overlays a matching server row with a pending stop', () => {
+    const server = [diaperAt('e1', '2026-01-01T10:00:00.000Z')];
+    const stopped = diaperAt('e1', '2026-01-01T10:00:00.000Z');
+    const pendingEvents = [
+      {
+        summary: stopped,
+        status: 'failed' as LocalEventStatus,
+        operation: 'stop' as const,
+        targetEventId: 'e1',
+      },
+    ];
+
+    const merged = mergeServerAndPendingEvents(server, pendingEvents, 'asc');
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].localStatus).toBe('failed');
+  });
+
+  it('still unions an unrelated create-type pending record (regression)', () => {
+    const server = [diaperAt('e1', '2026-01-01T10:00:00.000Z')];
+    // A create (no operation/targetEventId) plus an update overlay for the
+    // server row — the create is added, the overlay replaces.
+    const pendingEvents = [
+      pending('local-new', '2026-01-01T11:00:00.000Z'),
+      {
+        summary: { ...diaperAt('e1', '2026-01-01T10:00:00.000Z'), note: 'edited' },
+        status: 'pending' as LocalEventStatus,
+        operation: 'update' as const,
+        targetEventId: 'e1',
+      },
+    ];
+
+    const merged = mergeServerAndPendingEvents(server, pendingEvents, 'asc');
+
+    expect(merged.map((event) => event.summary.id)).toEqual(['e1', 'local-new']);
+    expect(merged[0].summary.note).toBe('edited');
+    expect(merged[1].localStatus).toBe('pending');
   });
 
   it('accepts pending records mapped straight off a PendingEventRecord', () => {

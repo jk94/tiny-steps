@@ -1,13 +1,32 @@
-import { createDiaperEvent, type CreateDiaperEventInput } from '../api/diaper-api';
+import {
+  createDiaperEvent,
+  updateDiaperEvent,
+  type CreateDiaperEventInput,
+  type UpdateDiaperEventInput,
+} from '../api/diaper-api';
 import {
   EVENT_TYPE_QUERY_KEY_SEGMENT,
+  isEventConflictError,
   type EventType,
   type TimelineEventSummary,
 } from '../api/event-api';
-import { createFeedingEvent, type CreateFeedingEventInput } from '../api/feeding-api';
+import {
+  createFeedingEvent,
+  stopFeedingTimer,
+  updateFeedingEvent,
+  type CreateFeedingEventInput,
+  type UpdateFeedingEventInput,
+} from '../api/feeding-api';
 import { ApiError } from '../api/http-client';
-import { createSleepEvent, type CreateSleepEventInput } from '../api/sleep-api';
+import {
+  createSleepEvent,
+  stopSleepTimer,
+  updateSleepEvent,
+  type CreateSleepEventInput,
+  type UpdateSleepEventInput,
+} from '../api/sleep-api';
 import { queryClient } from '../lib/query-client';
+import { recordConflictNotice } from './conflictNotices';
 import {
   deletePendingEvent,
   listAllPendingEvents,
@@ -74,6 +93,49 @@ const CREATE_FN_BY_EVENT_TYPE: Record<
 };
 
 /**
+ * Maps an event type to its plain (non-optimistic) update function — the
+ * `'update'`-operation counterpart of `CREATE_FN_BY_EVENT_TYPE`. Same
+ * loosely-typed seam: `eventType` and `updateInput` are always written together
+ * by the matching `update*EventOptimistic`, so the cast can't mismatch.
+ */
+const UPDATE_FN_BY_EVENT_TYPE: Record<
+  EventType,
+  (
+    householdId: string,
+    childId: string,
+    eventId: string,
+    input: unknown,
+  ) => Promise<TimelineEventSummary>
+> = {
+  FEEDING: (householdId, childId, eventId, input) =>
+    updateFeedingEvent(householdId, childId, eventId, input as UpdateFeedingEventInput),
+  SLEEP: (householdId, childId, eventId, input) =>
+    updateSleepEvent(householdId, childId, eventId, input as UpdateSleepEventInput),
+  DIAPER: (householdId, childId, eventId, input) =>
+    updateDiaperEvent(householdId, childId, eventId, input as UpdateDiaperEventInput),
+};
+
+/**
+ * Maps an event type to its timer-stop function. Only FEEDING/SLEEP are
+ * timer-based — a `'stop'` record for DIAPER is unreachable-by-construction and
+ * handled defensively at the call site.
+ */
+const STOP_FN_BY_EVENT_TYPE: Partial<
+  Record<
+    EventType,
+    (
+      householdId: string,
+      childId: string,
+      eventId: string,
+      clientTimestamp?: string,
+    ) => Promise<TimelineEventSummary>
+  >
+> = {
+  FEEDING: stopFeedingTimer,
+  SLEEP: stopSleepTimer,
+};
+
+/**
  * Whether a failed resend is worth retrying. A 4xx means the request itself is
  * malformed/unauthorized — retrying the identical payload can't help, so it's
  * abandoned. A 5xx or a raw network failure (fetch throwing a `TypeError` with
@@ -128,31 +190,110 @@ async function recordResendFailure(
 }
 
 /**
- * Resends a single buffered record. Returns the ISO instant of a scheduled
- * future retry (so the caller can plan the next autonomous drain), or
- * `undefined` when nothing further is pending for this record (success, a
- * permanently-skipped legacy record, or an abandoned one).
+ * Confirmed resend: drop the buffered copy and refresh both the pending-events
+ * query (removes the now-gone overlay/ghost row) and the authoritative
+ * per-domain query. Shared by the create/update/stop success paths.
  */
-async function resendPendingEvent(record: PendingEventRecord): Promise<string | undefined> {
+async function confirmResend(record: PendingEventRecord): Promise<void> {
+  await deletePendingEvent(record.localId);
+  await invalidatePendingEventsQuery(record.householdId, record.childId);
+  await invalidateDomainQuery(record);
+}
+
+/**
+ * Resolves a Last-Write-Wins conflict hit while resending a buffered edit/stop:
+ * the server had a newer write, so the buffered one is dropped (never retried),
+ * a dismissible notice is recorded (JC-3), and both queries are refreshed so the
+ * server's winning values are shown. Returns `undefined` (no retry scheduled).
+ */
+async function resolveResendConflict(record: PendingEventRecord): Promise<undefined> {
+  await deletePendingEvent(record.localId);
+  if (record.targetEventId !== undefined) {
+    recordConflictNotice(record.eventType, record.targetEventId);
+  }
+  await invalidatePendingEventsQuery(record.householdId, record.childId);
+  await invalidateDomainQuery(record);
+  return undefined;
+}
+
+/** Resends a buffered create (the original ADR-0010 path). */
+async function resendCreate(record: PendingEventRecord): Promise<string | undefined> {
   if (record.createInput === undefined) {
     // Legacy record from a pre-sync-queue build: no request body was persisted,
     // so it can't be resent. Leave it failed forever rather than guessing one.
     return undefined;
   }
-
   const createEvent = CREATE_FN_BY_EVENT_TYPE[record.eventType];
   try {
     await createEvent(record.householdId, record.childId, record.createInput);
   } catch (error) {
     return recordResendFailure(record, error);
   }
-
-  // Confirmed: drop the buffered copy and refresh both the pending-events query
-  // (removes the now-gone ghost row) and the authoritative per-domain query.
-  await deletePendingEvent(record.localId);
-  await invalidatePendingEventsQuery(record.householdId, record.childId);
-  await invalidateDomainQuery(record);
+  await confirmResend(record);
   return undefined;
+}
+
+/** Resends a buffered edit (PATCH). LWW conflicts resolve without a retry. */
+async function resendUpdate(record: PendingEventRecord): Promise<string | undefined> {
+  if (record.updateInput === undefined || record.targetEventId === undefined) {
+    return undefined; // malformed/legacy — nothing to resend
+  }
+  const updateEvent = UPDATE_FN_BY_EVENT_TYPE[record.eventType];
+  try {
+    await updateEvent(record.householdId, record.childId, record.targetEventId, record.updateInput);
+  } catch (error) {
+    if (isEventConflictError(error)) {
+      return resolveResendConflict(record);
+    }
+    return recordResendFailure(record, error);
+  }
+  await confirmResend(record);
+  return undefined;
+}
+
+/** Resends a buffered timer-stop. LWW conflicts resolve without a retry. */
+async function resendStop(record: PendingEventRecord): Promise<string | undefined> {
+  if (record.targetEventId === undefined) {
+    return undefined;
+  }
+  const stopTimer = STOP_FN_BY_EVENT_TYPE[record.eventType];
+  if (stopTimer === undefined) {
+    // A 'stop' record for a non-timer type (DIAPER) is unreachable by
+    // construction — no stop*Optimistic wrapper produces one. Log and leave it
+    // failed rather than crash the drain.
+    console.error(`Unexpected 'stop' record for event type ${record.eventType}; leaving it failed`);
+    return undefined;
+  }
+  const clientTimestamp = (record.updateInput as { clientTimestamp?: string } | undefined)
+    ?.clientTimestamp;
+  try {
+    await stopTimer(record.householdId, record.childId, record.targetEventId, clientTimestamp);
+  } catch (error) {
+    if (isEventConflictError(error)) {
+      return resolveResendConflict(record);
+    }
+    return recordResendFailure(record, error);
+  }
+  await confirmResend(record);
+  return undefined;
+}
+
+/**
+ * Resends a single buffered record, dispatching on its `operation`. Returns the
+ * ISO instant of a scheduled future retry (so the caller can plan the next
+ * autonomous drain), or `undefined` when nothing further is pending for this
+ * record (success, a resolved conflict, a permanently-skipped legacy record, or
+ * an abandoned one).
+ */
+function resendPendingEvent(record: PendingEventRecord): Promise<string | undefined> {
+  switch (record.operation) {
+    case 'update':
+      return resendUpdate(record);
+    case 'stop':
+      return resendStop(record);
+    default:
+      return resendCreate(record);
+  }
 }
 
 let scheduledRetryTimeout: ReturnType<typeof setTimeout> | null = null;

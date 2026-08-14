@@ -40,6 +40,27 @@ export interface PendingEventRecord {
    * update — the drain skips those permanently.
    */
   createInput?: unknown;
+  /**
+   * What kind of write this buffered record represents. `undefined` (the
+   * default for both legacy records and every `create*EventOptimistic` call
+   * site) means a create; `'update'` an edit (PATCH); `'stop'` a timer-stop.
+   * Additive, so no `idb` version bump is needed — see ADR-0011.
+   */
+  operation?: 'update' | 'stop';
+  /**
+   * The server id of the event an `'update'`/`'stop'` record targets. Always
+   * set whenever `operation` is set. Used both to resend the write and to
+   * overlay the matching server row at render time (see
+   * `mergeServerAndPendingEvents`). Undefined for create records (their target
+   * doesn't exist server-side yet).
+   */
+  targetEventId?: string;
+  /**
+   * The exact request body for an `'update'`/`'stop'` resend (parallel to
+   * `createInput`), including the `clientTimestamp` that drives Last-Write-Wins.
+   * The sync-queue replays this verbatim. Undefined for create records.
+   */
+  updateInput?: unknown;
   /** Resend attempts made by the sync-queue so far. Undefined == 0. */
   retryCount?: number;
   /** ISO timestamp before which the queue won't retry this record. Undefined == eligible now. */
@@ -133,6 +154,24 @@ export async function listPendingEvents(
 export async function listAllPendingEvents(): Promise<PendingEventRecord[]> {
   const db = await getDb();
   return db.getAll(STORE_NAME);
+}
+
+/**
+ * Finds an existing buffered `'update'`/`'stop'` record targeting a given server
+ * event, if any. A full-store scan (like `listAllPendingEvents`) since the store
+ * is small and there's no index on `targetEventId`. Supports JC-4: a second
+ * offline edit/stop of the same event replaces the pending record in place
+ * (reusing its `localId`) instead of queuing a duplicate — see
+ * `updateEventOptimistically` and ADR-0011.
+ */
+export async function findPendingUpdateForEvent(
+  targetEventId: string,
+): Promise<PendingEventRecord | undefined> {
+  const db = await getDb();
+  const all = await db.getAll(STORE_NAME);
+  return all.find(
+    (record) => record.operation !== undefined && record.targetEventId === targetEventId,
+  );
 }
 
 /**

@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { stopFeedingTimer } from '../api/feeding-api';
+import { stopFeedingTimerOptimistic } from '../api/feeding-api';
 import type { FeedingEventSummary, FeedingSide } from '../api/feeding-api';
-import { mapFeedingError } from '../feeding/mapFeedingError';
-import { queryClient } from '../lib/query-client';
-import { ErrorMessage } from './ErrorMessage';
 
 const TICK_INTERVAL_MS = 1000;
 
@@ -57,13 +54,14 @@ export function FeedingTimer({ householdId, childId, event }: FeedingTimerProps)
     return () => clearInterval(intervalId);
   }, [startedAtMs]);
 
+  // The optimistic stop buffers a pending `'stop'` record and invalidates the
+  // pending query *before* the network call, so `FeedingHome` immediately swaps
+  // this ticking timer for its stopped/optimistic state (JC-2). A conflict or a
+  // successful/ordinary-failed sync is then reconciled there and by the engine —
+  // there's nothing left for this component to display, hence no error UI.
   const mutation = useMutation({
-    mutationFn: () => stopFeedingTimer(householdId, childId, event.id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['households', householdId, 'children', childId, 'feeding-events'],
-      });
-    },
+    mutationFn: () =>
+      stopFeedingTimerOptimistic(householdId, childId, event, new Date().toISOString()),
   });
 
   return (
@@ -74,7 +72,6 @@ export function FeedingTimer({ householdId, childId, event }: FeedingTimerProps)
       <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
         {t(mutation.isPending ? 'feeding.timer.stopButtonPending' : 'feeding.timer.stopButton')}
       </button>
-      {mutation.isError && <ErrorMessage message={t(mapFeedingError(mutation.error, 'stop'))} />}
     </section>
   );
 }

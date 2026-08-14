@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Child, DiaperDetail, Event, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
+import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateDiaperEventDto } from './dto/create-diaper-event.dto';
 import { UpdateDiaperEventDto } from './dto/update-diaper-event.dto';
@@ -26,6 +27,9 @@ export interface DiaperEventSummary {
   occurredAt: Date;
   note: string | null;
   createdAt: Date;
+  // Server-side last-write timestamp (Prisma `@updatedAt`), the Last-Write-Wins
+  // baseline for offline edits — see ADR-0011 and FeedingEventSummary.
+  updatedAt: Date;
 }
 
 // Exported so EventService.listDaily can reuse the exact same mapping
@@ -49,6 +53,7 @@ export function toDiaperEventSummary(event: EventWithDiaperDetail): DiaperEventS
     occurredAt: event.occurredAt,
     note: detail.note,
     createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
   };
 }
 
@@ -147,33 +152,55 @@ export class DiaperService {
     eventId: string,
     dto: UpdateDiaperEventDto,
   ): Promise<DiaperEventSummary> {
-    await this.findDiaperEventOrThrow(householdId, childId, eventId);
+    // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
+    // it, and writing in one transaction stops two concurrent updates from
+    // both reading the same `updatedAt`, both passing the gate, and both
+    // writing (a lost-update race). All reads/writes below use `tx` so the
+    // check-then-act is serialized against other transactions — see ADR-0011.
+    // Diaper has no `stop()` (it is never timer-based), so this is its only
+    // read-check-write call site.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const existing = await this.findDiaperEventOrThrow(householdId, childId, eventId, tx);
 
-    const eventData: Prisma.EventUpdateInput = {};
-    if (dto.occurredAt !== undefined) {
-      eventData.occurredAt = new Date(dto.occurredAt);
-    }
+      // Last-Write-Wins: a buffered offline edit older than the current server
+      // row loses — see ADR-0011. Checked before any write.
+      assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+        toDiaperEventSummary(existing),
+      );
 
-    // Unlike Feeding, diaperType is unconditionally editable (see
-    // `UpdateDiaperEventDto`'s doc comment) and note applies uniformly to
-    // every diaperType, so both are unconditionally settable here.
-    const detailData: Prisma.DiaperDetailUpdateInput = {};
-    if (dto.diaperType !== undefined) {
-      detailData.diaperType = dto.diaperType;
-    }
-    if (dto.note !== undefined) {
-      detailData.note = dto.note;
-    }
+      const eventData: Prisma.EventUpdateInput = {};
+      if (dto.occurredAt !== undefined) {
+        eventData.occurredAt = new Date(dto.occurredAt);
+      }
 
-    const updated = await this.prisma.event.update({
-      where: { id: eventId },
-      data: {
-        ...eventData,
-        diaperDetail: Object.keys(detailData).length > 0 ? { update: detailData } : undefined,
-      },
-      include: { diaperDetail: true },
+      // Unlike Feeding, diaperType is unconditionally editable (see
+      // `UpdateDiaperEventDto`'s doc comment) and note applies uniformly to
+      // every diaperType, so both are unconditionally settable here.
+      const detailData: Prisma.DiaperDetailUpdateInput = {};
+      if (dto.diaperType !== undefined) {
+        detailData.diaperType = dto.diaperType;
+      }
+      if (dto.note !== undefined) {
+        detailData.note = dto.note;
+      }
+
+      return tx.event.update({
+        where: { id: eventId },
+        data: {
+          ...eventData,
+          // Explicit LWW-timestamp bump: Prisma does NOT auto-apply `@updatedAt`
+          // for a nested detail-only update (a note/diaperType-only edit), so
+          // `updatedAt` would otherwise not advance — see ADR-0011 and
+          // event-updated-at.integration.spec.
+          updatedAt: new Date(),
+          diaperDetail: Object.keys(detailData).length > 0 ? { update: detailData } : undefined,
+        },
+        include: { diaperDetail: true },
+      });
     });
 
+    // Broadcast after the transaction commits, so a rolled-back write never
+    // triggers a phantom refetch on other clients.
     this.realtime.broadcastEventChange(householdId, {
       type: EventType.DIAPER,
       action: 'updated',
@@ -200,8 +227,14 @@ export class DiaperService {
     });
   }
 
-  private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
-    const child = await this.prisma.child.findUnique({
+  private async findChildOrThrow(
+    householdId: string,
+    childId: string,
+    // Defaults to the top-level client; the caller inside `update()`'s
+    // `$transaction` passes `tx` so the read participates in the transaction.
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<Child> {
+    const child = await client.child.findUnique({
       where: { id: childId, householdId },
     });
 
@@ -216,10 +249,11 @@ export class DiaperService {
     householdId: string,
     childId: string,
     eventId: string,
+    client: Prisma.TransactionClient = this.prisma,
   ): Promise<EventWithDiaperDetail> {
-    await this.findChildOrThrow(householdId, childId);
+    await this.findChildOrThrow(householdId, childId, client);
 
-    const event = await this.prisma.event.findUnique({
+    const event = await client.event.findUnique({
       where: { id: eventId, childId, type: EventType.DIAPER },
       include: { diaperDetail: true },
     });

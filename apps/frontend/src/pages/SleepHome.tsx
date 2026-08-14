@@ -9,6 +9,8 @@ import { SleepEventList } from '../components/SleepEventList';
 import { SleepQuickEntry } from '../components/SleepQuickEntry';
 import { SleepTimer } from '../components/SleepTimer';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
+import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /**
@@ -38,6 +40,8 @@ export function SleepHome() {
     enabled: !!householdId && !!childId,
   });
 
+  const pendingQuery = usePendingLocalEvents(householdId!, childId!, 'SLEEP');
+
   if (childQuery.isLoading || activeTimerQuery.isLoading) {
     return <LoadingIndicator />;
   }
@@ -48,13 +52,28 @@ export function SleepHome() {
 
   const child = childQuery.data;
 
+  // A locally-buffered timer-stop not yet synced: show the stopped/optimistic
+  // state rather than the ticking timer (JC-2, step 20) — see FeedingHome.
+  const activeTimer = activeTimerQuery.data;
+  const pendingStop = activeTimer
+    ? pendingQuery.data?.find(
+        (record) => record.operation === 'stop' && record.targetEventId === activeTimer.id,
+      )
+    : undefined;
+
   return (
     <section>
       <Link to={`/households/${householdId}`}>{t('sleep.home.backLink')}</Link>
       <h1>{t('sleep.home.title', { name: child.name })}</h1>
 
-      {activeTimerQuery.data ? (
-        <SleepTimer householdId={householdId!} childId={childId!} event={activeTimerQuery.data} />
+      {activeTimer && pendingStop ? (
+        <section>
+          <p>
+            {t('sleep.timer.stopped')} <OfflineStatusBadge status={pendingStop.status} />
+          </p>
+        </section>
+      ) : activeTimer ? (
+        <SleepTimer householdId={householdId!} childId={childId!} event={activeTimer} />
       ) : (
         <SleepQuickEntry householdId={householdId!} childId={childId!} />
       )}

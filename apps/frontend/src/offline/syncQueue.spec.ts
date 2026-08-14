@@ -3,6 +3,7 @@ import * as feedingApi from '../api/feeding-api';
 import type { FeedingEventSummary } from '../api/feeding-api';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
+import * as conflictNotices from './conflictNotices';
 import * as db from './pendingEvents.db';
 import type { PendingEventRecord } from './pendingEvents.db';
 import { drainPendingEventQueue } from './syncQueue';
@@ -10,12 +11,14 @@ import * as pendingQuery from './usePendingLocalEvents';
 
 vi.mock('./pendingEvents.db');
 vi.mock('./usePendingLocalEvents');
+vi.mock('./conflictNotices');
 vi.mock('../api/feeding-api');
 vi.mock('../api/sleep-api');
 vi.mock('../api/diaper-api');
 
 const mockedDb = vi.mocked(db);
 const mockedPendingQuery = vi.mocked(pendingQuery);
+const mockedConflictNotices = vi.mocked(conflictNotices);
 const mockedFeedingApi = vi.mocked(feedingApi);
 
 // Mirrors `MAX_RETRY_ATTEMPTS` in syncQueue.ts — kept local (the constant is a
@@ -41,6 +44,7 @@ const serverSummary: FeedingEventSummary = {
   amountMl: null,
   note: null,
   createdAt: '2026-01-01T10:00:00.000Z',
+  updatedAt: '2026-01-01T10:00:00.000Z',
 };
 
 function makeRecord(overrides: Partial<PendingEventRecord> = {}): PendingEventRecord {
@@ -211,5 +215,85 @@ describe('drainPendingEventQueue', () => {
     await Promise.all([first, second]);
 
     expect(mockedDb.listAllPendingEvents).toHaveBeenCalledTimes(1);
+  });
+
+  describe('update/stop operations', () => {
+    const TARGET_ID = 'server-1';
+    const UPDATE_INPUT = { amountMl: 120, clientTimestamp: '2026-01-01T11:00:00.000Z' };
+    const STOP_INPUT = { clientTimestamp: '2026-01-01T11:00:00.000Z' };
+
+    function updateRecord(overrides: Partial<PendingEventRecord> = {}): PendingEventRecord {
+      return makeRecord({
+        localId: 'local-upd',
+        operation: 'update',
+        targetEventId: TARGET_ID,
+        updateInput: UPDATE_INPUT,
+        ...overrides,
+      });
+    }
+
+    it('drains a buffered update via the plain update function and clears it on success', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([updateRecord()]);
+      mockedFeedingApi.updateFeedingEvent.mockResolvedValue(serverSummary);
+
+      await drainPendingEventQueue();
+
+      expect(mockedFeedingApi.updateFeedingEvent).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        TARGET_ID,
+        UPDATE_INPUT,
+      );
+      expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-upd');
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'feeding-events'],
+      });
+    });
+
+    it('drains a buffered timer-stop via the plain stop function, forwarding its clientTimestamp', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([
+        updateRecord({ localId: 'local-stop', operation: 'stop', updateInput: STOP_INPUT }),
+      ]);
+      mockedFeedingApi.stopFeedingTimer.mockResolvedValue(serverSummary);
+
+      await drainPendingEventQueue();
+
+      expect(mockedFeedingApi.stopFeedingTimer).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        TARGET_ID,
+        STOP_INPUT.clientTimestamp,
+      );
+      expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-stop');
+    });
+
+    it('resolves an EVENT_CONFLICT during drain without scheduling a retry', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([updateRecord()]);
+      mockedFeedingApi.updateFeedingEvent.mockRejectedValue(
+        new ApiError(409, { code: 'EVENT_CONFLICT', currentEvent: serverSummary }),
+      );
+
+      await drainPendingEventQueue();
+
+      expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-upd');
+      expect(mockedConflictNotices.recordConflictNotice).toHaveBeenCalledWith('FEEDING', TARGET_ID);
+      expect(mockedDb.markPendingEventRetryScheduled).not.toHaveBeenCalled();
+    });
+
+    it('still retries a buffered update with backoff on a 5xx during drain', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([updateRecord()]);
+      mockedFeedingApi.updateFeedingEvent.mockRejectedValue(new ApiError(500, {}));
+
+      await drainPendingEventQueue();
+
+      expect(mockedDb.markPendingEventRetryScheduled).toHaveBeenCalledTimes(1);
+      const [localId, retryCount, nextRetryAt] =
+        mockedDb.markPendingEventRetryScheduled.mock.calls[0];
+      expect(localId).toBe('local-upd');
+      expect(retryCount).toBe(1);
+      expect(nextRetryAt).toBeDefined();
+      expect(mockedDb.deletePendingEvent).not.toHaveBeenCalled();
+      expect(mockedConflictNotices.recordConflictNotice).not.toHaveBeenCalled();
+    });
   });
 });

@@ -49,6 +49,8 @@ export function FeedingEventList({ householdId, childId }: FeedingEventListProps
     (pendingQuery.data ?? []).map((record) => ({
       summary: record.summary as FeedingEventSummary,
       status: record.status,
+      operation: record.operation,
+      targetEventId: record.targetEventId,
     })),
     'desc',
   );
