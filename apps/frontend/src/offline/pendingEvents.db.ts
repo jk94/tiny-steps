@@ -4,9 +4,10 @@ import type { EventType, TimelineEventSummary } from '../api/event-api';
 
 /**
  * A locally-buffered event is either still awaiting its server round-trip
- * (`pending`) or has had that round-trip fail (`failed`). A future sync-queue
- * slice acts on `failed` records; this slice only ever creates `pending` ones
- * and flips them to `failed` on error (it never retries).
+ * (`pending`) or has had that round-trip fail (`failed`). The sync-queue
+ * (`syncQueue.ts`) resends both on the next reconnect/online trigger; the
+ * optimistic write-through (`createEventOptimistically`) only ever creates
+ * `pending` ones and flips them to `failed` on error.
  */
 export type LocalEventStatus = 'pending' | 'failed';
 
@@ -22,7 +23,7 @@ export interface PendingEventRecord {
   childId: string;
   eventType: EventType;
   status: LocalEventStatus;
-  /** ISO — informational only; no retry/backoff scheduling reads this in this slice. */
+  /** ISO — informational; the sync-queue also orders its drain by this. */
   savedAt: string;
   /**
    * Shaped exactly like the eventual server response (`id` = `localId` for
@@ -30,6 +31,19 @@ export interface PendingEventRecord {
    * transformation.
    */
   summary: TimelineEventSummary;
+  /**
+   * The exact request body passed to the domain's plain create function
+   * (e.g. `CreateFeedingEventInput`). Persisted so the sync-queue can resend
+   * this exact record without reconstructing a request from `summary` (which
+   * is response-shaped, not request-shaped). Absent on records written by a
+   * pre-sync-queue build still sitting in a client's IndexedDB after an app
+   * update — the drain skips those permanently.
+   */
+  createInput?: unknown;
+  /** Resend attempts made by the sync-queue so far. Undefined == 0. */
+  retryCount?: number;
+  /** ISO timestamp before which the queue won't retry this record. Undefined == eligible now. */
+  nextRetryAt?: string;
 }
 
 const DB_NAME = 'baby-tracker-offline';
@@ -107,4 +121,36 @@ export async function listPendingEvents(
   return eventType === undefined
     ? records
     : records.filter((record) => record.eventType === eventType);
+}
+
+/**
+ * Household/child-agnostic full-store scan for the sync-queue's drain
+ * (`syncQueue.ts`) — deliberately the whole store, not the `byChild` index,
+ * since the store stays small (a family's offline buffer, not thousands of
+ * rows) and the drain needs every buffered record regardless of which
+ * household/child page is currently mounted.
+ */
+export async function listAllPendingEvents(): Promise<PendingEventRecord[]> {
+  const db = await getDb();
+  return db.getAll(STORE_NAME);
+}
+
+/**
+ * Records the outcome of a sync-queue resend attempt in place: bumps
+ * `retryCount` and (optionally) sets the earliest instant the next attempt may
+ * run at. Keeps `status: 'failed'` so the record stays visible in the UI. A
+ * no-op if the record was already deleted (e.g. a concurrent success),
+ * mirroring `markPendingEventFailed`.
+ */
+export async function markPendingEventRetryScheduled(
+  localId: string,
+  retryCount: number,
+  nextRetryAt?: string,
+): Promise<void> {
+  const db = await getDb();
+  const existing = await db.get(STORE_NAME, localId);
+  if (!existing) {
+    return;
+  }
+  await db.put(STORE_NAME, { ...existing, status: 'failed', retryCount, nextRetryAt });
 }

@@ -140,5 +140,6 @@ export function createDiaperEventOptimistic(
     buildOptimisticSummary: (localId) =>
       buildOptimisticDiaperSummary(localId, childId, userId, input),
     apiCall: () => createDiaperEvent(householdId, childId, input),
+    createInput: input,
   });
 }

@@ -153,5 +153,6 @@ export function createSleepEventOptimistic(
     buildOptimisticSummary: (localId) =>
       buildOptimisticSleepSummary(localId, childId, userId, input),
     apiCall: () => createSleepEvent(householdId, childId, input),
+    createInput: input,
   });
 }

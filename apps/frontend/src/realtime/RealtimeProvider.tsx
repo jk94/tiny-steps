@@ -1,27 +1,19 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Socket } from 'socket.io-client';
+import { EVENT_TYPE_QUERY_KEY_SEGMENT, type EventType } from '../api/event-api';
 import { useAuth } from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 import { RealtimeContext, type RealtimeContextValue } from './RealtimeContext';
 import { createSocket } from './socket-client';
 
-type EventChangeType = 'FEEDING' | 'SLEEP' | 'DIAPER';
-
 /** Mirrors the backend's `EventChangePayload` shape (see `realtime/realtime.service.ts`). */
 interface EventChangedPayload {
-  type: EventChangeType;
+  type: EventType;
   action: 'created' | 'updated' | 'deleted';
   eventId: string;
   childId: string;
   householdId: string;
 }
-
-/** Maps a broadcast's event type to the query-key segment each event-type's components use. */
-const EVENT_TYPE_QUERY_KEY_SEGMENT: Record<EventChangeType, string> = {
-  FEEDING: 'feeding-events',
-  SLEEP: 'sleep-events',
-  DIAPER: 'diaper-events',
-};
 
 /**
  * Opens the app's single Socket.IO connection once the user is

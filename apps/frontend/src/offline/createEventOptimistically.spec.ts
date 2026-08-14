@@ -13,6 +13,7 @@ const mockedPendingQuery = vi.mocked(pendingQuery);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
+const CREATE_INPUT = { feedingType: 'SOLID' } as const;
 
 const serverSummary: FeedingEventSummary = {
   id: 'server-id',
@@ -55,6 +56,7 @@ describe('createEventOptimistically', () => {
       eventType: 'FEEDING',
       buildOptimisticSummary: optimisticSummary,
       apiCall,
+      createInput: CREATE_INPUT,
     });
 
     const putOrder = mockedDb.putPendingEvent.mock.invocationCallOrder[0];
@@ -67,6 +69,21 @@ describe('createEventOptimistically', () => {
     expect(buffered.summary.id).toBe(buffered.localId);
   });
 
+  it('persists the createInput verbatim so the sync-queue can resend it later', async () => {
+    const apiCall = vi.fn().mockResolvedValue(serverSummary);
+
+    await createEventOptimistically({
+      householdId: HOUSEHOLD_ID,
+      childId: CHILD_ID,
+      eventType: 'FEEDING',
+      buildOptimisticSummary: optimisticSummary,
+      apiCall,
+      createInput: CREATE_INPUT,
+    });
+
+    expect(mockedDb.putPendingEvent.mock.calls[0][0].createInput).toBe(CREATE_INPUT);
+  });
+
   it('deletes the buffered copy and returns the server summary on success', async () => {
     const apiCall = vi.fn().mockResolvedValue(serverSummary);
 
@@ -76,6 +93,7 @@ describe('createEventOptimistically', () => {
       eventType: 'FEEDING',
       buildOptimisticSummary: optimisticSummary,
       apiCall,
+      createInput: CREATE_INPUT,
     });
 
     expect(result).toBe(serverSummary);
@@ -95,6 +113,7 @@ describe('createEventOptimistically', () => {
         eventType: 'FEEDING',
         buildOptimisticSummary: optimisticSummary,
         apiCall,
+        createInput: CREATE_INPUT,
       }),
     ).rejects.toBe(error);
 

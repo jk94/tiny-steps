@@ -17,6 +17,13 @@ export interface CreateEventOptimisticallyParams<T extends TimelineEventSummary>
   buildOptimisticSummary: (localId: string) => T;
   /** The real create request whose authoritative row eventually replaces the optimistic one. */
   apiCall: () => Promise<T>;
+  /**
+   * The exact request body `apiCall` sends (e.g. `CreateFeedingEventInput`).
+   * Persisted verbatim on the buffered record so the sync-queue
+   * (`syncQueue.ts`) can resend it later without reconstructing a request from
+   * the response-shaped `summary`.
+   */
+  createInput: unknown;
 }
 
 /**
@@ -40,7 +47,7 @@ export interface CreateEventOptimisticallyParams<T extends TimelineEventSummary>
 export async function createEventOptimistically<T extends TimelineEventSummary>(
   params: CreateEventOptimisticallyParams<T>,
 ): Promise<T> {
-  const { householdId, childId, eventType, buildOptimisticSummary, apiCall } = params;
+  const { householdId, childId, eventType, buildOptimisticSummary, apiCall, createInput } = params;
   const localId = generateLocalEventId();
   const summary = buildOptimisticSummary(localId);
 
@@ -53,6 +60,7 @@ export async function createEventOptimistically<T extends TimelineEventSummary>(
     status: 'pending',
     savedAt: new Date().toISOString(),
     summary,
+    createInput,
   });
   // 2) Make it visible immediately.
   await invalidatePendingEventsQuery(householdId, childId);
