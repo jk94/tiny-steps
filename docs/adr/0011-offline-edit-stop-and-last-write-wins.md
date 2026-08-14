@@ -170,6 +170,19 @@ defensively (logged, left failed).
   not merged field-by-field. This is the accepted MVP behavior, not field-level conflict resolution.
 - ADR-0010's accepted at-least-once (not exactly-once) delivery tradeoff still applies to the new
   update/stop resends.
+- **False-positive conflict on a redelivered own write (accepted).** As a direct consequence of that
+  at-least-once delivery, a buffered write can succeed server-side while its HTTP response is lost
+  (network drop after commit). On the next sync-queue drain the record is resent with its original,
+  unchanged `clientTimestamp` — but the first (successful) write already bumped the row's `updatedAt`
+  to server-processing-time, which is normally `>=` that original `clientTimestamp`. So the LWW gate
+  (`assertNoLaterServerWrite`) can now fire on the resend and treat it as a lost conflict, surfacing
+  the `ConflictNoticeBanner` — even though the value currently persisted on the server already _is_
+  exactly this user's own change. No data is lost or overridden in this case; it is purely a
+  misleading "your change was overridden" signal caused by resending one's own already-applied write.
+  This is an accepted, narrow UX limitation of the at-least-once design (the same class of tradeoff as
+  ADR-0010's), not something fixed in this slice — de-duplicating resends (e.g. a client-generated
+  idempotency key per buffered write, so a redelivery is recognized as the same write rather than a
+  newer competing one) is the natural future fix if it proves annoying in practice.
 
 ## Related
 
