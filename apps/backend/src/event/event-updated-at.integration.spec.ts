@@ -141,4 +141,75 @@ describe('Event.updatedAt migration + Prisma @updatedAt (real SQLite)', () => {
       rmSync(dbPath, { force: true });
     }
   });
+
+  it('(c) a $transaction-wrapped read-check-write persists the update and advances updatedAt (LWW race-fix regression)', async () => {
+    // The services now wrap the LWW read-check-write in `prisma.$transaction`
+    // so the check-then-act is atomic against concurrent writers (see ADR-0011).
+    // A true two-writer race can't be interleaved here — the better-sqlite3
+    // adapter is synchronous, so writes are fully serialized in-process and
+    // there is no concurrency to reproduce within Jest. This instead pins that
+    // the transactional read+write itself stays correct for the non-concurrent
+    // path: the read sees the current row, and the write inside the same
+    // transaction commits and advances updatedAt as expected.
+    const dbPath = makeTempDbPath();
+    const setupDb = new Database(dbPath);
+    try {
+      for (const dir of migrationDirsSorted()) {
+        applyMigration(setupDb, dir);
+      }
+    } finally {
+      setupDb.close();
+    }
+
+    const prisma = new PrismaClient({
+      adapter: new PrismaBetterSqlite3({ url: `file:${dbPath}` }),
+    });
+    try {
+      await prisma.user.create({ data: { id: 'u1', email: 'p@example.com' } });
+      await prisma.household.create({ data: { id: 'h1', name: 'Home' } });
+      await prisma.child.create({
+        data: { id: 'c1', householdId: 'h1', name: 'Alex', birthDate: new Date('2024-01-01') },
+      });
+      const created = await prisma.event.create({
+        data: {
+          id: 'e1',
+          childId: 'c1',
+          userId: 'u1',
+          type: 'FEEDING',
+          occurredAt: new Date('2026-01-01T10:00:00.000Z'),
+          feedingDetail: { create: { feedingType: 'SOLID', note: 'before' } },
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const existing = await tx.event.findUniqueOrThrow({
+          where: { id: 'e1' },
+          include: { feedingDetail: true },
+        });
+        // Stand-in for the LWW gate: it read the current row inside the tx.
+        expect(existing.feedingDetail?.note).toBe('before');
+        return tx.event.update({
+          where: { id: existing.id },
+          data: { updatedAt: new Date(), feedingDetail: { update: { note: 'after' } } },
+          include: { feedingDetail: true },
+        });
+      });
+
+      expect(updated.feedingDetail?.note).toBe('after');
+      expect(updated.updatedAt.getTime()).toBeGreaterThan(created.updatedAt.getTime());
+
+      // The committed row reflects the transactional write.
+      const persisted = await prisma.event.findUniqueOrThrow({
+        where: { id: 'e1' },
+        include: { feedingDetail: true },
+      });
+      expect(persisted.feedingDetail?.note).toBe('after');
+      expect(persisted.updatedAt.getTime()).toBe(updated.updatedAt.getTime());
+    } finally {
+      await prisma.$disconnect();
+      rmSync(dbPath, { force: true });
+    }
+  });
 });

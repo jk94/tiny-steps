@@ -56,6 +56,7 @@ describe('DiaperService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let realtime: { broadcastEventChange: jest.Mock };
   let service: DiaperService;
@@ -70,6 +71,10 @@ describe('DiaperService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      // Interactive transactions run the callback with a transaction client; the
+      // mock passes `prisma` itself as `tx`, so reads/writes hit the same mocked
+      // delegates and every existing assertion on `prisma.event.*` still applies.
+      $transaction: jest.fn((callback: (tx: typeof prisma) => unknown) => callback(prisma)),
     };
     realtime = { broadcastEventChange: jest.fn() };
     service = new DiaperService(

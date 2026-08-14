@@ -171,46 +171,55 @@ export class SleepService {
     eventId: string,
     dto: UpdateSleepEventDto,
   ): Promise<SleepEventSummary> {
-    const existing = await this.findSleepEventOrThrow(householdId, childId, eventId);
+    // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
+    // it, and writing in one transaction stops two concurrent updates from
+    // both reading the same `updatedAt`, both passing the gate, and both
+    // writing (a lost-update race). All reads/writes below use `tx` so the
+    // check-then-act is serialized against other transactions — see ADR-0011.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const existing = await this.findSleepEventOrThrow(householdId, childId, eventId, tx);
 
-    // Last-Write-Wins: a buffered offline edit older than the current server
-    // row loses — see ADR-0011. Checked before any write.
-    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
-      toSleepEventSummary(existing),
-    );
+      // Last-Write-Wins: a buffered offline edit older than the current server
+      // row loses — see ADR-0011. Checked before any write.
+      assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+        toSleepEventSummary(existing),
+      );
 
-    const eventData: Prisma.EventUpdateInput = {};
-    if (dto.occurredAt !== undefined) {
-      eventData.occurredAt = new Date(dto.occurredAt);
-    }
-    if (dto.startedAt !== undefined) {
-      eventData.startedAt = new Date(dto.startedAt);
-    }
-    if (dto.endedAt !== undefined) {
-      eventData.endedAt = new Date(dto.endedAt);
-    }
+      const eventData: Prisma.EventUpdateInput = {};
+      if (dto.occurredAt !== undefined) {
+        eventData.occurredAt = new Date(dto.occurredAt);
+      }
+      if (dto.startedAt !== undefined) {
+        eventData.startedAt = new Date(dto.startedAt);
+      }
+      if (dto.endedAt !== undefined) {
+        eventData.endedAt = new Date(dto.endedAt);
+      }
 
-    // The DTO-level `@IsEndNotBeforeStart` only sees fields present in THIS
-    // request body — a PATCH supplying only `endedAt` (or only
-    // `startedAt`) needs the merged effective values re-checked against
-    // what's already stored, which is only known here.
-    const effectiveStartedAt = (eventData.startedAt as Date | undefined) ?? existing.startedAt;
-    const effectiveEndedAt = (eventData.endedAt as Date | undefined) ?? existing.endedAt;
-    if (
-      effectiveStartedAt &&
-      effectiveEndedAt &&
-      effectiveEndedAt.getTime() < effectiveStartedAt.getTime()
-    ) {
-      throw new BadRequestException('endedAt must not be before startedAt');
-    }
+      // The DTO-level `@IsEndNotBeforeStart` only sees fields present in THIS
+      // request body — a PATCH supplying only `endedAt` (or only
+      // `startedAt`) needs the merged effective values re-checked against
+      // what's already stored, which is only known here.
+      const effectiveStartedAt = (eventData.startedAt as Date | undefined) ?? existing.startedAt;
+      const effectiveEndedAt = (eventData.endedAt as Date | undefined) ?? existing.endedAt;
+      if (
+        effectiveStartedAt &&
+        effectiveEndedAt &&
+        effectiveEndedAt.getTime() < effectiveStartedAt.getTime()
+      ) {
+        throw new BadRequestException('endedAt must not be before startedAt');
+      }
 
-    const updated = await this.prisma.event.update({
-      where: { id: eventId },
-      // Explicit LWW-timestamp bump so an update always advances `updatedAt`,
-      // uniform with FeedingService/DiaperService — see ADR-0011.
-      data: { ...eventData, updatedAt: new Date() },
+      return tx.event.update({
+        where: { id: eventId },
+        // Explicit LWW-timestamp bump so an update always advances `updatedAt`,
+        // uniform with FeedingService/DiaperService — see ADR-0011.
+        data: { ...eventData, updatedAt: new Date() },
+      });
     });
 
+    // Broadcast after the transaction commits, so a rolled-back write never
+    // triggers a phantom refetch on other clients.
     this.realtime.broadcastEventChange(householdId, {
       type: EventType.SLEEP,
       action: 'updated',
@@ -228,22 +237,34 @@ export class SleepService {
     eventId: string,
     dto: StopEventDto = {},
   ): Promise<SleepEventSummary> {
-    const existing = await this.findSleepEventOrThrow(householdId, childId, eventId);
+    // Same atomic read-check-write as update() — see its doc comment and
+    // ADR-0011.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const existing = await this.findSleepEventOrThrow(householdId, childId, eventId, tx);
 
-    // No "wrong type" guard needed here, unlike FeedingService.stop — every
-    // Sleep event is timer-capable, there's no non-timer sub-type to reject.
-    if (existing.endedAt !== null) {
-      throw new ConflictException('This sleep event has already been stopped');
-    }
+      // No "wrong type" guard needed here, unlike FeedingService.stop — every
+      // Sleep event is timer-capable, there's no non-timer sub-type to reject.
+      if (existing.endedAt !== null) {
+        throw new ConflictException('This sleep event has already been stopped');
+      }
 
-    // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().
-    assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
-      toSleepEventSummary(existing),
-    );
+      // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().
+      assertNoLaterServerWrite(existing.updatedAt, dto.clientTimestamp, () =>
+        toSleepEventSummary(existing),
+      );
 
-    const updated = await this.prisma.event.update({
-      where: { id: eventId },
-      data: { endedAt: new Date() },
+      // Persist the moment the timer was actually stopped, not when this write
+      // reached the server: a buffered offline stop carries the client-captured
+      // instant in `clientTimestamp`, and using `new Date()` on a delayed
+      // resend would inflate the recorded sleep duration (e.g. a stop captured
+      // at 22:00 but resent at 07:00 the next morning — a 9h-inflated night's
+      // sleep). Falls back to now for a plain online stop — see ADR-0011.
+      const endedAt = dto.clientTimestamp ? new Date(dto.clientTimestamp) : new Date();
+
+      return tx.event.update({
+        where: { id: eventId },
+        data: { endedAt },
+      });
     });
 
     // Collapsed into the generic 'updated' action — same rationale as
@@ -274,8 +295,14 @@ export class SleepService {
     });
   }
 
-  private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
-    const child = await this.prisma.child.findUnique({
+  private async findChildOrThrow(
+    householdId: string,
+    childId: string,
+    // Defaults to the top-level client; callers inside a `$transaction` pass
+    // `tx` so the read participates in the same transaction (see update()/stop()).
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<Child> {
+    const child = await client.child.findUnique({
       where: { id: childId, householdId },
     });
 
@@ -290,10 +317,11 @@ export class SleepService {
     householdId: string,
     childId: string,
     eventId: string,
+    client: Prisma.TransactionClient = this.prisma,
   ): Promise<Event> {
-    await this.findChildOrThrow(householdId, childId);
+    await this.findChildOrThrow(householdId, childId, client);
 
-    const event = await this.prisma.event.findUnique({
+    const event = await client.event.findUnique({
       where: { id: eventId, childId, type: EventType.SLEEP },
     });
 

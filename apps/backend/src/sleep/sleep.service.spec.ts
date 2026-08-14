@@ -51,6 +51,7 @@ describe('SleepService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let realtime: { broadcastEventChange: jest.Mock };
   let service: SleepService;
@@ -66,6 +67,10 @@ describe('SleepService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      // Interactive transactions run the callback with a transaction client; the
+      // mock passes `prisma` itself as `tx`, so reads/writes hit the same mocked
+      // delegates and every existing assertion on `prisma.event.*` still applies.
+      $transaction: jest.fn((callback: (tx: typeof prisma) => unknown) => callback(prisma)),
     };
     realtime = { broadcastEventChange: jest.fn() };
     service = new SleepService(
@@ -420,6 +425,50 @@ describe('SleepService', () => {
       await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    describe('endedAt source', () => {
+      it('persists endedAt as the supplied clientTimestamp, not the wall clock, for a buffered offline stop', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeEvent({
+          startedAt: new Date('2026-01-01T22:00:00.000Z'),
+          endedAt: null,
+          updatedAt: new Date('2026-01-01T22:00:00.000Z'),
+        });
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        // A sleep-timer stop captured offline at 22:00 but resent hours later
+        // must record 22:00 as endedAt — otherwise the night's sleep duration
+        // is inflated by the whole offline gap (the core bug this fix closes).
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          clientTimestamp: '2026-01-01T22:00:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalledWith({
+          where: { id: EVENT_ID },
+          data: { endedAt: new Date('2026-01-01T22:00:00.000Z') },
+        });
+      });
+
+      it('falls back to a freshly-generated Date for a plain online stop with no clientTimestamp', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeEvent({
+          startedAt: new Date('2026-01-01T20:00:00.000Z'),
+          endedAt: null,
+        });
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        const before = Date.now();
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+        const after = Date.now();
+
+        const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
+        expect(endedAt).toBeInstanceOf(Date);
+        expect(endedAt.getTime()).toBeGreaterThanOrEqual(before);
+        expect(endedAt.getTime()).toBeLessThanOrEqual(after);
+      });
     });
 
     describe('Last-Write-Wins (clientTimestamp)', () => {

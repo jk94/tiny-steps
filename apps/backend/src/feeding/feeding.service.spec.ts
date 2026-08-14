@@ -60,6 +60,7 @@ describe('FeedingService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let realtime: { broadcastEventChange: jest.Mock };
   let service: FeedingService;
@@ -75,6 +76,10 @@ describe('FeedingService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      // Interactive transactions run the callback with a transaction client; the
+      // mock passes `prisma` itself as `tx`, so reads/writes hit the same mocked
+      // delegates and every existing assertion on `prisma.event.*` still applies.
+      $transaction: jest.fn((callback: (tx: typeof prisma) => unknown) => callback(prisma)),
     };
     realtime = { broadcastEventChange: jest.fn() };
     service = new FeedingService(
@@ -679,6 +684,58 @@ describe('FeedingService', () => {
       await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    describe('endedAt source', () => {
+      function makeRunningBreast(updatedAt = new Date('2026-01-01T10:00:00.000Z')) {
+        return makeEvent({
+          startedAt: new Date('2026-01-01T10:00:00.000Z'),
+          endedAt: null,
+          updatedAt,
+          feedingDetail: {
+            eventId: EVENT_ID,
+            feedingType: FeedingType.BREAST,
+            side: FeedingSide.LEFT,
+            amountMl: null,
+            note: null,
+          },
+        });
+      }
+
+      it('persists endedAt as the supplied clientTimestamp, not the wall clock, for a buffered offline stop', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeRunningBreast();
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        // A stop captured offline at 10:15 but only resent later must record
+        // 10:15 as endedAt — using `new Date()` here would inflate the duration.
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          clientTimestamp: '2026-01-01T10:15:00.000Z',
+        });
+
+        expect(prisma.event.update).toHaveBeenCalledWith({
+          where: { id: EVENT_ID },
+          data: { endedAt: new Date('2026-01-01T10:15:00.000Z') },
+          include: { feedingDetail: true },
+        });
+      });
+
+      it('falls back to a freshly-generated Date for a plain online stop with no clientTimestamp', async () => {
+        prisma.child.findUnique.mockResolvedValue(makeChild());
+        const running = makeRunningBreast();
+        prisma.event.findUnique.mockResolvedValue(running);
+        prisma.event.update.mockResolvedValue(running);
+
+        const before = Date.now();
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+        const after = Date.now();
+
+        const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
+        expect(endedAt).toBeInstanceOf(Date);
+        expect(endedAt.getTime()).toBeGreaterThanOrEqual(before);
+        expect(endedAt.getTime()).toBeLessThanOrEqual(after);
+      });
     });
 
     describe('Last-Write-Wins (clientTimestamp)', () => {
