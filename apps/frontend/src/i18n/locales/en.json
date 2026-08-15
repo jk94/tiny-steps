@@ -145,6 +145,7 @@
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
       "timelineLink": "Daily timeline",
+      "exportLink": "Export",
       "photoAlt": "Photo of {{name}}"
     },
     "create": {
@@ -428,5 +429,17 @@
       "minutesAgo": "{{minutes}} min ago",
       "hoursAgo": "{{hours}}h ago"
     }
+  },
+  "export": {
+    "title": "Export data",
+    "backLink": "Back to timeline",
+    "formatLabel": "Format",
+    "formatJson": "JSON",
+    "formatCsv": "CSV",
+    "fromLabel": "From (optional)",
+    "toLabel": "To (optional)",
+    "downloadButton": "Download",
+    "downloadButtonPending": "Preparing…",
+    "error": "The export couldn't be generated. Please try again."
   }
 }

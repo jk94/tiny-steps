@@ -13,9 +13,9 @@ Phase 4 abgeschlossen (stabile Datenbasis und PWA-Grundlage).
 ## Aufgaben
 
 ### Datenexport
-- [ ] Backend-Endpoint für Datenexport (JSON) der Rohdaten eines Haushalts/Kindes
-- [ ] Backend-Endpoint für CSV-Export
-- [ ] Frontend: Export-UI mit Download-Funktion (Format-Auswahl, Zeitraum-Filter optional)
+- [x] Backend-Endpoint für Datenexport (JSON) der Rohdaten eines Haushalts/Kindes
+- [x] Backend-Endpoint für CSV-Export
+- [x] Frontend: Export-UI mit Download-Funktion (Format-Auswahl, Zeitraum-Filter optional)
 
 ### Entscheidung nativer Wrapper
 - [ ] Offene Frage aus PRD klären: Capacitor vs. Tauri (Kriterien: Push-Notification-Support, Wartungsaufwand, Team-Erfahrung, Bundle-Größe)

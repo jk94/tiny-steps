@@ -145,6 +145,7 @@
       "sleepLink": "Schlaf",
       "diaperLink": "Windel",
       "timelineLink": "Tagesübersicht",
+      "exportLink": "Export",
       "photoAlt": "Foto von {{name}}"
     },
     "create": {
@@ -428,5 +429,17 @@
       "minutesAgo": "vor {{minutes}} Min.",
       "hoursAgo": "vor {{hours}} Std."
     }
+  },
+  "export": {
+    "title": "Daten exportieren",
+    "backLink": "Zurück zur Tagesübersicht",
+    "formatLabel": "Format",
+    "formatJson": "JSON",
+    "formatCsv": "CSV",
+    "fromLabel": "Von (optional)",
+    "toLabel": "Bis (optional)",
+    "downloadButton": "Herunterladen",
+    "downloadButtonPending": "Wird vorbereitet…",
+    "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut."
   }
 }

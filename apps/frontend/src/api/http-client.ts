@@ -115,6 +115,62 @@ export function refreshSession(): Promise<boolean> {
   return refreshPromise;
 }
 
+export interface BlobResponse {
+  blob: Blob;
+  /** Parsed from the response's `Content-Disposition` header, or null if absent. */
+  filename: string | null;
+}
+
+/**
+ * Extracts the download filename from a `Content-Disposition` header, handling
+ * both the plain `filename="..."` and the RFC 5987 `filename*=UTF-8''...`
+ * forms. Returns null when the header is missing or has no filename token.
+ */
+export function parseContentDispositionFilename(header: string | null): string | null {
+  if (!header) {
+    return null;
+  }
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(header);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Binary sibling of `apiFetch` for file downloads (e.g. the data export
+ * endpoints): returns the raw `Blob` plus the server-provided download
+ * filename instead of JSON-parsing the body. Deliberately a separate function
+ * rather than a mode flag on `apiFetch`, to keep that hot path's contract
+ * (always `text()` → `JSON.parse`) untouched.
+ *
+ * Reuses the exact same single-flight 401 → refresh → retry flow as
+ * `apiFetch`. No CSRF handling is needed here because downloads are GETs
+ * (see `buildRequestInit`, which only attaches the header for mutating
+ * methods anyway).
+ */
+export async function apiFetchBlob(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<BlobResponse> {
+  const { skipAuthRetry, ...rest } = options;
+  const requestInit = buildRequestInit(rest);
+  const response = await fetch(`${API_PREFIX}${path}`, requestInit);
+
+  if (response.status === 401 && !skipAuthRetry) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      return apiFetchBlob(path, { ...options, skipAuthRetry: true });
+    }
+    throw new ApiError(response.status, await parseBody(response));
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseBody(response));
+  }
+
+  const blob = await response.blob();
+  const filename = parseContentDispositionFilename(response.headers.get('Content-Disposition'));
+  return { blob, filename };
+}
+
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { skipAuthRetry, ...rest } = options;
   const requestInit = buildRequestInit(rest);
