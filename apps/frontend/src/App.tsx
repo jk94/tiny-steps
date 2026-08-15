@@ -21,6 +21,7 @@ import { DiaperBackfillCreate } from './pages/DiaperBackfillCreate';
 import { DiaperEventEdit } from './pages/DiaperEventEdit';
 import { DailyTimeline } from './pages/DailyTimeline';
 import { Export } from './pages/Export';
+import { NotificationSettings } from './pages/NotificationSettings';
 import { InviteAccept } from './pages/InviteAccept';
 
 function App() {
@@ -69,6 +70,10 @@ function App() {
             element={<DailyTimeline />}
           />
           <Route path="households/:householdId/children/:childId/export" element={<Export />} />
+          <Route
+            path="households/:householdId/children/:childId/notifications"
+            element={<NotificationSettings />}
+          />
         </Route>
         <Route element={<GuestOnlyRoute />}>
           <Route path="login" element={<Login />} />

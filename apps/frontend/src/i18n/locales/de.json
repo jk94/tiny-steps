@@ -146,6 +146,7 @@
       "diaperLink": "Windel",
       "timelineLink": "Tagesübersicht",
       "exportLink": "Export",
+      "notificationsLink": "Benachrichtigungen",
       "photoAlt": "Foto von {{name}}"
     },
     "create": {
@@ -441,5 +442,19 @@
     "downloadButton": "Herunterladen",
     "downloadButtonPending": "Wird vorbereitet…",
     "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut."
+  },
+  "notifications": {
+    "title": "Benachrichtigungseinstellungen",
+    "backLink": "Zurück zur Tagesübersicht",
+    "feedingReminderLabel": "Fütterungserinnerung",
+    "thresholdLabel": "Erinnern nach (Stunden)",
+    "thresholdInvalid": "Bitte eine ganze Stundenzahl (mindestens 1) eingeben.",
+    "dailySummaryLabel": "Tagesüberblick",
+    "summaryHourLabel": "Uhrzeit des Überblicks (0–23)",
+    "saveButton": "Speichern",
+    "saveButtonPending": "Wird gespeichert…",
+    "saved": "Einstellungen gespeichert.",
+    "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
+    "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden."
   }
 }

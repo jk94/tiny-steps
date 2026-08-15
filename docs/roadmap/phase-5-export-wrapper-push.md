@@ -27,10 +27,10 @@ Phase 4 abgeschlossen (stabile Datenbasis und PWA-Grundlage).
 - [x] Sicherstellen, dass Mobile-first-UI ohne Neubau im Wrapper funktioniert — dieselbe gebaute React-SPA (`webDir: dist`) wird im WebView geladen, kein UI-Neubau
 
 ### Push-Benachrichtigungen
-- [ ] Plattformspezifische Push-Integration über den nativen Wrapper
+- [x] Plattformspezifische Push-Integration über den nativen Wrapper — `@capacitor/push-notifications` via `registerPushNotifications` (nach Login, nur nativer Build), Token an `POST /api/push/subscriptions`. **Deferred:** reale Ende-zu-Ende-Zustellung an ein Gerät (echtes Firebase-Projekt nötig) — siehe `docs/known-issues.md`.
 - [x] Backend-seitige Trigger-Logik (z. B. Scheduled Job: „Letzte Fütterung vor X Stunden“ → Erinnerung) — `NotificationSchedulerService.checkFeedingReminders()` (@Cron alle 30 min), FCM via `PushSenderService`
 - [x] Zusammenfassungs-Benachrichtigung (z. B. Tagesüberblick) — `NotificationSchedulerService.sendDailySummaries()` (@Cron stündlich, sendet zur konfigurierten Stunde)
-- [ ] Nutzerseitige Einstellungen: Push-Benachrichtigungen an/aus, Schwellenwerte konfigurierbar
+- [x] Nutzerseitige Einstellungen: Push-Benachrichtigungen an/aus, Schwellenwerte konfigurierbar — Backend `NotificationSettings` (`GET`/`PUT .../notification-settings`) + Frontend-Seite `NotificationSettings.tsx`
 
 ## Definition of Done
 
