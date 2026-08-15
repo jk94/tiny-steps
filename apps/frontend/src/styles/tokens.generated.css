@@ -1,0 +1,202 @@
+/* GENERATED FILE — do not edit by hand. Run 'bun run design-tokens:build' to regenerate. Source: design-system/tokens/*.json */
+
+:root {
+  /* Color (light / default) */
+  --color-background: #ffffff;
+  --color-foreground: #1f2933;
+  --color-primary: #4f46e5;
+  --color-primary-foreground: #ffffff;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-success: #16a34a;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-foreground: #ffffff;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-ring: #4f46e5;
+  --color-feeding: #f59e0b;
+  --color-feeding-breast: #ec4899;
+  --color-feeding-bottle: #3b82f6;
+  --color-feeding-solid: #f97316;
+  --color-sleep: #8b5cf6;
+  --color-diaper: #0d9488;
+  --color-diaper-pee: #eab308;
+  --color-diaper-stool: #a16207;
+  --color-diaper-both: #0d9488;
+
+  /* Breakpoints */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* Spacing */
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+
+  /* Typography */
+  --font-family-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Radii */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* System-preference dark mode (opt out per-subtree with [data-theme='light']). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-background: #0f172a;
+    --color-foreground: #e2e8f0;
+    --color-primary: #818cf8;
+    --color-primary-foreground: #0f172a;
+    --color-muted: #1e293b;
+    --color-muted-foreground: #94a3b8;
+    --color-success: #4ade80;
+    --color-success-foreground: #052e16;
+    --color-warning: #fbbf24;
+    --color-warning-foreground: #451a03;
+    --color-destructive: #f87171;
+    --color-destructive-foreground: #450a0a;
+    --color-border: #334155;
+    --color-ring: #818cf8;
+    --color-feeding: #fbbf24;
+    --color-feeding-breast: #f472b6;
+    --color-feeding-bottle: #60a5fa;
+    --color-feeding-solid: #fb923c;
+    --color-sleep: #a78bfa;
+    --color-diaper: #2dd4bf;
+    --color-diaper-pee: #facc15;
+    --color-diaper-stool: #d0a15a;
+    --color-diaper-both: #2dd4bf;
+  }
+}
+
+/* Explicit override hook (no theme-toggle UI in M1 — just the CSS mechanism). */
+:root[data-theme='dark'] {
+  --color-background: #0f172a;
+  --color-foreground: #e2e8f0;
+  --color-primary: #818cf8;
+  --color-primary-foreground: #0f172a;
+  --color-muted: #1e293b;
+  --color-muted-foreground: #94a3b8;
+  --color-success: #4ade80;
+  --color-success-foreground: #052e16;
+  --color-warning: #fbbf24;
+  --color-warning-foreground: #451a03;
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #450a0a;
+  --color-border: #334155;
+  --color-ring: #818cf8;
+  --color-feeding: #fbbf24;
+  --color-feeding-breast: #f472b6;
+  --color-feeding-bottle: #60a5fa;
+  --color-feeding-solid: #fb923c;
+  --color-sleep: #a78bfa;
+  --color-diaper: #2dd4bf;
+  --color-diaper-pee: #facc15;
+  --color-diaper-stool: #d0a15a;
+  --color-diaper-both: #2dd4bf;
+}
+
+@theme inline {
+  /* Colors */
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-success: var(--color-success);
+  --color-success-foreground: var(--color-success-foreground);
+  --color-warning: var(--color-warning);
+  --color-warning-foreground: var(--color-warning-foreground);
+  --color-destructive: var(--color-destructive);
+  --color-destructive-foreground: var(--color-destructive-foreground);
+  --color-border: var(--color-border);
+  --color-ring: var(--color-ring);
+  --color-feeding: var(--color-feeding);
+  --color-feeding-breast: var(--color-feeding-breast);
+  --color-feeding-bottle: var(--color-feeding-bottle);
+  --color-feeding-solid: var(--color-feeding-solid);
+  --color-sleep: var(--color-sleep);
+  --color-diaper: var(--color-diaper);
+  --color-diaper-pee: var(--color-diaper-pee);
+  --color-diaper-stool: var(--color-diaper-stool);
+  --color-diaper-both: var(--color-diaper-both);
+  /* Breakpoints (literal — media queries cannot read a CSS variable) */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  /* Spacing */
+  --spacing-0: var(--spacing-0);
+  --spacing-1: var(--spacing-1);
+  --spacing-2: var(--spacing-2);
+  --spacing-3: var(--spacing-3);
+  --spacing-4: var(--spacing-4);
+  --spacing-5: var(--spacing-5);
+  --spacing-6: var(--spacing-6);
+  --spacing-8: var(--spacing-8);
+  --spacing-10: var(--spacing-10);
+  --spacing-12: var(--spacing-12);
+  --spacing-16: var(--spacing-16);
+  /* Typography */
+  --font-sans: var(--font-family-sans);
+  --font-mono: var(--font-family-mono);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-base);
+  --text-lg: var(--font-size-lg);
+  --text-xl: var(--font-size-xl);
+  --text-2xl: var(--font-size-2xl);
+  --text-3xl: var(--font-size-3xl);
+  --leading-tight: var(--line-height-tight);
+  --leading-normal: var(--line-height-normal);
+  --leading-relaxed: var(--line-height-relaxed);
+  --font-weight-normal: var(--font-weight-normal);
+  --font-weight-medium: var(--font-weight-medium);
+  --font-weight-semibold: var(--font-weight-semibold);
+  --font-weight-bold: var(--font-weight-bold);
+  /* Radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+  /* Shadows */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}

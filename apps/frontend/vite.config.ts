@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { pwaManifest } from './pwa.config.ts';
 
@@ -7,6 +8,10 @@ import { pwaManifest } from './pwa.config.ts';
 export default defineConfig({
   plugins: [
     react(),
+    // Tailwind CSS v4, driven by the externally-generated design tokens
+    // (see docs/adr/0013-design-system-styling-approach.md). Preflight is
+    // deliberately NOT imported in src/index.css — see the note there.
+    tailwindcss(),
     // "PWA basics" slice of Phase 4 (see docs/adr/0008-pwa-basics-via-vite-plugin-pwa.md):
     // installable app shell (manifest + service worker) via the `generateSW`
     // strategy (the plugin's default `strategies`). Registration is done

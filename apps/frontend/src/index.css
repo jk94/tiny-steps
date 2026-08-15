@@ -1,3 +1,11 @@
+@import './styles/tokens.generated.css';
+@import 'tailwindcss/theme' theme(reference);
+@import 'tailwindcss/utilities';
+/* NOTE: tailwindcss/preflight intentionally NOT imported here — it would
+   globally restyle existing, not-yet-migrated screens (AuthForm and every
+   other Phase 0–5 screen). M1 only builds the components/ui/ library; it
+   migrates no screens. Revisit when a future phase migrates screens onto the
+   primitives. */
 @import './styles/breakpoints.css';
 
 :root {
