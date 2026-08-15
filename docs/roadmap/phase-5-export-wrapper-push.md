@@ -18,8 +18,8 @@ Phase 4 abgeschlossen (stabile Datenbasis und PWA-Grundlage).
 - [x] Frontend: Export-UI mit Download-Funktion (Format-Auswahl, Zeitraum-Filter optional)
 
 ### Entscheidung nativer Wrapper
-- [ ] Offene Frage aus PRD klären: Capacitor vs. Tauri (Kriterien: Push-Notification-Support, Wartungsaufwand, Team-Erfahrung, Bundle-Größe)
-- [ ] Entscheidung dokumentieren (z. B. als ADR)
+- [x] Offene Frage aus PRD klären: Capacitor vs. Tauri (Kriterien: Push-Notification-Support, Wartungsaufwand, Team-Erfahrung, Bundle-Größe) — Capacitor gewählt, siehe [ADR-0012](../adr/0012-capacitor-native-wrapper.md)
+- [x] Entscheidung dokumentieren (z. B. als ADR) — [ADR-0012](../adr/0012-capacitor-native-wrapper.md)
 
 ### Nativer Wrapper
 - [ ] Gewählten Wrapper um bestehende React-Codebasis aufsetzen
