@@ -243,8 +243,16 @@ describe('reconnect → full multi-domain sync (integration)', () => {
     await flushRealMacrotasks();
 
     // The diaper create was retried and succeeded; nothing is left buffered or
-    // still scheduled.
+    // still scheduled. Assert the retried (second) call's arguments too — a
+    // regression resending the record with the wrong household/child/payload
+    // would otherwise slip past the mere call-count check.
     expect(diaperApi.createDiaperEvent).toHaveBeenCalledTimes(2);
+    expect(diaperApi.createDiaperEvent).toHaveBeenNthCalledWith(
+      2,
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      DIAPER_CREATE_INPUT,
+    );
     remaining = await db.listAllPendingEvents();
     expect(remaining).toEqual([]);
   });

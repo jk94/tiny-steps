@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import type { FeedingEventSummary } from '../api/feeding-api';
+import type { SleepEventSummary } from '../api/sleep-api';
 import type { PendingEventRecord } from './pendingEvents.db';
 
 // Only the network seam (`apiFetch`) is mocked; the IndexedDB layer and the
 // optimistic write-through engines all run for real (against a fresh
 // fake-indexeddb per test). This proves the "input works while offline, no data
-// is lost" requirement (roadmap Phase 4) directly against IndexedDB — across all
-// three domains and all operation types (create/update/stop) — rather than
-// against transient React state.
+// is lost" requirement (roadmap Phase 4) directly against IndexedDB — genuinely
+// across all three domains (Feeding-create, Diaper-create, Sleep-create) and all
+// operation types (create/update/stop, via a Feeding-update and Feeding-stop) —
+// rather than against transient React state.
 vi.mock('../api/http-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/http-client')>();
   return { ...actual, apiFetch: vi.fn() };
@@ -58,6 +60,9 @@ const activeBreastFeeding: FeedingEventSummary = {
 const STOP_TIMESTAMP = '2026-01-01T11:30:00.000Z';
 const EXPECTED_STOP_DURATION_SECONDS = 30 * 60;
 
+// The start instant entered for the offline Sleep-create.
+const SLEEP_STARTED_AT = '2026-01-01T09:00:00.000Z';
+
 // The db module memoizes its open-connection promise, so a fresh IDBFactory
 // alone wouldn't isolate tests. Reset the module registry too and re-import db
 // and the domain APIs together, so they bind to the same fresh db instance the
@@ -66,6 +71,7 @@ let db: typeof import('./pendingEvents.db');
 let httpClient: typeof import('../api/http-client');
 let feedingApi: typeof import('../api/feeding-api');
 let diaperApi: typeof import('../api/diaper-api');
+let sleepApi: typeof import('../api/sleep-api');
 
 beforeEach(async () => {
   vi.stubGlobal('indexedDB', new IDBFactory());
@@ -74,7 +80,7 @@ beforeEach(async () => {
   httpClient = await import('../api/http-client');
   feedingApi = await import('../api/feeding-api');
   diaperApi = await import('../api/diaper-api');
-  await import('../api/sleep-api');
+  sleepApi = await import('../api/sleep-api');
   // "Offline": every network call rejects, mirroring the existing offline
   // convention (see `updateOptimistic.integration.spec.ts`).
   vi.mocked(httpClient.apiFetch).mockRejectedValue(new TypeError('offline'));
@@ -90,9 +96,9 @@ function findRecord(
   return matches[0];
 }
 
-/** Asserts the four buffered records carry exactly the offline-entered values. */
-function assertAllFourRecords(records: PendingEventRecord[]): void {
-  expect(records).toHaveLength(4);
+/** Asserts the five buffered records carry exactly the offline-entered values. */
+function assertAllFiveRecords(records: PendingEventRecord[]): void {
+  expect(records).toHaveLength(5);
   expect(records.every((record) => record.status === 'failed')).toBe(true);
 
   const feedingCreate = findRecord(
@@ -110,6 +116,14 @@ function assertAllFourRecords(records: PendingEventRecord[]): void {
   expect(diaperCreate.targetEventId).toBeUndefined();
   expect(diaperCreate.createInput).toEqual({ diaperType: 'STOOL' });
   expect((diaperCreate.summary as { diaperType: string }).diaperType).toBe('STOOL');
+
+  const sleepCreate = findRecord(
+    records,
+    (record) => record.eventType === 'SLEEP' && record.operation === undefined,
+  );
+  expect(sleepCreate.targetEventId).toBeUndefined();
+  expect(sleepCreate.createInput).toEqual({ startedAt: SLEEP_STARTED_AT });
+  expect((sleepCreate.summary as SleepEventSummary).startedAt).toBe(SLEEP_STARTED_AT);
 
   const feedingUpdate = findRecord(records, (record) => record.operation === 'update');
   expect(feedingUpdate.eventType).toBe('FEEDING');
@@ -150,6 +164,12 @@ describe('offline input → no data loss (integration)', () => {
     ).rejects.toBeInstanceOf(TypeError);
 
     await expect(
+      sleepApi.createSleepEventOptimistic(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
+        startedAt: SLEEP_STARTED_AT,
+      }),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    await expect(
       feedingApi.updateFeedingEventOptimistic(HOUSEHOLD_ID, CHILD_ID, existingBottleFeeding, {
         amountMl: 150,
         clientTimestamp: '2026-01-01T10:15:00.000Z',
@@ -166,7 +186,7 @@ describe('offline input → no data loss (integration)', () => {
     ).rejects.toBeInstanceOf(TypeError);
 
     // 2) Durability now: read straight from IndexedDB, not React state.
-    assertAllFourRecords(await db.listAllPendingEvents());
+    assertAllFiveRecords(await db.listAllPendingEvents());
 
     // 3) Simulated reload: reset only the module registry (NOT the IDBFactory —
     //    that would defeat the point), so `pendingEvents.db` reopens a brand-new
@@ -174,6 +194,6 @@ describe('offline input → no data loss (integration)', () => {
     //    durability through IndexedDB's real storage, not in-memory module state.
     vi.resetModules();
     const reloadedDb = await import('./pendingEvents.db');
-    assertAllFourRecords(await reloadedDb.listAllPendingEvents());
+    assertAllFiveRecords(await reloadedDb.listAllPendingEvents());
   });
 });
