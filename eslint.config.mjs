@@ -14,6 +14,10 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/*.config.js',
       'apps/backend/prisma/**',
+      // Generated Capacitor native projects (Gradle/Xcode scaffolding plus
+      // copied web assets) — not our source, see ADR-0012.
+      'apps/frontend/android/**',
+      'apps/frontend/ios/**',
     ],
   },
   eslint.configs.recommended,

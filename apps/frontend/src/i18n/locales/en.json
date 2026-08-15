@@ -145,6 +145,8 @@
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
       "timelineLink": "Daily timeline",
+      "exportLink": "Export",
+      "notificationsLink": "Notifications",
       "photoAlt": "Photo of {{name}}"
     },
     "create": {
@@ -428,5 +430,32 @@
       "minutesAgo": "{{minutes}} min ago",
       "hoursAgo": "{{hours}}h ago"
     }
+  },
+  "export": {
+    "title": "Export data",
+    "backLink": "Back to timeline",
+    "formatLabel": "Format",
+    "formatJson": "JSON",
+    "formatCsv": "CSV",
+    "fromLabel": "From (optional)",
+    "toLabel": "To (optional)",
+    "downloadButton": "Download",
+    "downloadButtonPending": "Preparing…",
+    "error": "The export couldn't be generated. Please try again."
+  },
+  "notifications": {
+    "title": "Notification settings",
+    "backLink": "Back to timeline",
+    "feedingReminderLabel": "Feeding reminder",
+    "thresholdLabel": "Remind after (hours)",
+    "thresholdInvalid": "Please enter a whole number of hours (at least 1).",
+    "dailySummaryLabel": "Daily summary",
+    "summaryHourLabel": "Summary hour (0–23)",
+    "summaryHourInvalid": "Please enter a whole hour between 0 and 23.",
+    "saveButton": "Save",
+    "saveButtonPending": "Saving…",
+    "saved": "Settings saved.",
+    "saveError": "Couldn't save your settings. Please try again.",
+    "loadError": "Couldn't load your notification settings."
   }
 }

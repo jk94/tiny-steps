@@ -31,12 +31,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships     Membership[]
-  events          Event[]
-  refreshTokens   RefreshToken[]
-  createdInvites  Invite[]       @relation("InviteCreatedBy")
-  acceptedInvites Invite[]       @relation("InviteAcceptedBy")
-  oidcIdentities  OidcIdentity[]
+  memberships          Membership[]
+  events               Event[]
+  refreshTokens        RefreshToken[]
+  createdInvites       Invite[]               @relation("InviteCreatedBy")
+  acceptedInvites      Invite[]               @relation("InviteAcceptedBy")
+  oidcIdentities       OidcIdentity[]
+  pushSubscriptions    PushSubscription[]
+  notificationSettings NotificationSettings[]
 }
 
 model OidcIdentity {
@@ -125,8 +127,9 @@ model Child {
   photoMimeType String?
   createdAt     DateTime @default(now())
 
-  household Household @relation(fields: [householdId], references: [id])
-  events    Event[]
+  household            Household              @relation(fields: [householdId], references: [id])
+  events               Event[]
+  notificationSettings NotificationSettings[]
 }
 
 model Event {
@@ -195,4 +198,48 @@ model DiaperDetail {
   // Cascade: deleting an Event auto-removes its DiaperDetail, same pattern
   // as FeedingDetail — no manual two-step delete in DiaperService.
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id     String @id @default(cuid())
+  userId String
+  // The device/app FCM registration token — unique so re-registering the same
+  // device upserts rather than duplicating (see PushService.upsert).
+  token  String @unique
+  // PushPlatform value ('ANDROID' | 'IOS'); see
+  // `src/push/push-platform.enum.ts`. Plain `String`, not a Prisma `enum`,
+  // for the same reason as `Event.type`/`Membership.role` — Prisma's `enum`
+  // type isn't supported on the SQLite connector. Guarded at the application
+  // layer via `toPushPlatform()`, mirroring `toEventType()`. See ADR-0002.
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model NotificationSettings {
+  id                            String    @id @default(cuid())
+  userId                        String
+  childId                       String
+  feedingReminderEnabled        Boolean   @default(true)
+  feedingReminderThresholdHours Int       @default(4)
+  // Last time a feeding reminder was actually sent for this (user, child) —
+  // used together with the last feeding event's timestamp to de-duplicate
+  // reminders (see NotificationSchedulerService.checkFeedingReminders).
+  feedingReminderLastSentAt     DateTime?
+  dailySummaryEnabled           Boolean   @default(true)
+  // Hour-of-day (0–23) at which the daily summary is sent, interpreted in the
+  // SERVER's local timezone — an MVP simplification (no per-user timezone
+  // handling yet), matching how the scheduler compares against the current
+  // server hour.
+  dailySummaryHourLocal         Int       @default(20)
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  child Child @relation(fields: [childId], references: [id])
+
+  // One settings row per (user, child) pair.
+  @@unique([userId, childId])
 }

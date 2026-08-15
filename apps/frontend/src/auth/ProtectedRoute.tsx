@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { usePushRegistration } from '../push/usePushRegistration';
 import { useAuth } from './useAuth';
 
 /**
@@ -10,6 +11,10 @@ import { useAuth } from './useAuth';
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, error } = useAuth();
   const location = useLocation();
+
+  // Register for native push once authenticated (no-op in the browser/PWA
+  // build) — see usePushRegistration / registerPushNotifications.
+  usePushRegistration(isAuthenticated);
 
   if (isLoading) {
     return <LoadingIndicator />;

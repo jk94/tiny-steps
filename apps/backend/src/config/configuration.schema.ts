@@ -46,4 +46,13 @@ export const configValidationSchema = Joi.object({
         .default([]),
     }).required(),
   }).required(),
+
+  // Optional push-notification section. When omitted, push is disabled (see
+  // AppConfig.push and ADR-0012). `serviceAccountPath` points at a Firebase
+  // service-account JSON file.
+  push: Joi.object({
+    firebase: Joi.object({
+      serviceAccountPath: Joi.string().required(),
+    }).required(),
+  }).optional(),
 });

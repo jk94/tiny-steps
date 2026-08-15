@@ -18,6 +18,19 @@ export interface AppConfig {
       providers: OidcProviderConfig[];
     };
   };
+  // Optional: when absent, push notifications are disabled (no Firebase
+  // credential, PushSenderService no-ops). See ADR-0012 for why this is a
+  // deliberate, per-operator cloud-relay exception to the self-hosted-only
+  // principle.
+  push?: {
+    firebase: {
+      // Path to a Firebase service-account JSON file (relative to the
+      // backend's working directory or absolute). A file path, not inline
+      // JSON, keeps the large credential blob out of config.yml — mirroring
+      // how `DATABASE_URL`/secrets stay out of YAML elsewhere.
+      serviceAccountPath: string;
+    };
+  };
 }
 
 /**

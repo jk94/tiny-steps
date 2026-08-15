@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiError, readCookie } from './http-client';
+import {
+  apiFetch,
+  apiFetchBlob,
+  ApiError,
+  parseContentDispositionFilename,
+  readCookie,
+} from './http-client';
 
 function jsonResponse(status: number, body: unknown, ok = status >= 200 && status < 300): Response {
   return {
@@ -7,6 +13,21 @@ function jsonResponse(status: number, body: unknown, ok = status >= 200 && statu
     status,
     text: () => Promise.resolve(JSON.stringify(body)),
   } as Response;
+}
+
+function blobResponse(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+  ok = status >= 200 && status < 300,
+): Response {
+  return {
+    ok,
+    status,
+    blob: () => Promise.resolve(new Blob([body])),
+    text: () => Promise.resolve(body),
+    headers: new Headers(headers),
+  } as unknown as Response;
 }
 
 // `path=/` mirrors the real backend's `csrf_token` cookie scoping
@@ -178,6 +199,100 @@ describe('apiFetch', () => {
       status: 404,
       body: { statusCode: 404, message: 'Not Found', error: 'Not Found' },
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('parseContentDispositionFilename', () => {
+  it('returns null when the header is absent', () => {
+    expect(parseContentDispositionFilename(null)).toBeNull();
+  });
+
+  it('parses a quoted filename', () => {
+    expect(parseContentDispositionFilename('attachment; filename="export-c1.csv"')).toBe(
+      'export-c1.csv',
+    );
+  });
+
+  it('parses a bare (unquoted) filename', () => {
+    expect(parseContentDispositionFilename('attachment; filename=export.json')).toBe('export.json');
+  });
+
+  it('parses the RFC 5987 filename* form and decodes it', () => {
+    expect(parseContentDispositionFilename("attachment; filename*=UTF-8''export%20c1.csv")).toBe(
+      'export c1.csv',
+    );
+  });
+});
+
+describe('apiFetchBlob', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the blob and the filename parsed from Content-Disposition', async () => {
+    fetchMock.mockResolvedValueOnce(
+      blobResponse(200, 'id,type\n1,DIAPER\n', {
+        'Content-Disposition': 'attachment; filename="export-c1.csv"',
+      }),
+    );
+
+    const { blob, filename } = await apiFetchBlob('/households/h1/children/c1/export/csv');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/households/h1/children/c1/export/csv');
+    expect(filename).toBe('export-c1.csv');
+    await expect(blob.text()).resolves.toBe('id,type\n1,DIAPER\n');
+  });
+
+  it('returns a null filename when Content-Disposition is absent', async () => {
+    fetchMock.mockResolvedValueOnce(blobResponse(200, '[]'));
+
+    const { filename } = await apiFetchBlob('/households/h1/children/c1/export/json');
+
+    expect(filename).toBeNull();
+  });
+
+  it('reuses the 401 → refresh → retry flow, returning the blob after refresh', async () => {
+    fetchMock
+      .mockResolvedValueOnce(blobResponse(401, '{"message":"Unauthorized"}', {}, false)) // original
+      .mockResolvedValueOnce(jsonResponse(200, { user: { id: '1' } })) // refresh
+      .mockResolvedValueOnce(
+        blobResponse(200, 'ok', { 'Content-Disposition': 'attachment; filename="export.json"' }),
+      ); // retry
+
+    const { blob, filename } = await apiFetchBlob('/households/h1/children/c1/export/json');
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/auth/refresh');
+    expect(filename).toBe('export.json');
+    await expect(blob.text()).resolves.toBe('ok');
+  });
+
+  it('propagates the original 401 when refresh also fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce(blobResponse(401, '{"message":"original"}', {}, false))
+      .mockResolvedValueOnce(jsonResponse(401, { message: 'refresh failed' }, false));
+
+    await expect(apiFetchBlob('/households/h1/children/c1/export/json')).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws ApiError for a non-401 non-ok response without refreshing', async () => {
+    fetchMock.mockResolvedValueOnce(blobResponse(404, '{"message":"Not Found"}', {}, false));
+
+    await expect(
+      apiFetchBlob('/households/h1/children/missing/export/json'),
+    ).rejects.toBeInstanceOf(ApiError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

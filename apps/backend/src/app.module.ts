@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -8,9 +9,12 @@ import { AuthModule } from './auth/auth.module';
 import { HouseholdModule } from './household/household.module';
 import { ChildModule } from './child/child.module';
 import { EventModule } from './event/event.module';
+import { ExportModule } from './export/export.module';
 import { FeedingModule } from './feeding/feeding.module';
 import { SleepModule } from './sleep/sleep.module';
 import { DiaperModule } from './diaper/diaper.module';
+import { PushModule } from './push/push.module';
+import { NotificationModule } from './notification/notification.module';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -22,6 +26,9 @@ import loadConfiguration from './config/configuration';
       isGlobal: true,
       load: [loadConfiguration],
     }),
+    // Enables the @Cron-based notification triggers (see
+    // NotificationSchedulerService).
+    ScheduleModule.forRoot(),
     // Serves the built React SPA (copied into dist/public by the Docker
     // build, see the root Dockerfile) with client-side routing fallback.
     // `/api/**` and `/health` are excluded so they reach the Nest
@@ -35,10 +42,13 @@ import loadConfiguration from './config/configuration';
     HouseholdModule,
     ChildModule,
     EventModule,
+    ExportModule,
     RealtimeModule,
     FeedingModule,
     SleepModule,
     DiaperModule,
+    PushModule,
+    NotificationModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

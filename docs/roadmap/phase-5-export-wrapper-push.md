@@ -13,24 +13,24 @@ Phase 4 abgeschlossen (stabile Datenbasis und PWA-Grundlage).
 ## Aufgaben
 
 ### Datenexport
-- [ ] Backend-Endpoint für Datenexport (JSON) der Rohdaten eines Haushalts/Kindes
-- [ ] Backend-Endpoint für CSV-Export
-- [ ] Frontend: Export-UI mit Download-Funktion (Format-Auswahl, Zeitraum-Filter optional)
+- [x] Backend-Endpoint für Datenexport (JSON) der Rohdaten eines Haushalts/Kindes
+- [x] Backend-Endpoint für CSV-Export
+- [x] Frontend: Export-UI mit Download-Funktion (Format-Auswahl, Zeitraum-Filter optional)
 
 ### Entscheidung nativer Wrapper
-- [ ] Offene Frage aus PRD klären: Capacitor vs. Tauri (Kriterien: Push-Notification-Support, Wartungsaufwand, Team-Erfahrung, Bundle-Größe)
-- [ ] Entscheidung dokumentieren (z. B. als ADR)
+- [x] Offene Frage aus PRD klären: Capacitor vs. Tauri (Kriterien: Push-Notification-Support, Wartungsaufwand, Team-Erfahrung, Bundle-Größe) — Capacitor gewählt, siehe [ADR-0012](../adr/0012-capacitor-native-wrapper.md)
+- [x] Entscheidung dokumentieren (z. B. als ADR) — [ADR-0012](../adr/0012-capacitor-native-wrapper.md)
 
 ### Nativer Wrapper
-- [ ] Gewählten Wrapper um bestehende React-Codebasis aufsetzen
-- [ ] Build-Pipeline für Android/iOS (je nach Wrapper-Fähigkeiten) einrichten
-- [ ] Sicherstellen, dass Mobile-first-UI ohne Neubau im Wrapper funktioniert
+- [x] Gewählten Wrapper um bestehende React-Codebasis aufsetzen — Capacitor (`apps/frontend/capacitor.config.ts`, `android/`/`ios/` committed)
+- [x] Build-Pipeline für Android/iOS (je nach Wrapper-Fähigkeiten) einrichten — `cap:sync`/`cap:android`/`cap:ios` npm scripts; `cap sync` verifiziert. **Scope-Grenze:** Android/iOS-Builds werden bewusst NICHT in CI (`.github/workflows/ci.yml`) gebaut (keine SDKs/Signing auf den Runnern), siehe [ADR-0012](../adr/0012-capacitor-native-wrapper.md). Realer Geräte-Build/Install ist als manueller Follow-up in `docs/known-issues.md` erfasst.
+- [x] Sicherstellen, dass Mobile-first-UI ohne Neubau im Wrapper funktioniert — dieselbe gebaute React-SPA (`webDir: dist`) wird im WebView geladen, kein UI-Neubau
 
 ### Push-Benachrichtigungen
-- [ ] Plattformspezifische Push-Integration über den nativen Wrapper
-- [ ] Backend-seitige Trigger-Logik (z. B. Scheduled Job: „Letzte Fütterung vor X Stunden“ → Erinnerung)
-- [ ] Zusammenfassungs-Benachrichtigung (z. B. Tagesüberblick)
-- [ ] Nutzerseitige Einstellungen: Push-Benachrichtigungen an/aus, Schwellenwerte konfigurierbar
+- [x] Plattformspezifische Push-Integration über den nativen Wrapper — `@capacitor/push-notifications` via `registerPushNotifications` (nach Login, nur nativer Build), Token an `POST /api/push/subscriptions`. **Deferred:** reale Ende-zu-Ende-Zustellung an ein Gerät (echtes Firebase-Projekt nötig) — siehe `docs/known-issues.md`.
+- [x] Backend-seitige Trigger-Logik (z. B. Scheduled Job: „Letzte Fütterung vor X Stunden“ → Erinnerung) — `NotificationSchedulerService.checkFeedingReminders()` (@Cron alle 30 min), FCM via `PushSenderService`
+- [x] Zusammenfassungs-Benachrichtigung (z. B. Tagesüberblick) — `NotificationSchedulerService.sendDailySummaries()` (@Cron stündlich, sendet zur konfigurierten Stunde)
+- [x] Nutzerseitige Einstellungen: Push-Benachrichtigungen an/aus, Schwellenwerte konfigurierbar — Backend `NotificationSettings` (`GET`/`PUT .../notification-settings`) + Frontend-Seite `NotificationSettings.tsx`
 
 ## Definition of Done
 
