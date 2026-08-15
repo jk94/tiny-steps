@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
     "cap:sync": "vite build && cap sync",
     "cap:android": "bun run cap:sync && cap open android",
     "cap:ios": "bun run cap:sync && cap open ios"

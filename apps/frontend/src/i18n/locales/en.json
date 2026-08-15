@@ -457,5 +457,27 @@
     "saved": "Settings saved.",
     "saveError": "Couldn't save your settings. Please try again.",
     "loadError": "Couldn't load your notification settings."
+  },
+  "ui": {
+    "eventTypes": {
+      "FEEDING": "Feeding",
+      "FEEDING_BREAST": "Breastfeeding",
+      "FEEDING_BOTTLE": "Bottle",
+      "FEEDING_SOLID": "Solid food",
+      "SLEEP": "Sleep",
+      "DIAPER": "Diaper",
+      "DIAPER_PEE": "Pee",
+      "DIAPER_STOOL": "Stool",
+      "DIAPER_BOTH": "Both"
+    },
+    "dialog": {
+      "close": "Close"
+    },
+    "toast": {
+      "dismiss": "Dismiss notification"
+    },
+    "emptyState": {
+      "defaultTitle": "Nothing here yet"
+    }
   }
 }
