@@ -29,7 +29,10 @@ const tokensByKey = eventTypeTokens as Record<string, EventTypeTokenEntry | unde
  */
 export function getEventTypeVisual(type: EventType, subtype?: string): EventTypeVisual {
   const compositeKey = subtype ? `${type}.${subtype}` : type;
-  const entry = tokensByKey[compositeKey] ?? tokensByKey[type];
+  // Fall back to the base type when the sub-type key is unknown, and derive the
+  // label from whichever key actually resolved (so color/icon/label stay consistent).
+  const resolvedKey = tokensByKey[compositeKey] ? compositeKey : type;
+  const entry = tokensByKey[resolvedKey];
   if (!entry) {
     throw new Error(`No event-type visual mapping for "${compositeKey}"`);
   }
@@ -37,6 +40,6 @@ export function getEventTypeVisual(type: EventType, subtype?: string): EventType
   return {
     colorVar: entry.colorVar,
     Icon,
-    labelKey: `ui.eventTypes.${compositeKey.replace('.', '_')}`,
+    labelKey: `ui.eventTypes.${resolvedKey.replace('.', '_')}`,
   };
 }
