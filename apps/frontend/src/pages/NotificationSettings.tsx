@@ -89,6 +89,7 @@ function NotificationSettingsForm({
   const { t } = useTranslation();
   const [values, setValues] = useState<NotificationSettingsValues>(initialValues);
   const [thresholdError, setThresholdError] = useState<string | null>(null);
+  const [summaryHourError, setSummaryHourError] = useState<string | null>(null);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -100,6 +101,15 @@ function NotificationSettingsForm({
       return;
     }
     setThresholdError(null);
+    if (
+      !Number.isInteger(values.dailySummaryHourLocal) ||
+      values.dailySummaryHourLocal < MIN_HOUR ||
+      values.dailySummaryHourLocal > MAX_HOUR
+    ) {
+      setSummaryHourError(t('notifications.summaryHourInvalid'));
+      return;
+    }
+    setSummaryHourError(null);
     onSubmit(values);
   };
 
@@ -148,16 +158,20 @@ function NotificationSettingsForm({
 
       <label>
         {t('notifications.summaryHourLabel')}
+        {/* No HTML `min`/`max` here on purpose, for the same reason as the
+            threshold input above: a native range constraint makes the browser
+            silently block form submission for an out-of-range value, so our
+            own i18n validation message (below) would never show. The JS check
+            in handleSubmit is the single client-side guard instead. */}
         <input
           type="number"
-          min={MIN_HOUR}
-          max={MAX_HOUR}
           value={values.dailySummaryHourLocal}
           onChange={(event) =>
             setValues((prev) => ({ ...prev, dailySummaryHourLocal: event.target.valueAsNumber }))
           }
         />
       </label>
+      {summaryHourError && <ErrorMessage message={summaryHourError} />}
 
       <button type="submit" disabled={isSaving}>
         {isSaving ? t('notifications.saveButtonPending') : t('notifications.saveButton')}

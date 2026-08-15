@@ -143,6 +143,32 @@ describe('ExportService', () => {
     });
   });
 
+  it('applies an open-ended upper bound when only from is given', async () => {
+    prisma.child.findUnique.mockResolvedValue(makeChild());
+    prisma.event.findMany.mockResolvedValue([]);
+
+    await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, FROM, undefined);
+
+    expect(prisma.event.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, occurredAt: { gte: FROM } },
+      include: { feedingDetail: true, diaperDetail: true },
+      orderBy: { occurredAt: 'asc' },
+    });
+  });
+
+  it('applies an open-ended lower bound when only to is given', async () => {
+    prisma.child.findUnique.mockResolvedValue(makeChild());
+    prisma.event.findMany.mockResolvedValue([]);
+
+    await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, undefined, TO);
+
+    expect(prisma.event.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, occurredAt: { lt: TO } },
+      include: { feedingDetail: true, diaperDetail: true },
+      orderBy: { occurredAt: 'asc' },
+    });
+  });
+
   it('flattens a FEEDING event with its detail fields and derived duration', async () => {
     prisma.child.findUnique.mockResolvedValue(makeChild());
     prisma.event.findMany.mockResolvedValue([makeFeedingEvent()]);

@@ -451,6 +451,7 @@
     "thresholdInvalid": "Bitte eine ganze Stundenzahl (mindestens 1) eingeben.",
     "dailySummaryLabel": "Tagesüberblick",
     "summaryHourLabel": "Uhrzeit des Überblicks (0–23)",
+    "summaryHourInvalid": "Bitte eine ganze Stunde zwischen 0 und 23 eingeben.",
     "saveButton": "Speichern",
     "saveButtonPending": "Wird gespeichert…",
     "saved": "Einstellungen gespeichert.",

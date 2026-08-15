@@ -451,6 +451,7 @@
     "thresholdInvalid": "Please enter a whole number of hours (at least 1).",
     "dailySummaryLabel": "Daily summary",
     "summaryHourLabel": "Summary hour (0–23)",
+    "summaryHourInvalid": "Please enter a whole hour between 0 and 23.",
     "saveButton": "Save",
     "saveButtonPending": "Saving…",
     "saved": "Settings saved.",

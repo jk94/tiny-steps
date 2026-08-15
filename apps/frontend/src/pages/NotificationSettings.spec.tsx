@@ -104,6 +104,35 @@ describe('NotificationSettings page', () => {
     );
   });
 
+  it('rejects an out-of-range summary hour client-side without calling the API', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const summaryHour = await screen.findByLabelText('Summary hour (0–23)');
+    await user.clear(summaryHour);
+    await user.type(summaryHour, '25');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockedApi.updateNotificationSettings).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Please enter a whole hour between 0 and 23.',
+    );
+  });
+
+  it('rejects an empty summary hour client-side without calling the API', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const summaryHour = await screen.findByLabelText('Summary hour (0–23)');
+    await user.clear(summaryHour);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockedApi.updateNotificationSettings).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Please enter a whole hour between 0 and 23.',
+    );
+  });
+
   it('shows an error when settings fail to load', async () => {
     mockedApi.fetchNotificationSettings.mockRejectedValue(new Error('boom'));
 

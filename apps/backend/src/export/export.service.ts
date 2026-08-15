@@ -64,7 +64,14 @@ export class ExportService {
   ): Promise<RawExportRow[]> {
     await this.findChildOrThrow(householdId, childId);
 
-    const dateFilter = from && to ? { occurredAt: { gte: from, lt: to } } : {};
+    // Build the range from whichever bound(s) are present so a lone `from`
+    // (open-ended upper) or lone `to` (open-ended lower) still filters, rather
+    // than only both-or-neither.
+    const occurredAtFilter: { gte?: Date; lt?: Date } = {};
+    if (from) occurredAtFilter.gte = from;
+    if (to) occurredAtFilter.lt = to;
+    const dateFilter =
+      Object.keys(occurredAtFilter).length > 0 ? { occurredAt: occurredAtFilter } : {};
 
     const events = await this.prisma.event.findMany({
       where: { childId, ...dateFilter },

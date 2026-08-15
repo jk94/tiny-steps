@@ -74,7 +74,7 @@ describe('NotificationSchedulerService', () => {
     it('does NOT send just under the threshold (13:59, 3h59m since a 10:00 feeding)', async () => {
       clock.now.mockReturnValue(new Date('2026-01-01T13:59:00.000Z'));
       prisma.notificationSettings.findMany.mockResolvedValue([makeFeedingSettings()]);
-      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT });
+      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT, createdAt: FEEDING_AT });
 
       await service.checkFeedingReminders();
 
@@ -86,7 +86,7 @@ describe('NotificationSchedulerService', () => {
       const now = new Date('2026-01-01T14:01:00.000Z');
       clock.now.mockReturnValue(now);
       prisma.notificationSettings.findMany.mockResolvedValue([makeFeedingSettings()]);
-      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT });
+      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT, createdAt: FEEDING_AT });
 
       await service.checkFeedingReminders();
 
@@ -111,7 +111,7 @@ describe('NotificationSchedulerService', () => {
         // Already reminded at 14:05, after the 10:00 feeding.
         makeFeedingSettings({ feedingReminderLastSentAt: new Date('2026-01-01T14:05:00.000Z') }),
       ]);
-      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT });
+      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT, createdAt: FEEDING_AT });
 
       await service.checkFeedingReminders();
 
@@ -124,15 +124,62 @@ describe('NotificationSchedulerService', () => {
       prisma.notificationSettings.findMany.mockResolvedValue([
         makeFeedingSettings({ feedingReminderLastSentAt: new Date('2026-01-01T14:05:00.000Z') }),
       ]);
-      // A newer feeding at 15:30 — more than 4h before now, and after the last
-      // reminder — so the reminder is re-armed.
+      // A newer feeding at 15:30 — more than 4h before now, and logged after the
+      // last reminder — so the reminder is re-armed.
       prisma.event.findFirst.mockResolvedValue({
         occurredAt: new Date('2026-01-01T15:30:00.000Z'),
+        createdAt: new Date('2026-01-01T15:30:00.000Z'),
       });
 
       await service.checkFeedingReminders();
 
       expect(pushSender.sendToTokens).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-sends when a backdated feeding is logged after the last reminder (dedup by createdAt, not occurredAt)', async () => {
+      // Last reminder was sent at 12:30. The user then backfills a feeding whose
+      // occurredAt (09:00) is EARLIER than the last reminder, but whose createdAt
+      // (13:00) is later — i.e. it was only just logged. Since we've never
+      // reminded about this newly-logged record, and the gap since 09:00 now
+      // exceeds the 4h threshold, the reminder is legitimately due again.
+      clock.now.mockReturnValue(new Date('2026-01-01T14:00:00.000Z'));
+      prisma.notificationSettings.findMany.mockResolvedValue([
+        makeFeedingSettings({ feedingReminderLastSentAt: new Date('2026-01-01T12:30:00.000Z') }),
+      ]);
+      prisma.event.findFirst.mockResolvedValue({
+        occurredAt: new Date('2026-01-01T09:00:00.000Z'),
+        createdAt: new Date('2026-01-01T13:00:00.000Z'),
+      });
+
+      await service.checkFeedingReminders();
+
+      expect(pushSender.sendToTokens).toHaveBeenCalledTimes(1);
+      expect(prisma.notificationSettings.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('continues to the next row when one row send rejects (does not abort the tick)', async () => {
+      clock.now.mockReturnValue(new Date('2026-01-01T15:00:00.000Z'));
+      prisma.notificationSettings.findMany.mockResolvedValue([
+        makeFeedingSettings({ id: 'settings-1', userId: 'user-1', childId: 'child-1' }),
+        makeFeedingSettings({ id: 'settings-2', userId: 'user-2', childId: 'child-2' }),
+      ]);
+      // Both children have an overdue feeding.
+      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT, createdAt: FEEDING_AT });
+      // First send rejects (e.g. transport-level FCM failure), second resolves.
+      pushSender.sendToTokens
+        .mockRejectedValueOnce(new Error('FCM down'))
+        .mockResolvedValueOnce(undefined);
+
+      await expect(service.checkFeedingReminders()).resolves.toBeUndefined();
+
+      // Both rows were still attempted despite the first failing.
+      expect(pushSender.sendToTokens).toHaveBeenCalledTimes(2);
+      // Only the successful row stamped its last-sent timestamp.
+      expect(prisma.notificationSettings.update).toHaveBeenCalledTimes(1);
+      expect(prisma.notificationSettings.update).toHaveBeenCalledWith({
+        where: { id: 'settings-2' },
+        data: expect.objectContaining({ feedingReminderLastSentAt: expect.any(Date) }),
+      });
     });
 
     it('skips a child that has no feeding events at all', async () => {
@@ -188,6 +235,37 @@ describe('NotificationSchedulerService', () => {
 
       expect(prisma.event.count).not.toHaveBeenCalled();
       expect(pushSender.sendToTokens).not.toHaveBeenCalled();
+    });
+
+    it('continues to the next row when one row send rejects (does not abort the tick)', async () => {
+      clock.now.mockReturnValue(new Date(2026, 0, 1, 20, 0, 0));
+      prisma.notificationSettings.findMany.mockResolvedValue([
+        makeFeedingSettings({
+          id: 'settings-1',
+          userId: 'user-1',
+          childId: 'child-1',
+          dailySummaryEnabled: true,
+          dailySummaryHourLocal: 20,
+        }),
+        makeFeedingSettings({
+          id: 'settings-2',
+          userId: 'user-2',
+          childId: 'child-2',
+          dailySummaryEnabled: true,
+          dailySummaryHourLocal: 20,
+        }),
+      ]);
+      prisma.event.count.mockResolvedValue(1);
+      // First send rejects (e.g. transport-level FCM failure), second resolves.
+      pushSender.sendToTokens
+        .mockRejectedValueOnce(new Error('FCM down'))
+        .mockResolvedValueOnce(undefined);
+
+      await expect(service.sendDailySummaries()).resolves.toBeUndefined();
+
+      // Both due rows were still attempted despite the first failing — critical
+      // here since these are hour-matched and won't self-heal on the next tick.
+      expect(pushSender.sendToTokens).toHaveBeenCalledTimes(2);
     });
   });
 });

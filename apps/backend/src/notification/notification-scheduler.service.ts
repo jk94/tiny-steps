@@ -37,12 +37,19 @@ export class NotificationSchedulerService {
    * (user, child) settings row whose threshold has been exceeded.
    *
    * De-duplication is correctness-critical: a reminder is sent only when the
-   * threshold is exceeded AND we haven't already reminded about *this* feeding
-   * — i.e. `feedingReminderLastSentAt` is null, or is older than the most
-   * recent feeding event. Comparing against the last feeding's timestamp (not
-   * merely "did we send recently") means logging a new feeding naturally
-   * re-arms the reminder, while a long gap with no new feeding is reminded
-   * about exactly once.
+   * threshold is exceeded AND we haven't already reminded about the current
+   * known feeding state — i.e. `feedingReminderLastSentAt` is null, or predates
+   * the moment the most recent feeding was *logged* (`createdAt`). Comparing
+   * against when the feeding was logged rather than its `occurredAt` (when it is
+   * claimed to have happened) means a backdated/backfilled feeding still re-arms
+   * the reminder: a feeding logged now with an earlier `occurredAt` than the
+   * last reminder would be wrongly suppressed if we compared `occurredAt`, even
+   * though we have never reminded about that newly-logged record. A long gap
+   * with no new feeding is still reminded about exactly once, since `createdAt`
+   * is stable across ticks.
+   *
+   * Each row's send is wrapped in try/catch so a request-level send failure for
+   * one (user, child) doesn't abort the remaining rows in this tick.
    */
   @Cron(CronExpression.EVERY_30_MINUTES, { name: FEEDING_REMINDER_CRON })
   async checkFeedingReminders(): Promise<void> {
@@ -67,27 +74,36 @@ export class NotificationSchedulerService {
         continue;
       }
 
-      // Already reminded about this exact feeding — don't nag again until a
-      // newer feeding event resets the baseline.
+      // Already reminded about the current feeding state — don't nag again
+      // until a newer feeding record is logged. Compare against when the
+      // feeding was created (logged), not its `occurredAt`, so a backdated
+      // feeding logged after the last reminder still re-arms it.
       const alreadyReminded =
         settings.feedingReminderLastSentAt !== null &&
-        settings.feedingReminderLastSentAt >= lastFeeding.occurredAt;
+        settings.feedingReminderLastSentAt >= lastFeeding.createdAt;
       if (alreadyReminded) {
         continue;
       }
 
-      const tokens = await this.tokensForUser(settings.userId);
-      const hours = Math.floor(hoursSinceFeeding);
-      await this.pushSender.sendToTokens(tokens, {
-        title: 'Fütterungserinnerung',
-        body: `Die letzte Fütterung war vor über ${hours} Stunden.`,
-        data: { type: 'FEEDING_REMINDER', childId: settings.childId },
-      });
+      try {
+        const tokens = await this.tokensForUser(settings.userId);
+        const hours = Math.floor(hoursSinceFeeding);
+        await this.pushSender.sendToTokens(tokens, {
+          title: 'Fütterungserinnerung',
+          body: `Die letzte Fütterung war vor über ${hours} Stunden.`,
+          data: { type: 'FEEDING_REMINDER', childId: settings.childId },
+        });
 
-      await this.prisma.notificationSettings.update({
-        where: { id: settings.id },
-        data: { feedingReminderLastSentAt: now },
-      });
+        await this.prisma.notificationSettings.update({
+          where: { id: settings.id },
+          data: { feedingReminderLastSentAt: now },
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send feeding reminder for settings ${settings.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
     }
   }
 
@@ -112,13 +128,24 @@ export class NotificationSchedulerService {
     const { from, to } = localDayBounds(now);
 
     for (const settings of settingsList) {
-      const counts = await this.countEventsByType(settings.childId, from, to);
-      const tokens = await this.tokensForUser(settings.userId);
-      await this.pushSender.sendToTokens(tokens, {
-        title: 'Tagesüberblick',
-        body: `Heute: ${counts.FEEDING} Fütterungen, ${counts.SLEEP} Schlafphasen, ${counts.DIAPER} Windelwechsel.`,
-        data: { type: 'DAILY_SUMMARY', childId: settings.childId },
-      });
+      // Each row's send is wrapped so a request-level send failure for one
+      // (user, child) doesn't skip the rest of this hour's due summaries —
+      // unlike feeding reminders these are hour-matched, so a skipped user
+      // would miss that day's summary entirely rather than self-healing.
+      try {
+        const counts = await this.countEventsByType(settings.childId, from, to);
+        const tokens = await this.tokensForUser(settings.userId);
+        await this.pushSender.sendToTokens(tokens, {
+          title: 'Tagesüberblick',
+          body: `Heute: ${counts.FEEDING} Fütterungen, ${counts.SLEEP} Schlafphasen, ${counts.DIAPER} Windelwechsel.`,
+          data: { type: 'DAILY_SUMMARY', childId: settings.childId },
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send daily summary for settings ${settings.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
     }
   }
 
