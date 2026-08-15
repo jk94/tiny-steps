@@ -48,6 +48,12 @@ function Demo() {
 }
 
 export const Playground: Story = {
+  // `render` ignores `args`; supplied only to satisfy `Meta<typeof Toast>`'s
+  // required-props type.
+  args: {
+    toast: { id: 'story-placeholder', title: 'Heads up' },
+    onDismiss: () => {},
+  },
   render: () => (
     <ToastProvider>
       <Demo />

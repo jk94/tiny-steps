@@ -12,6 +12,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  // `render` ignores `args`; supplied only to satisfy `Meta<typeof Tabs>`'s
+  // required-props type.
+  args: {
+    defaultValue: 'feeding',
+    children: null,
+  },
   render: () => (
     <Tabs defaultValue="feeding">
       <Tabs.List>

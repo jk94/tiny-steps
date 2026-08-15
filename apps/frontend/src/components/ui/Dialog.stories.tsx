@@ -42,5 +42,12 @@ function ControlledDialogDemo() {
 }
 
 export const Controlled: Story = {
+  // `render` ignores `args` entirely; they're supplied only to satisfy
+  // `Meta<typeof Dialog>`'s required-props type.
+  args: {
+    isOpen: false,
+    onOpenChange: () => {},
+    children: null,
+  },
   render: () => <ControlledDialogDemo />,
 };
