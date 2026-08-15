@@ -24,7 +24,7 @@ Phase 3 abgeschlossen (Echtzeit-Sync-Mechanismus steht, darauf baut die Offline-
 ### PWA
 - [x] Web App Manifest (Icon, Name, Theme-Farbe, Start-URL) — via `vite-plugin-pwa`, siehe [ADR-0008](../adr/0008-pwa-basics-via-vite-plugin-pwa.md)
 - [x] Service Worker für Offline-Grundfunktion (App-Shell-Caching) — `generateSW`-Strategie, API/Socket.IO-Pfade bewusst vom Caching ausgeschlossen (network-only), siehe ADR-0008
-- [ ] Installierbarkeit testen (Android/iOS/Desktop-Browser) — automatisierte Build-/Manifest-/Service-Worker-Prüfungen (`manifest.webmanifest`/`sw.js`/Icons werden korrekt gebaut und ausgeliefert) sind erledigt, der echte manuelle Installations-Check auf Android/iOS/Desktop-Browsern steht aber noch aus
+- [ ] Installierbarkeit testen (Android/iOS/Desktop-Browser) — automatisierte Build-/Manifest-/Service-Worker-Prüfungen (`manifest.webmanifest`/`sw.js`/Icons werden korrekt gebaut und ausgeliefert) sind erledigt; der echte manuelle Installations-Check erfordert reale Geräte/Browser und ist daher als offener Punkt nach [`docs/known-issues.md`](../known-issues.md) verschoben, statt die Phase dafür offen zu halten
 
 ### Tests
 - [x] Test: Eingabe ohne Netzwerkverbindung möglich, Daten gehen nicht verloren — `offlineNoDataLoss.integration.spec.ts`: erfasst offline (nur `apiFetch` gemockt, echtes fake-indexeddb) alle drei Domains und alle Operationstypen (Feeding-Create, Diaper-Create, Sleep-Create, Feeding-Update, Feeding-Timer-Stop), prüft die fünf gepufferten Records direkt gegen IndexedDB und beweist mit einem simulierten Reload (nur `vi.resetModules()`, gleiche `IDBFactory`) die Persistenz über den echten IndexedDB-Speicher statt über In-Memory-Modulzustand
