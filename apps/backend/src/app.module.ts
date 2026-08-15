@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { HouseholdModule } from './household/household.module';
 import { ChildModule } from './child/child.module';
 import { EventModule } from './event/event.module';
+import { ExportModule } from './export/export.module';
 import { FeedingModule } from './feeding/feeding.module';
 import { SleepModule } from './sleep/sleep.module';
 import { DiaperModule } from './diaper/diaper.module';
@@ -35,6 +36,7 @@ import loadConfiguration from './config/configuration';
     HouseholdModule,
     ChildModule,
     EventModule,
+    ExportModule,
     RealtimeModule,
     FeedingModule,
     SleepModule,

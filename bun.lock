@@ -36,6 +36,7 @@
         "class-validator": "^0.15.1",
         "cookie": "^2.0.1",
         "cookie-parser": "^1.4.7",
+        "csv-stringify": "^6.8.3",
         "joi": "^18.2.3",
         "js-yaml": "^5.2.2",
         "multer": "^2.2.0",
@@ -57,6 +58,7 @@
         "@types/node": "^24.0.0",
         "@types/passport-jwt": "^4.0.1",
         "@types/supertest": "^7.0.0",
+        "csv-parse": "^7.0.2",
         "jest": "^30.0.0",
         "nock": "^14.0.17",
         "prisma": "^7.9.1",
@@ -1203,6 +1205,10 @@
     "css.escape": ["css.escape@1.5.1", "", {}, "sha512-YUifsXXuknHlUsmlgyY0PKzgPOr7/FjCePfHNt0jxm83wHZi44VDMQ7/fGNkjY3/jV1MC+1CmZbaHzugyeRtpg=="],
 
     "csstype": ["csstype@3.2.3", "", {}, "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ=="],
+
+    "csv-parse": ["csv-parse@7.0.2", "", {}, "sha512-uKZghv9UmPkMVLYy//KZ9HFAIJsl7wkhoEdIL0+rhuSY9pZQlhaeGEDPIe+/w7eh81MOql8Q/9+inAGWG6ZHYA=="],
+
+    "csv-stringify": ["csv-stringify@6.8.3", "", {}, "sha512-gIeSCvq5F4VtXV3naV3VAewLhBkiZBz+PPhTOA8H3Y8h/ELa+R1ml0GZck/4/Nzo9ep2lvOluilJ6MJlbZsKMA=="],
 
     "d3-array": ["d3-array@3.2.4", "", { "dependencies": { "internmap": "1 - 2" } }, "sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg=="],
 
