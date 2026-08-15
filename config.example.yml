@@ -48,3 +48,20 @@ auth:
     #     clientId: "baby-tracker"
     #     clientSecret: "REPLACE_ME"
     #     scopes: ["openid", "profile", "email"]
+
+# Push notifications (OPTIONAL). Omit this whole section to run without push —
+# the app then simply never sends notifications (PushSenderService no-ops).
+#
+# Native mobile push unavoidably relies on cloud relays (Google FCM, and APNs
+# for iOS via FCM), which is a deliberate, explicit exception to the
+# "self-hosted only" principle — see docs/adr/0012-capacitor-native-wrapper.md.
+# Each operator supplies THEIR OWN Firebase project credential; there is no
+# shared/central push service run by this project.
+#
+# `serviceAccountPath` points at a Firebase service-account JSON file you
+# download from your own Firebase project (Project settings → Service
+# accounts → Generate new private key). Treat it as a secret; keep it out of
+# version control (config.yml is git-ignored).
+# push:
+#   firebase:
+#     serviceAccountPath: "./firebase-service-account.json"

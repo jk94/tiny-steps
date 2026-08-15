@@ -102,3 +102,36 @@ describe('configValidationSchema (auth.oidc.providers)', () => {
     expect(error).toBeDefined();
   });
 });
+
+describe('configValidationSchema (push)', () => {
+  const baseWithOidc = {
+    ...baseConfig,
+    auth: { ...baseConfig.auth, oidc: {} },
+  };
+
+  it('accepts a config with no push section (push disabled)', () => {
+    const { error, value } = configValidationSchema.validate(baseWithOidc);
+
+    expect(error).toBeUndefined();
+    expect(value.push).toBeUndefined();
+  });
+
+  it('accepts a push section with a Firebase service-account path', () => {
+    const { error, value } = configValidationSchema.validate({
+      ...baseWithOidc,
+      push: { firebase: { serviceAccountPath: './firebase-service-account.json' } },
+    });
+
+    expect(error).toBeUndefined();
+    expect(value.push.firebase.serviceAccountPath).toBe('./firebase-service-account.json');
+  });
+
+  it('rejects a push section without a serviceAccountPath', () => {
+    const { error } = configValidationSchema.validate({
+      ...baseWithOidc,
+      push: { firebase: {} },
+    });
+
+    expect(error).toBeDefined();
+  });
+});

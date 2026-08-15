@@ -28,8 +28,8 @@ Phase 4 abgeschlossen (stabile Datenbasis und PWA-Grundlage).
 
 ### Push-Benachrichtigungen
 - [ ] Plattformspezifische Push-Integration über den nativen Wrapper
-- [ ] Backend-seitige Trigger-Logik (z. B. Scheduled Job: „Letzte Fütterung vor X Stunden“ → Erinnerung)
-- [ ] Zusammenfassungs-Benachrichtigung (z. B. Tagesüberblick)
+- [x] Backend-seitige Trigger-Logik (z. B. Scheduled Job: „Letzte Fütterung vor X Stunden“ → Erinnerung) — `NotificationSchedulerService.checkFeedingReminders()` (@Cron alle 30 min), FCM via `PushSenderService`
+- [x] Zusammenfassungs-Benachrichtigung (z. B. Tagesüberblick) — `NotificationSchedulerService.sendDailySummaries()` (@Cron stündlich, sendet zur konfigurierten Stunde)
 - [ ] Nutzerseitige Einstellungen: Push-Benachrichtigungen an/aus, Schwellenwerte konfigurierbar
 
 ## Definition of Done
