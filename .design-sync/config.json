@@ -1,0 +1,20 @@
+{
+  "projectId": "a3104d28-a985-45a8-bebb-9521ed6ca7df",
+  "shape": "storybook",
+  "storybookConfigDir": "apps/frontend/.storybook",
+  "pkg": "@baby-tracker/design-system",
+  "storybookStatic": ".design-sync/sb-reference",
+  "tsconfig": "tsconfig.app.json",
+  "readmeHeader": ".design-sync/conventions.md",
+  "buildCmd": "cd apps/frontend && rm -rf types && npx tsc -p tsconfig.design-sync-types.json",
+  "overrides": {
+    "Select": { "cardMode": "column" },
+    "EmptyState": { "skip": ["components-emptystate--default"] }
+  },
+  "storyImports": {
+    "shim": [
+      "src/components/ui/useToast.ts",
+      "src/components/ui/ToastContext.ts"
+    ]
+  }
+}

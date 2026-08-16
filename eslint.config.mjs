@@ -20,6 +20,14 @@ export default tseslint.config(
       'apps/frontend/ios/**',
       // Storybook build output (design-system component catalog, Phase 6 M1).
       'apps/frontend/storybook-static/**',
+      // claude.ai/design sync tooling/output — staged scripts, build output,
+      // generated .d.ts declarations (types/), and sync state/fixtures under
+      // .design-sync/ (including committed preview overrides — a specialized
+      // fixture format for the sync, not application source).
+      '.ds-sync/**',
+      'ds-bundle/**',
+      'apps/frontend/types/**',
+      '.design-sync/**',
     ],
   },
   eslint.configs.recommended,

@@ -30,3 +30,13 @@ data/
 
 # Real config (only config.example.yml is tracked)
 config.yml
+
+# claude.ai/design sync — transient build/verification state (see
+# .design-sync/config.json and docs/design-system/ for the durable parts)
+.design-sync/sb-reference/
+.design-sync/learnings/
+.design-sync/.cache/
+.design-sync/node_modules
+.ds-sync/
+ds-bundle/
+apps/frontend/types/

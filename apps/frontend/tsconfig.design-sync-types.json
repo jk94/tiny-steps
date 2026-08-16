@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "types",
+    "rootDir": "src"
+  },
+  "include": ["src/components/ui/**/*.ts", "src/components/ui/**/*.tsx"],
+  "exclude": ["src/components/ui/**/*.spec.tsx", "src/components/ui/**/*.stories.tsx"]
+}
