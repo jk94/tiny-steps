@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { createInvite } from '../api/household-api';
 import { ErrorMessage } from './ErrorMessage';
+import { Button, Card, Input } from './ui';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 
 export interface InviteGeneratorProps {
@@ -54,32 +55,51 @@ export function InviteGenerator({ householdId, role }: InviteGeneratorProps) {
   };
 
   return (
-    <div>
-      <button type="button" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-        {t(
-          mutation.isPending
-            ? 'household.invite.generateButtonPending'
-            : 'household.invite.generateButton',
+    <Card>
+      <Card.Body className="flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => mutation.mutate()}
+          isLoading={mutation.isPending}
+        >
+          {t(
+            mutation.isPending
+              ? 'household.invite.generateButtonPending'
+              : 'household.invite.generateButton',
+          )}
+        </Button>
+
+        {mutation.isError && <ErrorMessage message={t(mapHouseholdError(mutation.error))} />}
+
+        {invite && inviteLink && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  id="invite-link"
+                  label={t('household.invite.linkLabel')}
+                  readOnly
+                  value={inviteLink}
+                />
+              </div>
+              <Button type="button" variant="secondary" onClick={() => void handleCopy()}>
+                {t('household.invite.copyButton')}
+              </Button>
+            </div>
+            {copied && (
+              <span className="text-sm text-success">
+                {t('household.invite.copiedConfirmation')}
+              </span>
+            )}
+            {copyFailed && <ErrorMessage message={t('household.invite.copyFailed')} />}
+            <p className="text-xs text-muted-foreground">
+              {t('household.invite.expiresAtLabel')}:{' '}
+              {new Date(invite.expiresAt).toLocaleDateString()}
+            </p>
+          </div>
         )}
-      </button>
-
-      {mutation.isError && <ErrorMessage message={t(mapHouseholdError(mutation.error))} />}
-
-      {invite && inviteLink && (
-        <div>
-          <label htmlFor="invite-link">{t('household.invite.linkLabel')}</label>
-          <input id="invite-link" type="text" readOnly value={inviteLink} />
-          <button type="button" onClick={() => void handleCopy()}>
-            {t('household.invite.copyButton')}
-          </button>
-          {copied && <span>{t('household.invite.copiedConfirmation')}</span>}
-          {copyFailed && <ErrorMessage message={t('household.invite.copyFailed')} />}
-          <p>
-            {t('household.invite.expiresAtLabel')}:{' '}
-            {new Date(invite.expiresAt).toLocaleDateString()}
-          </p>
-        </div>
-      )}
-    </div>
+      </Card.Body>
+    </Card>
   );
 }

@@ -16,7 +16,10 @@
   },
   "nav": {
     "dashboardLink": "Dashboard",
-    "householdsLink": "Haushalte"
+    "householdsLink": "Haushalte",
+    "homeLink": "Start",
+    "settingsLink": "Einstellungen",
+    "childNavLabel": "Kind-Navigation"
   },
   "layout": {
     "logoutButton": "Abmelden",
@@ -146,8 +149,7 @@
       "diaperLink": "Windel",
       "timelineLink": "Tagesübersicht",
       "exportLink": "Export",
-      "notificationsLink": "Benachrichtigungen",
-      "photoAlt": "Foto von {{name}}"
+      "notificationsLink": "Benachrichtigungen"
     },
     "create": {
       "title": "Kind-Profil anlegen",

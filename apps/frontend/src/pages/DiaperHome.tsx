@@ -39,17 +39,35 @@ export function DiaperHome() {
   const child = childQuery.data;
 
   return (
-    <section>
-      <Link to={`/households/${householdId}`}>{t('diaper.home.backLink')}</Link>
-      <h1>{t('diaper.home.title', { name: child.name })}</h1>
+    <section className="flex flex-col gap-4">
+      <div>
+        <Link
+          to={`/households/${householdId}`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('diaper.home.backLink')}
+        </Link>
+        <h1 className="mt-1 text-xl font-bold text-foreground">
+          {t('diaper.home.title', { name: child.name })}
+        </h1>
+      </div>
 
-      <DiaperQuickEntry householdId={householdId!} childId={childId!} />
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="flex flex-col gap-3 lg:w-[340px] lg:flex-none">
+          <DiaperQuickEntry householdId={householdId!} childId={childId!} />
 
-      <Link to={`/households/${householdId}/children/${childId}/diaper/new`}>
-        {t('diaper.home.backfillLink')}
-      </Link>
+          <Link
+            to={`/households/${householdId}/children/${childId}/diaper/new`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t('diaper.home.backfillLink')}
+          </Link>
+        </div>
 
-      <DiaperEventList householdId={householdId!} childId={childId!} />
+        <div className="flex-1">
+          <DiaperEventList householdId={householdId!} childId={childId!} />
+        </div>
+      </div>
     </section>
   );
 }

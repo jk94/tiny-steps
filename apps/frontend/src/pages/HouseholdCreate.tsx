@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { createHousehold } from '../api/household-api';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Button, Card, Input } from '../components/ui';
 import { mapHouseholdError, type HouseholdErrorKey } from '../household/mapHouseholdError';
 import { queryClient } from '../lib/query-client';
 
@@ -55,42 +56,44 @@ export function HouseholdCreate() {
   };
 
   return (
-    <section>
-      <h1>{t('household.create.title')}</h1>
-      <form noValidate onSubmit={(event) => void handleSubmit(event)}>
-        <div>
-          <label htmlFor="household-name">{t('household.create.nameLabel')}</label>
-          <input
-            id="household-name"
-            type="text"
-            required
-            maxLength={MAX_NAME_LENGTH}
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              if (nameErrorKey) {
-                setNameErrorKey(null);
-              }
-            }}
-            aria-invalid={!!nameErrorKey}
-            aria-describedby={nameErrorKey ? 'household-name-error' : undefined}
-            disabled={isSubmitting}
-          />
-          {nameErrorKey && (
-            <div id="household-name-error">
-              <ErrorMessage message={t(nameErrorKey)} />
-            </div>
-          )}
-        </div>
+    <section className="mx-auto w-full max-w-sm">
+      <Card>
+        <Card.Body className="flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-foreground">{t('household.create.title')}</h1>
+          <form
+            className="flex flex-col gap-4"
+            noValidate
+            onSubmit={(event) => void handleSubmit(event)}
+          >
+            <Input
+              id="household-name"
+              label={t('household.create.nameLabel')}
+              type="text"
+              required
+              maxLength={MAX_NAME_LENGTH}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (nameErrorKey) {
+                  setNameErrorKey(null);
+                }
+              }}
+              error={nameErrorKey ? t(nameErrorKey) : undefined}
+              disabled={isSubmitting}
+            />
 
-        {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
+            {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-        <button type="submit" disabled={isSubmitting}>
-          {t(
-            isSubmitting ? 'household.create.submitButtonPending' : 'household.create.submitButton',
-          )}
-        </button>
-      </form>
+            <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
+              {t(
+                isSubmitting
+                  ? 'household.create.submitButtonPending'
+                  : 'household.create.submitButton',
+              )}
+            </Button>
+          </form>
+        </Card.Body>
+      </Card>
     </section>
   );
 }

@@ -16,7 +16,10 @@
   },
   "nav": {
     "dashboardLink": "Dashboard",
-    "householdsLink": "Households"
+    "householdsLink": "Households",
+    "homeLink": "Home",
+    "settingsLink": "Settings",
+    "childNavLabel": "Child navigation"
   },
   "layout": {
     "logoutButton": "Log out",
@@ -146,8 +149,7 @@
       "diaperLink": "Diaper",
       "timelineLink": "Daily timeline",
       "exportLink": "Export",
-      "notificationsLink": "Notifications",
-      "photoAlt": "Photo of {{name}}"
+      "notificationsLink": "Notifications"
     },
     "create": {
       "title": "Create child profile",

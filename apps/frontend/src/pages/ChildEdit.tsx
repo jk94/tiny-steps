@@ -8,6 +8,7 @@ import { ChildForm } from '../components/ChildForm';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { Button, Card } from '../components/ui';
 import { bumpPhotoCacheBust } from '../child/childPhotoCacheBust';
 import { mapChildError } from '../child/mapChildError';
 import { mapHouseholdError } from '../household/mapHouseholdError';
@@ -72,45 +73,59 @@ export function ChildEdit() {
   };
 
   return (
-    <section>
-      <Link to={`/households/${household.id}`}>{household.name}</Link>
-      <h1>{t('child.edit.title')}</h1>
-      <ChildForm
-        mode="edit"
-        initialValues={{
-          name: child.name,
-          // `birthDate` arrives as a full ISO8601 datetime string; an
-          // `<input type="date">` value must be the date-only portion.
-          birthDate: child.birthDate.slice(0, 10),
-          childId: child.id,
-          householdId: household.id,
-          hasPhoto: child.hasPhoto,
-        }}
-        onSubmit={handleSubmit}
-      />
-
-      {/* Child deletion is OWNER-only server-side (see `ChildController`) —
-          completely hidden for a CO_PARENT, not just disabled. */}
-      {household.role === 'OWNER' && (
-        <>
-          <button type="button" onClick={() => setIsDeleteDialogOpen(true)}>
-            {t('child.edit.deleteButton')}
-          </button>
-          <ConfirmDialog
-            isOpen={isDeleteDialogOpen}
-            title={t('child.edit.deleteDialog.title')}
-            description={t('child.edit.deleteDialog.description')}
-            confirmLabel={t('child.edit.deleteDialog.confirmButton')}
-            cancelLabel={t('child.edit.deleteDialog.cancelButton')}
-            onConfirm={() => deleteMutation.mutate()}
-            onCancel={() => setIsDeleteDialogOpen(false)}
-            isConfirming={deleteMutation.isPending}
+    <section className="mx-auto w-full max-w-sm">
+      <Link
+        to={`/households/${household.id}`}
+        className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
+      >
+        {household.name}
+      </Link>
+      <Card>
+        <Card.Body className="flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-foreground">{t('child.edit.title')}</h1>
+          <ChildForm
+            mode="edit"
+            initialValues={{
+              name: child.name,
+              // `birthDate` arrives as a full ISO8601 datetime string; an
+              // `<input type="date">` value must be the date-only portion.
+              birthDate: child.birthDate.slice(0, 10),
+              childId: child.id,
+              householdId: household.id,
+              hasPhoto: child.hasPhoto,
+            }}
+            onSubmit={handleSubmit}
           />
-          {deleteMutation.isError && (
-            <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
+
+          {/* Child deletion is OWNER-only server-side (see `ChildController`) —
+              completely hidden for a CO_PARENT, not just disabled. */}
+          {household.role === 'OWNER' && (
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('child.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('child.edit.deleteDialog.title')}
+                description={t('child.edit.deleteDialog.description')}
+                confirmLabel={t('child.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('child.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
+              )}
+            </>
           )}
-        </>
-      )}
+        </Card.Body>
+      </Card>
     </section>
   );
 }

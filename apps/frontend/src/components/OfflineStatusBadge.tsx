@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { LocalEventStatus } from '../offline/pendingEvents.db';
+import { Badge } from './ui';
 
 export interface OfflineStatusBadgeProps {
   /**
@@ -29,13 +30,14 @@ export function OfflineStatusBadge({ status }: OfflineStatusBadgeProps) {
   const text = isFailed ? t('offline.status.failed') : t('offline.status.pending');
 
   return (
-    <span
-      className={isFailed ? 'offline-badge offline-badge--failed' : 'offline-badge'}
+    <Badge
+      variant={isFailed ? 'destructive' : 'warning'}
+      size="sm"
       role={isFailed ? 'status' : undefined}
       aria-label={label}
       title={label}
     >
       {text}
-    </span>
+    </Badge>
   );
 }

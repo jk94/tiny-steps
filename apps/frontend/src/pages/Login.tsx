@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useSearchParams, type Location } from 'react-
 import { AuthForm } from '../components/AuthForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { OidcProviderButtons } from '../components/OidcProviderButtons';
+import { Card } from '../components/ui';
 import { useAuth } from '../auth/useAuth';
 import { mapOidcError, type OidcErrorKey } from '../auth/mapOidcError';
 
@@ -37,11 +38,15 @@ export function Login() {
   };
 
   return (
-    <section>
-      <h1>{t('auth.login.title')}</h1>
-      {oidcErrorKey && <ErrorMessage message={t(oidcErrorKey)} />}
-      <OidcProviderButtons />
-      <AuthForm mode="login" onSubmit={handleSubmit} />
+    <section className="mx-auto flex w-full max-w-sm flex-col items-center gap-6 py-8">
+      <Card className="w-full">
+        <Card.Body className="flex flex-col items-center gap-6 p-8">
+          <h1 className="text-xl font-bold text-foreground">{t('auth.login.title')}</h1>
+          {oidcErrorKey && <ErrorMessage message={t(oidcErrorKey)} />}
+          <OidcProviderButtons />
+          <AuthForm mode="login" onSubmit={handleSubmit} />
+        </Card.Body>
+      </Card>
     </section>
   );
 }

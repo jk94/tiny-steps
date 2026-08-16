@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchEventStats } from '../api/event-api';
 import { LoadingIndicator } from './LoadingIndicator';
 import { TimeSinceCard } from './TimeSinceCard';
+import { Card } from './ui';
 
 export interface DailyStatsSummaryProps {
   householdId: string;
@@ -48,13 +49,29 @@ export function DailyStatsSummary({
   const stats = statsQuery.data;
 
   return (
-    <section>
-      <h2>{t('stats.title')}</h2>
-      <p>{t('stats.sleepHoursToday', { hours: stats.sleepHoursToday })}</p>
-      <p>{t('stats.feedingCountToday', { count: stats.feedingCountToday })}</p>
-      <TimeSinceCard eventType="FEEDING" lastEventAt={stats.lastEventAt.FEEDING} />
-      <TimeSinceCard eventType="SLEEP" lastEventAt={stats.lastEventAt.SLEEP} />
-      <TimeSinceCard eventType="DIAPER" lastEventAt={stats.lastEventAt.DIAPER} />
+    <section className="flex flex-col gap-3">
+      <h2 className="sr-only">{t('stats.title')}</h2>
+      <div className="flex gap-3">
+        <Card className="flex-1">
+          <Card.Body className="p-3 text-center">
+            <p className="text-sm font-semibold text-foreground">
+              {t('stats.sleepHoursToday', { hours: stats.sleepHoursToday })}
+            </p>
+          </Card.Body>
+        </Card>
+        <Card className="flex-1">
+          <Card.Body className="p-3 text-center">
+            <p className="text-sm font-semibold text-foreground">
+              {t('stats.feedingCountToday', { count: stats.feedingCountToday })}
+            </p>
+          </Card.Body>
+        </Card>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <TimeSinceCard eventType="FEEDING" lastEventAt={stats.lastEventAt.FEEDING} />
+        <TimeSinceCard eventType="SLEEP" lastEventAt={stats.lastEventAt.SLEEP} />
+        <TimeSinceCard eventType="DIAPER" lastEventAt={stats.lastEventAt.DIAPER} />
+      </div>
     </section>
   );
 }

@@ -13,6 +13,7 @@ import { DiaperEventForm } from '../components/DiaperEventForm';
 import type { DiaperEventFormOutput } from '../components/DiaperEventForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { Button, Card } from '../components/ui';
 import { mapDiaperError } from '../diaper/mapDiaperError';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
@@ -88,37 +89,49 @@ export function DiaperEventEdit() {
   };
 
   return (
-    <section>
-      <Link to={`/households/${householdId}/children/${childId}/diaper`}>
+    <section className="mx-auto w-full max-w-sm">
+      <Link
+        to={`/households/${householdId}/children/${childId}/diaper`}
+        className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
+      >
         {t('diaper.edit.backLink')}
       </Link>
-      <h1>{t('diaper.edit.title')}</h1>
-      <DiaperEventForm
-        mode="edit"
-        initialValues={{
-          diaperType: event.diaperType,
-          occurredAt: event.occurredAt,
-          note: event.note ?? undefined,
-        }}
-        onSubmit={handleSubmit}
-      />
+      <Card>
+        <Card.Body className="flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-foreground">{t('diaper.edit.title')}</h1>
+          <DiaperEventForm
+            mode="edit"
+            initialValues={{
+              diaperType: event.diaperType,
+              occurredAt: event.occurredAt,
+              note: event.note ?? undefined,
+            }}
+            onSubmit={handleSubmit}
+          />
 
-      <button type="button" onClick={() => setIsDeleteDialogOpen(true)}>
-        {t('diaper.edit.deleteButton')}
-      </button>
-      <ConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        title={t('diaper.edit.deleteDialog.title')}
-        description={t('diaper.edit.deleteDialog.description')}
-        confirmLabel={t('diaper.edit.deleteDialog.confirmButton')}
-        cancelLabel={t('diaper.edit.deleteDialog.cancelButton')}
-        onConfirm={() => deleteMutation.mutate()}
-        onCancel={() => setIsDeleteDialogOpen(false)}
-        isConfirming={deleteMutation.isPending}
-      />
-      {deleteMutation.isError && (
-        <ErrorMessage message={t(mapDiaperError(deleteMutation.error, 'delete'))} />
-      )}
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            {t('diaper.edit.deleteButton')}
+          </Button>
+          <ConfirmDialog
+            isOpen={isDeleteDialogOpen}
+            title={t('diaper.edit.deleteDialog.title')}
+            description={t('diaper.edit.deleteDialog.description')}
+            confirmLabel={t('diaper.edit.deleteDialog.confirmButton')}
+            cancelLabel={t('diaper.edit.deleteDialog.cancelButton')}
+            onConfirm={() => deleteMutation.mutate()}
+            onCancel={() => setIsDeleteDialogOpen(false)}
+            isConfirming={deleteMutation.isPending}
+          />
+          {deleteMutation.isError && (
+            <ErrorMessage message={t(mapDiaperError(deleteMutation.error, 'delete'))} />
+          )}
+        </Card.Body>
+      </Card>
     </section>
   );
 }

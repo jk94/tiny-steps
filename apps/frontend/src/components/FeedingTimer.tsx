@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { stopFeedingTimerOptimistic } from '../api/feeding-api';
 import type { FeedingEventSummary, FeedingSide } from '../api/feeding-api';
+import { Badge, Button, Card } from './ui';
 
 const TICK_INTERVAL_MS = 1000;
 
@@ -65,13 +66,26 @@ export function FeedingTimer({ householdId, childId, event }: FeedingTimerProps)
   });
 
   return (
-    <section>
-      <h2>{t('feeding.timer.title')}</h2>
-      {event.side && <p>{t(SIDE_LABEL_KEYS[event.side])}</p>}
-      <p role="timer">{formatElapsed(elapsedSeconds)}</p>
-      <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-        {t(mutation.isPending ? 'feeding.timer.stopButtonPending' : 'feeding.timer.stopButton')}
-      </button>
-    </section>
+    <Card>
+      <Card.Body className="flex flex-col items-center gap-3 py-8">
+        <Badge variant="feeding-breast" className="text-sm">
+          {t('feeding.timer.title')}
+        </Badge>
+        {event.side && (
+          <p className="text-sm text-muted-foreground">{t(SIDE_LABEL_KEYS[event.side])}</p>
+        )}
+        <p role="timer" className="text-4xl font-extrabold tabular-nums text-foreground">
+          {formatElapsed(elapsedSeconds)}
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          isLoading={mutation.isPending}
+          onClick={() => mutation.mutate()}
+        >
+          {t(mutation.isPending ? 'feeding.timer.stopButtonPending' : 'feeding.timer.stopButton')}
+        </Button>
+      </Card.Body>
+    </Card>
   );
 }

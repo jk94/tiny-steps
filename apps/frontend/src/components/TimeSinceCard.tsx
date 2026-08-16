@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { EventType } from '../api/event-api';
 import { useTick } from '../lib/useTick';
+import { Card } from './ui';
 
 const TICK_INTERVAL_MS = 30_000;
 const MS_PER_MINUTE = 60_000;
@@ -42,14 +43,16 @@ export function TimeSinceCard({ eventType, lastEventAt }: TimeSinceCardProps) {
   const now = useTick(TICK_INTERVAL_MS);
 
   return (
-    <div>
-      <h3>{titleFor(t, eventType)}</h3>
-      <p>
-        {lastEventAt === null
-          ? t('stats.timeSince.noEntries')
-          : formatTimeSince(t, lastEventAt, now)}
-      </p>
-    </div>
+    <Card className="flex-1">
+      <Card.Body className="flex flex-col gap-1 p-3">
+        <h3 className="text-xs text-muted-foreground">{titleFor(t, eventType)}</h3>
+        <p className="text-sm font-semibold text-foreground">
+          {lastEventAt === null
+            ? t('stats.timeSince.noEntries')
+            : formatTimeSince(t, lastEventAt, now)}
+        </p>
+      </Card.Body>
+    </Card>
   );
 }
 

@@ -4,17 +4,18 @@ import { ChildPhoto } from './ChildPhoto';
 import { bumpPhotoCacheBust, getPhotoCacheBust } from '../child/childPhotoCacheBust';
 
 describe('ChildPhoto', () => {
-  it('renders a placeholder (no img) when hasPhoto is false', () => {
+  it('renders initials as an accessible placeholder (no <img>) when hasPhoto is false', () => {
     render(<ChildPhoto childId="c1" householdId="h1" hasPhoto={false} name="Alex" />);
 
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Alex' })).toHaveAccessibleName('Alex');
+    expect(screen.queryByRole('img')?.tagName).not.toBe('IMG');
+    expect(screen.getByText('AL')).toBeInTheDocument();
   });
 
-  it('renders an <img> with the correct alt text when hasPhoto is true', () => {
+  it('renders an <img> with the child name as its accessible name when hasPhoto is true', () => {
     render(<ChildPhoto childId="c1" householdId="h1" hasPhoto={true} name="Alex" />);
 
-    expect(screen.getByRole('img', { name: 'Photo of Alex' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Alex' }).tagName).toBe('IMG');
   });
 
   it('builds the src as a plain path including the current photo cache-bust value', () => {

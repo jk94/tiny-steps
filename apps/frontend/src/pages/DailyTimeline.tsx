@@ -54,9 +54,18 @@ export function DailyTimeline() {
   const child = childQuery.data;
 
   return (
-    <section>
-      <Link to={`/households/${householdId}`}>{t('timeline.backLink')}</Link>
-      <h1>{t('timeline.title', { name: child.name })}</h1>
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <div>
+        <Link
+          to={`/households/${householdId}`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('timeline.backLink')}
+        </Link>
+        <h1 className="mt-1 text-xl font-bold text-foreground">
+          {t('timeline.title', { name: child.name })}
+        </h1>
+      </div>
 
       <DailyStatsSummary
         householdId={householdId!}

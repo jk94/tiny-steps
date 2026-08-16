@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { listHouseholds } from '../api/household-api';
+import { Select } from './ui';
 
 const HOUSEHOLDS_QUERY_KEY = ['households'] as const;
 
@@ -29,19 +30,22 @@ export function HouseholdSwitcher() {
   }
 
   return (
-    <select
-      aria-label={t('household.switcher.label')}
-      value=""
-      onChange={(event) => navigate(`/households/${event.target.value}`)}
-    >
-      <option value="" disabled>
-        {t('household.switcher.placeholder')}
-      </option>
-      {data.map((household) => (
-        <option key={household.id} value={household.id}>
-          {household.name}
+    <div className="[&_label]:sr-only">
+      <Select
+        label={t('household.switcher.label')}
+        value=""
+        onChange={(event) => navigate(`/households/${event.target.value}`)}
+        className="h-9 w-44"
+      >
+        <option value="" disabled>
+          {t('household.switcher.placeholder')}
         </option>
-      ))}
-    </select>
+        {data.map((household) => (
+          <option key={household.id} value={household.id}>
+            {household.name}
+          </option>
+        ))}
+      </Select>
+    </div>
   );
 }

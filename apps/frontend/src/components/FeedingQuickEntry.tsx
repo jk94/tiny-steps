@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { mapFeedingError } from '../feeding/mapFeedingError';
 import { queryClient } from '../lib/query-client';
 import { ErrorMessage } from './ErrorMessage';
+import { Badge, Button } from './ui';
 
 const BOTTLE_AMOUNT_PRESETS_ML = [60, 90, 120, 150];
 
@@ -48,49 +49,62 @@ export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryPro
   const create = (input: CreateFeedingEventInput) => mutation.mutate(input);
 
   return (
-    <section>
-      <h2>{t('feeding.quickEntry.title')}</h2>
-      <div>
-        <button
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+        {t('feeding.quickEntry.title')}
+      </h2>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
           type="button"
+          variant="secondary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => create({ feedingType: 'BREAST', side: 'LEFT' })}
         >
           {t('feeding.quickEntry.breastLeftButton')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => create({ feedingType: 'BREAST', side: 'RIGHT' })}
         >
           {t('feeding.quickEntry.breastRightButton')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="primary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => setShowBottlePresets(true)}
         >
           {t('feeding.quickEntry.bottleButton')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => create({ feedingType: 'SOLID' })}
         >
           {t('feeding.quickEntry.solidButton')}
-        </button>
+        </Button>
       </div>
 
       {showBottlePresets && (
-        <div>
+        <div className="flex flex-wrap gap-2">
           {BOTTLE_AMOUNT_PRESETS_ML.map((amountMl) => (
             <button
               key={amountMl}
               type="button"
+              className="cursor-pointer"
               disabled={mutation.isPending}
               onClick={() => create({ feedingType: 'BOTTLE', amountMl })}
             >
-              {t('feeding.quickEntry.bottleAmountButton', { amount: amountMl })}
+              <Badge variant="feeding-bottle" className="cursor-pointer px-3 py-1.5">
+                {t('feeding.quickEntry.bottleAmountButton', { amount: amountMl })}
+              </Badge>
             </button>
           ))}
         </div>

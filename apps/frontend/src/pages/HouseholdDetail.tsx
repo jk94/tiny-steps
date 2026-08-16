@@ -29,19 +29,29 @@ export function HouseholdDetail() {
   }
 
   return (
-    <section>
-      <Link to="/households">{t('household.detail.backLink')}</Link>
-      <h1>{data.name}</h1>
-      <p>
-        {t('household.detail.yourRoleLabel')}:{' '}
-        <strong>
-          {t(data.role === 'OWNER' ? 'household.list.roleOwner' : 'household.list.roleCoParent')}
-        </strong>
-      </p>
-      <p>
-        {t('household.detail.createdAtLabel')}:{' '}
-        <strong>{new Date(data.createdAt).toLocaleDateString()}</strong>
-      </p>
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <Link to="/households" className="text-sm font-medium text-primary hover:underline">
+        {t('household.detail.backLink')}
+      </Link>
+      <div>
+        <h1 className="text-xl font-bold text-foreground">{data.name}</h1>
+        <div className="mt-1 flex gap-3 text-sm text-muted-foreground">
+          <span>
+            {t('household.detail.yourRoleLabel')}:{' '}
+            <strong className="text-foreground">
+              {t(
+                data.role === 'OWNER' ? 'household.list.roleOwner' : 'household.list.roleCoParent',
+              )}
+            </strong>
+          </span>
+          <span>
+            {t('household.detail.createdAtLabel')}:{' '}
+            <strong className="text-foreground">
+              {new Date(data.createdAt).toLocaleDateString()}
+            </strong>
+          </span>
+        </div>
+      </div>
       <InviteGenerator householdId={data.id} role={data.role} />
       <ChildList householdId={data.id} role={data.role} />
     </section>

@@ -71,7 +71,7 @@ describe('Export page', () => {
     const user = userEvent.setup();
     renderExport();
 
-    await user.click(screen.getByRole('radio', { name: 'CSV' }));
+    await user.click(screen.getByRole('button', { name: 'CSV' }));
     await user.click(screen.getByRole('button', { name: 'Download' }));
 
     expect(mockedExportApi.downloadExport).toHaveBeenCalledWith(

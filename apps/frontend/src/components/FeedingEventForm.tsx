@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreateFeedingEventInput, FeedingSide, FeedingType } from '../api/feeding-api';
 import { mapFeedingError, type FeedingErrorKey } from '../feeding/mapFeedingError';
 import { ErrorMessage } from './ErrorMessage';
+import { Button, Input, Select } from './ui';
 
 const MAX_NOTE_LENGTH = 500;
 const MIN_AMOUNT_ML = 1;
@@ -72,6 +73,8 @@ export interface FeedingEventFormProps {
  */
 export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEventFormProps) {
   const { t } = useTranslation();
+  const noteId = useId();
+  const noteErrorId = `${noteId}-error`;
   const [feedingType, setFeedingType] = useState<FeedingType | ''>(
     initialValues?.feedingType ?? '',
   );
@@ -204,161 +207,139 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
         : 'feeding.form.saveButton';
 
   return (
-    <form className="feeding-event-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
-      <div className="feeding-event-form__field">
-        <label htmlFor="feeding-type">{t('feeding.fields.feedingTypeLabel')}</label>
-        <select
-          id="feeding-type"
-          required
-          value={feedingType}
-          disabled={mode === 'edit' || isSubmitting}
-          onChange={(event) => {
-            setFeedingType(event.target.value as FeedingType);
-            clearFieldError('feedingType');
-          }}
-          aria-invalid={!!fieldErrorKeys.feedingType}
-          aria-describedby={fieldErrorKeys.feedingType ? 'feeding-type-error' : undefined}
-        >
-          <option value="" disabled>
-            {t('feeding.fields.feedingTypePlaceholder')}
-          </option>
-          <option value="BREAST">{t('feeding.fields.feedingTypeOptionBreast')}</option>
-          <option value="BOTTLE">{t('feeding.fields.feedingTypeOptionBottle')}</option>
-          <option value="SOLID">{t('feeding.fields.feedingTypeOptionSolid')}</option>
-        </select>
-        {fieldErrorKeys.feedingType && (
-          <div id="feeding-type-error">
-            <ErrorMessage message={t(fieldErrorKeys.feedingType)} />
-          </div>
-        )}
-      </div>
+    <form
+      className="flex w-full flex-col gap-4"
+      noValidate
+      onSubmit={(event) => void handleSubmit(event)}
+    >
+      <Select
+        id="feeding-type"
+        label={t('feeding.fields.feedingTypeLabel')}
+        required
+        value={feedingType}
+        disabled={mode === 'edit' || isSubmitting}
+        onChange={(event) => {
+          setFeedingType(event.target.value as FeedingType);
+          clearFieldError('feedingType');
+        }}
+        error={fieldErrorKeys.feedingType ? t(fieldErrorKeys.feedingType) : undefined}
+      >
+        <option value="" disabled>
+          {t('feeding.fields.feedingTypePlaceholder')}
+        </option>
+        <option value="BREAST">{t('feeding.fields.feedingTypeOptionBreast')}</option>
+        <option value="BOTTLE">{t('feeding.fields.feedingTypeOptionBottle')}</option>
+        <option value="SOLID">{t('feeding.fields.feedingTypeOptionSolid')}</option>
+      </Select>
 
-      <div className="feeding-event-form__field">
-        <label htmlFor="feeding-occurred-at">{t('feeding.fields.occurredAtLabel')}</label>
-        <input
-          id="feeding-occurred-at"
-          type="datetime-local"
-          required
-          max={nowAsDatetimeLocalValue()}
-          value={occurredAt}
-          onChange={(event) => {
-            setOccurredAt(event.target.value);
-            clearFieldError('occurredAt');
-          }}
-          aria-invalid={!!fieldErrorKeys.occurredAt}
-          aria-describedby={fieldErrorKeys.occurredAt ? 'feeding-occurred-at-error' : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrorKeys.occurredAt && (
-          <div id="feeding-occurred-at-error">
-            <ErrorMessage message={t(fieldErrorKeys.occurredAt)} />
-          </div>
-        )}
-      </div>
+      <Input
+        id="feeding-occurred-at"
+        label={t('feeding.fields.occurredAtLabel')}
+        type="datetime-local"
+        required
+        max={nowAsDatetimeLocalValue()}
+        value={occurredAt}
+        onChange={(event) => {
+          setOccurredAt(event.target.value);
+          clearFieldError('occurredAt');
+        }}
+        error={fieldErrorKeys.occurredAt ? t(fieldErrorKeys.occurredAt) : undefined}
+        disabled={isSubmitting}
+      />
 
       {feedingType === 'BREAST' && (
         <>
-          <fieldset className="feeding-event-form__field">
-            <legend>{t('feeding.fields.sideLabel')}</legend>
-            <label>
-              <input
-                type="radio"
-                name="feeding-side"
-                value="LEFT"
-                checked={side === 'LEFT'}
-                onChange={() => {
-                  setSide('LEFT');
-                  clearFieldError('side');
-                }}
-                disabled={isSubmitting}
-              />
-              {t('feeding.fields.sideLeftOption')}
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="feeding-side"
-                value="RIGHT"
-                checked={side === 'RIGHT'}
-                onChange={() => {
-                  setSide('RIGHT');
-                  clearFieldError('side');
-                }}
-                disabled={isSubmitting}
-              />
-              {t('feeding.fields.sideRightOption')}
-            </label>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-foreground">
+              {t('feeding.fields.sideLabel')}
+            </legend>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="feeding-side"
+                  value="LEFT"
+                  checked={side === 'LEFT'}
+                  onChange={() => {
+                    setSide('LEFT');
+                    clearFieldError('side');
+                  }}
+                  disabled={isSubmitting}
+                  className="h-4 w-4 accent-primary"
+                />
+                {t('feeding.fields.sideLeftOption')}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="feeding-side"
+                  value="RIGHT"
+                  checked={side === 'RIGHT'}
+                  onChange={() => {
+                    setSide('RIGHT');
+                    clearFieldError('side');
+                  }}
+                  disabled={isSubmitting}
+                  className="h-4 w-4 accent-primary"
+                />
+                {t('feeding.fields.sideRightOption')}
+              </label>
+            </div>
             {fieldErrorKeys.side && <ErrorMessage message={t(fieldErrorKeys.side)} />}
           </fieldset>
 
-          <div className="feeding-event-form__field">
-            <label htmlFor="feeding-started-at">{t('feeding.fields.startedAtLabel')}</label>
-            <input
-              id="feeding-started-at"
-              type="datetime-local"
-              max={nowAsDatetimeLocalValue()}
-              value={startedAt}
-              onChange={(event) => {
-                setStartedAt(event.target.value);
-                clearFieldError('endedAt');
-              }}
-              disabled={isSubmitting}
-            />
-          </div>
+          <Input
+            id="feeding-started-at"
+            label={t('feeding.fields.startedAtLabel')}
+            type="datetime-local"
+            max={nowAsDatetimeLocalValue()}
+            value={startedAt}
+            onChange={(event) => {
+              setStartedAt(event.target.value);
+              clearFieldError('endedAt');
+            }}
+            disabled={isSubmitting}
+          />
 
-          <div className="feeding-event-form__field">
-            <label htmlFor="feeding-ended-at">{t('feeding.fields.endedAtLabel')}</label>
-            <input
-              id="feeding-ended-at"
-              type="datetime-local"
-              max={nowAsDatetimeLocalValue()}
-              value={endedAt}
-              onChange={(event) => {
-                setEndedAt(event.target.value);
-                clearFieldError('endedAt');
-              }}
-              aria-invalid={!!fieldErrorKeys.endedAt}
-              aria-describedby={fieldErrorKeys.endedAt ? 'feeding-ended-at-error' : undefined}
-              disabled={isSubmitting}
-            />
-            {fieldErrorKeys.endedAt && (
-              <div id="feeding-ended-at-error">
-                <ErrorMessage message={t(fieldErrorKeys.endedAt)} />
-              </div>
-            )}
-          </div>
+          <Input
+            id="feeding-ended-at"
+            label={t('feeding.fields.endedAtLabel')}
+            type="datetime-local"
+            max={nowAsDatetimeLocalValue()}
+            value={endedAt}
+            onChange={(event) => {
+              setEndedAt(event.target.value);
+              clearFieldError('endedAt');
+            }}
+            error={fieldErrorKeys.endedAt ? t(fieldErrorKeys.endedAt) : undefined}
+            disabled={isSubmitting}
+          />
         </>
       )}
 
       {feedingType === 'BOTTLE' && (
-        <div className="feeding-event-form__field">
-          <label htmlFor="feeding-amount-ml">{t('feeding.fields.amountLabel')}</label>
-          <input
-            id="feeding-amount-ml"
-            type="number"
-            min={MIN_AMOUNT_ML}
-            max={MAX_AMOUNT_ML}
-            value={amountMl}
-            onChange={(event) => {
-              setAmountMl(event.target.value);
-              clearFieldError('amountMl');
-            }}
-            aria-invalid={!!fieldErrorKeys.amountMl}
-            aria-describedby={fieldErrorKeys.amountMl ? 'feeding-amount-ml-error' : undefined}
-            disabled={isSubmitting}
-          />
-          {fieldErrorKeys.amountMl && (
-            <div id="feeding-amount-ml-error">
-              <ErrorMessage message={t(fieldErrorKeys.amountMl)} />
-            </div>
-          )}
-        </div>
+        <Input
+          id="feeding-amount-ml"
+          label={t('feeding.fields.amountLabel')}
+          type="number"
+          min={MIN_AMOUNT_ML}
+          max={MAX_AMOUNT_ML}
+          value={amountMl}
+          onChange={(event) => {
+            setAmountMl(event.target.value);
+            clearFieldError('amountMl');
+          }}
+          error={fieldErrorKeys.amountMl ? t(fieldErrorKeys.amountMl) : undefined}
+          disabled={isSubmitting}
+        />
       )}
 
-      <div className="feeding-event-form__field">
-        <label htmlFor="feeding-note">{t('feeding.fields.noteLabel')}</label>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={noteId} className="text-sm font-medium text-foreground">
+          {t('feeding.fields.noteLabel')}
+        </label>
         <textarea
-          id="feeding-note"
+          id={noteId}
           maxLength={MAX_NOTE_LENGTH}
           value={note}
           onChange={(event) => {
@@ -366,11 +347,13 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
             clearFieldError('note');
           }}
           aria-invalid={!!fieldErrorKeys.note}
-          aria-describedby={fieldErrorKeys.note ? 'feeding-note-error' : undefined}
+          aria-describedby={fieldErrorKeys.note ? noteErrorId : undefined}
           disabled={isSubmitting}
+          rows={3}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         />
         {fieldErrorKeys.note && (
-          <div id="feeding-note-error">
+          <div id={noteErrorId}>
             <ErrorMessage message={t(fieldErrorKeys.note)} />
           </div>
         )}
@@ -378,9 +361,9 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <button type="submit" disabled={isSubmitting}>
+      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
         {t(submitButtonTextKey)}
-      </button>
+      </Button>
     </form>
   );
 }

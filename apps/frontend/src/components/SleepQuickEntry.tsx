@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth';
 import { mapSleepError } from '../sleep/mapSleepError';
 import { queryClient } from '../lib/query-client';
 import { ErrorMessage } from './ErrorMessage';
+import { Button } from './ui';
 
 export interface SleepQuickEntryProps {
   householdId: string;
@@ -37,11 +38,20 @@ export function SleepQuickEntry({ householdId, childId }: SleepQuickEntryProps) 
   });
 
   return (
-    <section>
-      <h2>{t('sleep.quickEntry.title')}</h2>
-      <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+        {t('sleep.quickEntry.title')}
+      </h2>
+      <Button
+        type="button"
+        variant="primary"
+        size="lg"
+        className="w-full"
+        disabled={mutation.isPending}
+        onClick={() => mutation.mutate()}
+      >
         {t('sleep.quickEntry.startButton')}
-      </button>
+      </Button>
 
       {mutation.isError && <ErrorMessage message={t(mapSleepError(mutation.error, 'create'))} />}
     </section>

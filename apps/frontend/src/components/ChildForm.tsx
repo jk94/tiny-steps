@@ -5,6 +5,7 @@ import { ALLOWED_PHOTO_MIME_TYPES, MAX_PHOTO_BYTES } from '../child/childPhotoCo
 import { mapChildError, type ChildErrorKey } from '../child/mapChildError';
 import { ChildPhoto } from './ChildPhoto';
 import { ErrorMessage } from './ErrorMessage';
+import { Button, Input } from './ui';
 
 const MAX_NAME_LENGTH = 120;
 
@@ -113,65 +114,56 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
         : 'child.edit.submitButton';
 
   return (
-    <form className="child-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
-      <div className="child-form__field">
-        <label htmlFor="child-name">{t('child.fields.nameLabel')}</label>
-        <input
-          id="child-name"
-          type="text"
-          required
-          maxLength={MAX_NAME_LENGTH}
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            if (fieldErrorKeys.name) {
-              setFieldErrorKeys((prev) => ({ ...prev, name: undefined }));
-            }
-          }}
-          aria-invalid={!!fieldErrorKeys.name}
-          aria-describedby={fieldErrorKeys.name ? 'child-name-error' : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrorKeys.name && (
-          <div id="child-name-error">
-            <ErrorMessage message={t(fieldErrorKeys.name)} />
-          </div>
-        )}
-      </div>
+    <form
+      className="flex w-full flex-col gap-4"
+      noValidate
+      onSubmit={(event) => void handleSubmit(event)}
+    >
+      <Input
+        id="child-name"
+        label={t('child.fields.nameLabel')}
+        type="text"
+        required
+        maxLength={MAX_NAME_LENGTH}
+        value={name}
+        onChange={(event) => {
+          setName(event.target.value);
+          if (fieldErrorKeys.name) {
+            setFieldErrorKeys((prev) => ({ ...prev, name: undefined }));
+          }
+        }}
+        error={fieldErrorKeys.name ? t(fieldErrorKeys.name) : undefined}
+        disabled={isSubmitting}
+      />
 
-      <div className="child-form__field">
-        <label htmlFor="child-birth-date">{t('child.fields.birthDateLabel')}</label>
-        <input
-          id="child-birth-date"
-          type="date"
-          required
-          max={todayAsIsoDate()}
-          value={birthDate}
-          onChange={(event) => {
-            setBirthDate(event.target.value);
-            if (fieldErrorKeys.birthDate) {
-              setFieldErrorKeys((prev) => ({ ...prev, birthDate: undefined }));
-            }
-          }}
-          aria-invalid={!!fieldErrorKeys.birthDate}
-          aria-describedby={fieldErrorKeys.birthDate ? 'child-birth-date-error' : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrorKeys.birthDate && (
-          <div id="child-birth-date-error">
-            <ErrorMessage message={t(fieldErrorKeys.birthDate)} />
-          </div>
-        )}
-      </div>
+      <Input
+        id="child-birth-date"
+        label={t('child.fields.birthDateLabel')}
+        type="date"
+        required
+        max={todayAsIsoDate()}
+        value={birthDate}
+        onChange={(event) => {
+          setBirthDate(event.target.value);
+          if (fieldErrorKeys.birthDate) {
+            setFieldErrorKeys((prev) => ({ ...prev, birthDate: undefined }));
+          }
+        }}
+        error={fieldErrorKeys.birthDate ? t(fieldErrorKeys.birthDate) : undefined}
+        disabled={isSubmitting}
+      />
 
-      <div className="child-form__field">
-        <label htmlFor="child-photo">{t('child.fields.photoLabel')}</label>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="child-photo" className="text-sm font-medium text-foreground">
+          {t('child.fields.photoLabel')}
+        </label>
         {mode === 'edit' && initialValues && (
           <ChildPhoto
             childId={initialValues.childId}
             householdId={initialValues.householdId}
             hasPhoto={initialValues.hasPhoto}
             name={initialValues.name}
+            size="lg"
           />
         )}
         <input
@@ -182,8 +174,11 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
           aria-invalid={!!fieldErrorKeys.photo}
           aria-describedby={fieldErrorKeys.photo ? 'child-photo-error' : 'child-photo-hint'}
           disabled={isSubmitting}
+          className="text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted/80"
         />
-        <p id="child-photo-hint">{t('child.fields.photoHint')}</p>
+        <p id="child-photo-hint" className="text-xs text-muted-foreground">
+          {t('child.fields.photoHint')}
+        </p>
         {fieldErrorKeys.photo && (
           <div id="child-photo-error">
             <ErrorMessage message={t(fieldErrorKeys.photo)} />
@@ -193,9 +188,9 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <button type="submit" disabled={isSubmitting}>
+      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
         {t(submitButtonTextKey)}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -9,6 +9,7 @@ import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEve
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
+import { Badge, Card, type BadgeVariant } from './ui';
 
 export interface TimelineEventListProps {
   householdId: string;
@@ -42,6 +43,29 @@ function entryLabel(t: TFunction, event: TimelineEventSummary): string {
         return t('timeline.list.entryDiaperStool');
       }
       return t('timeline.list.entryDiaperBoth');
+  }
+}
+
+function badgeVariantFor(event: TimelineEventSummary): BadgeVariant {
+  switch (event.type) {
+    case 'FEEDING':
+      if (event.feedingType === 'BREAST') {
+        return 'feeding-breast';
+      }
+      if (event.feedingType === 'BOTTLE') {
+        return 'feeding-bottle';
+      }
+      return 'feeding-solid';
+    case 'SLEEP':
+      return 'sleep';
+    case 'DIAPER':
+      if (event.diaperType === 'PEE') {
+        return 'diaper-pee';
+      }
+      if (event.diaperType === 'STOOL') {
+        return 'diaper-stool';
+      }
+      return 'diaper-both';
   }
 }
 
@@ -109,30 +133,40 @@ export function TimelineEventList({
   ).filter(({ summary }) => enabledTypes.has(summary.type));
 
   if (events.length === 0) {
-    return <p>{t('timeline.list.empty')}</p>;
+    return <p className="text-sm text-muted-foreground">{t('timeline.list.empty')}</p>;
   }
 
   return (
-    <ul>
+    <ul className="flex flex-col gap-2">
       {events.map(({ summary, localStatus }) => (
         <li key={summary.id}>
-          <span>{entryLabel(t, summary)}</span>
-          <time dateTime={summary.occurredAt}>
-            {new Date(summary.occurredAt).toLocaleTimeString()}
-          </time>
-          {summary.type !== 'DIAPER' && summary.durationSeconds !== null && (
-            <span>
-              {t('timeline.list.durationMinutes', {
-                minutes: Math.round(summary.durationSeconds / 60),
-              })}
-            </span>
-          )}
-          <span>
-            {t('timeline.list.loggedBy', {
-              user: resolveUserLabel(summary.userId, membersQuery.data),
-            })}
-          </span>
-          <OfflineStatusBadge status={localStatus} />
+          <Card>
+            <Card.Body className="flex items-center gap-3">
+              <Badge variant={badgeVariantFor(summary)} size="sm">
+                {entryLabel(t, summary)}
+              </Badge>
+              <div className="flex flex-1 flex-col">
+                <time dateTime={summary.occurredAt} className="text-sm text-foreground">
+                  {new Date(summary.occurredAt).toLocaleTimeString()}
+                </time>
+                <span className="flex gap-1 text-xs text-muted-foreground">
+                  {summary.type !== 'DIAPER' && summary.durationSeconds !== null && (
+                    <span>
+                      {t('timeline.list.durationMinutes', {
+                        minutes: Math.round(summary.durationSeconds / 60),
+                      })}
+                    </span>
+                  )}
+                  <span>
+                    {t('timeline.list.loggedBy', {
+                      user: resolveUserLabel(summary.userId, membersQuery.data),
+                    })}
+                  </span>
+                </span>
+              </div>
+              <OfflineStatusBadge status={localStatus} />
+            </Card.Body>
+          </Card>
         </li>
       ))}
     </ul>
