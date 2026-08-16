@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Button, Dialog } from './ui';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -12,11 +13,12 @@ export interface ConfirmDialogProps {
 }
 
 /**
- * Generic, reusable confirm/cancel modal built on the native `<dialog>`
- * element — `showModal()`/`close()` give ESC-dismiss, a focus trap, and
- * `::backdrop` styling for free, with zero new dependency. Intentionally
- * just this one component, not a portal/dialog-manager abstraction: the app
- * only needs a single concurrent confirm dialog at a time.
+ * Generic, reusable confirm/cancel modal. Renders through the `Dialog`
+ * primitive's `Header`/`Body`/`Footer` slots for styling, but manages its
+ * own native `<dialog>` (not `Dialog`'s root) because it needs one behavior
+ * `Dialog` doesn't generalize: suppressing ESC-dismiss while `isConfirming`
+ * (see below) — this component predates, and is the documented precedent
+ * for, `Dialog`'s own showModal()/close() approach (see ADR-0013).
  */
 export function ConfirmDialog({
   isOpen,
@@ -61,17 +63,36 @@ export function ConfirmDialog({
         }
       }}
       onClose={onCancel}
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/50"
     >
-      <h2>{title}</h2>
-      {description && <p>{description}</p>}
-      <div>
-        <button type="button" onClick={onCancel} disabled={isConfirming}>
+      <Dialog.Header>
+        <h2 className="text-lg font-bold text-foreground">{title}</h2>
+      </Dialog.Header>
+      {description && (
+        <Dialog.Body>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </Dialog.Body>
+      )}
+      <Dialog.Footer>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onCancel}
+          disabled={isConfirming}
+        >
           {cancelLabel}
-        </button>
-        <button type="button" onClick={onConfirm} disabled={isConfirming}>
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={onConfirm}
+          isLoading={isConfirming}
+        >
           {confirmLabel}
-        </button>
-      </div>
+        </Button>
+      </Dialog.Footer>
     </dialog>
   );
 }
