@@ -16,7 +16,10 @@
   },
   "nav": {
     "dashboardLink": "Dashboard",
-    "householdsLink": "Haushalte"
+    "householdsLink": "Haushalte",
+    "homeLink": "Start",
+    "settingsLink": "Einstellungen",
+    "childNavLabel": "Kind-Navigation"
   },
   "layout": {
     "logoutButton": "Abmelden",

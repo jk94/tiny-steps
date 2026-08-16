@@ -33,18 +33,9 @@ body {
   min-height: 100vh;
 }
 
-/* Mobile-first: unqualified padding is tight, then grows on wider screens. */
-#root {
-  padding: 0.75rem;
-}
-
-@media (min-width: 768px) {
-  #root {
-    padding: 1.5rem;
-    max-width: 960px;
-    margin: 0 auto;
-  }
-}
+/* No #root padding/max-width here: the AppShell (components/Layout.tsx) now
+   owns page-level layout (sidebar + content) and its own spacing — a global
+   max-width would clip the desktop sidebar. */
 
 a {
   font-weight: 500;
