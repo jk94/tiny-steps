@@ -1,8 +1,15 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { EventType } from '../api/event-api';
+import { cn } from '../lib/cn';
 
 const ALL_EVENT_TYPES: EventType[] = ['FEEDING', 'SLEEP', 'DIAPER'];
+
+const PILL_VARIANT: Record<EventType, string> = {
+  FEEDING: 'bg-feeding text-white',
+  SLEEP: 'bg-sleep text-white',
+  DIAPER: 'bg-diaper text-white',
+};
 
 /**
  * A `switch` calling `t()` with a literal key directly in each branch
@@ -31,7 +38,9 @@ export interface TimelineFilterProps {
 }
 
 /**
- * Three toggle checkboxes (Feeding/Sleep/Diaper). Purely a client-side
+ * Three toggle checkboxes (Feeding/Sleep/Diaper), styled as `Badge`-colored
+ * pills — but built on real `<input type="checkbox">` elements, not `Badge`
+ * itself (`Badge` is documented non-interactive). Purely a client-side
  * filter — no backend param, no query-key impact (see `TimelineEventList`,
  * which receives the resulting set and filters the already-fetched daily
  * events in-memory). Fully controlled: `enabledTypes` and `onChange` are the
@@ -52,13 +61,27 @@ export function TimelineFilter({ enabledTypes, onChange }: TimelineFilterProps) 
   }
 
   return (
-    <fieldset>
-      {ALL_EVENT_TYPES.map((type) => (
-        <label key={type}>
-          <input type="checkbox" checked={enabledTypes.has(type)} onChange={() => toggle(type)} />
-          {filterLabel(t, type)}
-        </label>
-      ))}
+    <fieldset className="flex flex-wrap gap-2">
+      {ALL_EVENT_TYPES.map((type) => {
+        const isEnabled = enabledTypes.has(type);
+        return (
+          <label
+            key={type}
+            className={cn(
+              'flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
+              isEnabled ? PILL_VARIANT[type] : 'bg-muted text-muted-foreground',
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={isEnabled}
+              onChange={() => toggle(type)}
+              className="sr-only"
+            />
+            {filterLabel(t, type)}
+          </label>
+        );
+      })}
     </fieldset>
   );
 }
