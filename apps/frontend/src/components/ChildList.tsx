@@ -4,16 +4,26 @@ import { Link } from 'react-router';
 import { listChildren } from '../api/child-api';
 import { ChildPhoto } from './ChildPhoto';
 import { LoadingIndicator } from './LoadingIndicator';
+import { Card, EmptyState } from './ui';
+import { cn } from '../lib/cn';
 
 export interface ChildListProps {
   householdId: string;
   role: 'OWNER' | 'CO_PARENT';
 }
 
+const EVENT_TYPE_PILL = 'bg-feeding text-white';
+const NEUTRAL_PILL = 'bg-muted text-foreground';
+const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-90';
+
 /**
  * Children list within `HouseholdDetail`. "Add child" is OWNER-only (child
  * creation is restricted server-side to OWNER — see `ChildController`),
- * completely hidden rather than disabled for a CO_PARENT.
+ * completely hidden rather than disabled for a CO_PARENT. Each child row is
+ * the entry point into that child's routes — there's no other UI to pick a
+ * "current child", so all six links stay functional (not just Feeding/
+ * Sleep/Diaper as in the mockup's abbreviated row), styled as small pills
+ * using the same per-event-type colors as `Badge`.
  */
 export function ChildList({ householdId, role }: ChildListProps) {
   const { t } = useTranslation();
@@ -24,46 +34,82 @@ export function ChildList({ householdId, role }: ChildListProps) {
   });
 
   return (
-    <section>
-      <h2>{t('child.list.title')}</h2>
-      {role === 'OWNER' && (
-        <Link to={`/households/${householdId}/children/new`}>{t('child.list.addLink')}</Link>
-      )}
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-bold text-foreground">{t('child.list.title')}</h2>
+        {role === 'OWNER' && (
+          <Link
+            to={`/households/${householdId}/children/new`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t('child.list.addLink')}
+          </Link>
+        )}
+      </div>
       {isLoading ? (
         <LoadingIndicator />
       ) : !data || data.length === 0 ? (
-        <p>{t('child.list.empty')}</p>
+        <EmptyState description={t('child.list.empty')} />
       ) : (
-        <ul>
+        <ul className="flex flex-col gap-2">
           {data.map((child) => (
             <li key={child.id}>
-              <Link to={`/households/${householdId}/children/${child.id}`}>
-                <ChildPhoto
-                  childId={child.id}
-                  householdId={householdId}
-                  hasPhoto={child.hasPhoto}
-                  name={child.name}
-                />
-                <span>{child.name}</span>
-              </Link>
-              <Link to={`/households/${householdId}/children/${child.id}/feeding`}>
-                {t('child.list.feedingLink')}
-              </Link>
-              <Link to={`/households/${householdId}/children/${child.id}/sleep`}>
-                {t('child.list.sleepLink')}
-              </Link>
-              <Link to={`/households/${householdId}/children/${child.id}/diaper`}>
-                {t('child.list.diaperLink')}
-              </Link>
-              <Link to={`/households/${householdId}/children/${child.id}/timeline`}>
-                {t('child.list.timelineLink')}
-              </Link>
-              <Link to={`/households/${householdId}/children/${child.id}/export`}>
-                {t('child.list.exportLink')}
-              </Link>
-              <Link to={`/households/${householdId}/children/${child.id}/notifications`}>
-                {t('child.list.notificationsLink')}
-              </Link>
+              <Card>
+                <Card.Body className="flex flex-col gap-3">
+                  <Link
+                    to={`/households/${householdId}/children/${child.id}`}
+                    className="flex items-center gap-3"
+                  >
+                    <ChildPhoto
+                      childId={child.id}
+                      householdId={householdId}
+                      hasPhoto={child.hasPhoto}
+                      name={child.name}
+                      size="sm"
+                      aria-hidden="true"
+                    />
+                    <span className="font-semibold text-foreground">{child.name}</span>
+                  </Link>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Link
+                      to={`/households/${householdId}/children/${child.id}/feeding`}
+                      className={cn(PILL_CLASS, EVENT_TYPE_PILL)}
+                    >
+                      {t('child.list.feedingLink')}
+                    </Link>
+                    <Link
+                      to={`/households/${householdId}/children/${child.id}/sleep`}
+                      className={cn(PILL_CLASS, 'bg-sleep text-white')}
+                    >
+                      {t('child.list.sleepLink')}
+                    </Link>
+                    <Link
+                      to={`/households/${householdId}/children/${child.id}/diaper`}
+                      className={cn(PILL_CLASS, 'bg-diaper text-white')}
+                    >
+                      {t('child.list.diaperLink')}
+                    </Link>
+                    <Link
+                      to={`/households/${householdId}/children/${child.id}/timeline`}
+                      className={cn(PILL_CLASS, NEUTRAL_PILL)}
+                    >
+                      {t('child.list.timelineLink')}
+                    </Link>
+                    <Link
+                      to={`/households/${householdId}/children/${child.id}/export`}
+                      className={cn(PILL_CLASS, NEUTRAL_PILL)}
+                    >
+                      {t('child.list.exportLink')}
+                    </Link>
+                    <Link
+                      to={`/households/${householdId}/children/${child.id}/notifications`}
+                      className={cn(PILL_CLASS, NEUTRAL_PILL)}
+                    >
+                      {t('child.list.notificationsLink')}
+                    </Link>
+                  </div>
+                </Card.Body>
+              </Card>
             </li>
           ))}
         </ul>

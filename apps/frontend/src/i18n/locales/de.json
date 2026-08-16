@@ -149,8 +149,7 @@
       "diaperLink": "Windel",
       "timelineLink": "Tagesübersicht",
       "exportLink": "Export",
-      "notificationsLink": "Benachrichtigungen",
-      "photoAlt": "Foto von {{name}}"
+      "notificationsLink": "Benachrichtigungen"
     },
     "create": {
       "title": "Kind-Profil anlegen",

@@ -149,8 +149,7 @@
       "diaperLink": "Diaper",
       "timelineLink": "Daily timeline",
       "exportLink": "Export",
-      "notificationsLink": "Notifications",
-      "photoAlt": "Photo of {{name}}"
+      "notificationsLink": "Notifications"
     },
     "create": {
       "title": "Create child profile",

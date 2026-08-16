@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-/** Minimal, shared loading state — no UI kit in this project yet. */
+/** Shared loading state, styled with the design-system's muted text token. */
 export function LoadingIndicator() {
   const { t } = useTranslation();
-  return <p>{t('common.loading')}</p>;
+  return <p className="text-sm text-muted-foreground">{t('common.loading')}</p>;
 }

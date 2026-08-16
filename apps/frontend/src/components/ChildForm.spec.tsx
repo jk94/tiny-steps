@@ -232,8 +232,8 @@ describe('ChildForm (edit mode)', () => {
   it('renders the existing photo (placeholder) via ChildPhoto', () => {
     renderChildForm('edit', vi.fn(), initialValues);
 
-    // hasPhoto: false -> ChildPhoto renders its placeholder initial, not an <img>.
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(screen.getByText('A')).toBeInTheDocument();
+    // hasPhoto: false -> ChildPhoto/Avatar renders its initials fallback, not an <img>.
+    expect(screen.getByRole('img', { name: 'Alex' }).tagName).not.toBe('IMG');
+    expect(screen.getByText('AL')).toBeInTheDocument();
   });
 });
