@@ -1,0 +1,11 @@
+{
+  "FEEDING": { "colorToken": "feeding", "iconKey": "bottle" },
+  "FEEDING.BREAST": { "colorToken": "feeding-breast", "iconKey": "breastfeeding" },
+  "FEEDING.BOTTLE": { "colorToken": "feeding-bottle", "iconKey": "bottle" },
+  "FEEDING.SOLID": { "colorToken": "feeding-solid", "iconKey": "solid-food" },
+  "SLEEP": { "colorToken": "sleep", "iconKey": "sleep" },
+  "DIAPER": { "colorToken": "diaper", "iconKey": "diaper" },
+  "DIAPER.PEE": { "colorToken": "diaper-pee", "iconKey": "diaper" },
+  "DIAPER.STOOL": { "colorToken": "diaper-stool", "iconKey": "diaper" },
+  "DIAPER.BOTH": { "colorToken": "diaper-both", "iconKey": "diaper" }
+}

@@ -18,6 +18,8 @@ export default tseslint.config(
       // copied web assets) — not our source, see ADR-0012.
       'apps/frontend/android/**',
       'apps/frontend/ios/**',
+      // Storybook build output (design-system component catalog, Phase 6 M1).
+      'apps/frontend/storybook-static/**',
     ],
   },
   eslint.configs.recommended,

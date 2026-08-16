@@ -18,7 +18,8 @@
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "design-tokens:build": "bun run design-system/scripts/build-tokens.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

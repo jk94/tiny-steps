@@ -457,5 +457,27 @@
     "saved": "Einstellungen gespeichert.",
     "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
     "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden."
+  },
+  "ui": {
+    "eventTypes": {
+      "FEEDING": "Füttern",
+      "FEEDING_BREAST": "Stillen",
+      "FEEDING_BOTTLE": "Fläschchen",
+      "FEEDING_SOLID": "Beikost",
+      "SLEEP": "Schlaf",
+      "DIAPER": "Windel",
+      "DIAPER_PEE": "Pipi",
+      "DIAPER_STOOL": "Stuhlgang",
+      "DIAPER_BOTH": "Beides"
+    },
+    "dialog": {
+      "close": "Schließen"
+    },
+    "toast": {
+      "dismiss": "Benachrichtigung schließen"
+    },
+    "emptyState": {
+      "defaultTitle": "Noch nichts vorhanden"
+    }
   }
 }

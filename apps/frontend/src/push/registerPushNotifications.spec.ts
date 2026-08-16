@@ -55,11 +55,17 @@ describe('registerPushNotifications', () => {
     expect(PushNotifications.register).toHaveBeenCalledTimes(1);
 
     // Simulate the native `registration` event firing with a token.
+    // `addListener`'s real type is overloaded per event name; TS's
+    // `Parameters<>` on an overloaded function only sees the last overload,
+    // so the event/callback types here don't match what we actually mocked
+    // — route through `unknown` rather than fight the overload inference.
     const registrationCall = vi
       .mocked(PushNotifications.addListener)
-      .mock.calls.find(([event]) => event === 'registration');
+      .mock.calls.find(([event]) => (event as unknown as string) === 'registration');
     expect(registrationCall).toBeDefined();
-    const registrationCallback = registrationCall![1] as (token: { value: string }) => void;
+    const registrationCallback = registrationCall![1] as unknown as (token: {
+      value: string;
+    }) => void;
     registrationCallback({ value: 'fcm-token-123' });
 
     expect(pushApi.registerPushToken).toHaveBeenCalledWith('fcm-token-123', 'ANDROID');
@@ -76,9 +82,9 @@ describe('registerPushNotifications', () => {
 
     const registrationCallback = vi
       .mocked(PushNotifications.addListener)
-      .mock.calls.find(([event]) => event === 'registration')![1] as (token: {
-      value: string;
-    }) => void;
+      .mock.calls.find(
+        ([event]) => (event as unknown as string) === 'registration',
+      )![1] as unknown as (token: { value: string }) => void;
     registrationCallback({ value: 'apns-token' });
 
     expect(pushApi.registerPushToken).toHaveBeenCalledWith('apns-token', 'IOS');

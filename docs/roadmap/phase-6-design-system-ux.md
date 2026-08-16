@@ -58,38 +58,38 @@ beschreiben), damit M2/M3 nicht auf unterschiedlichen Zwischenständen aufbauen.
 
 ### M1 — Fundament: Design-Tokens & Komponenten-Bibliothek
 
-- [ ] Entscheidung für einen Styling-Ansatz treffen und dokumentieren (z. B. Tailwind CSS vs. CSS-Module
+- [x] Entscheidung für einen Styling-Ansatz treffen und dokumentieren (z. B. Tailwind CSS vs. CSS-Module
       vs. vorgefertigte Komponenten-Bibliothek wie Radix/shadcn-ähnlich) — als ADR festhalten, analog zu
       bestehenden Architekturentscheidungen (siehe `docs/adr/`)
-- [ ] Design-Tokens definieren: Farbpalette (inkl. Dark-Mode-Betrachtung), Typografie-Skala,
+- [x] Design-Tokens definieren: Farbpalette (inkl. Dark-Mode-Betrachtung), Typografie-Skala,
       Abstands-/Spacing-Skala, Radien, Schatten, Breakpoints — Ablösung/Konsolidierung der bestehenden
       Breakpoints-CSS aus Phase 0; Tokens als plattformneutrale Werte (z. B. JSON/YAML) definieren, aus
       denen sowohl die React-Implementierung als auch der Markdown-Styleguide (siehe unten) generiert
       bzw. abgeleitet werden, statt die Tokens nur hart in React-/CSS-Code zu kodieren
-- [ ] Konsistentes Icon- und ggf. Illustrations-Set einbinden (z. B. für Event-Typen Stillen/Fläschchen/
+- [x] Konsistentes Icon- und ggf. Illustrations-Set einbinden (z. B. für Event-Typen Stillen/Fläschchen/
       Beikost/Schlaf/Windel), inkl. Farbcodierung je Event-Typ
 
 #### M1a — React-Komponenten-Bibliothek (Claude-Design-kompatibel)
 
-- [ ] Wiederverwendbare Basis-Komponenten für dieses Frontend bauen (Button, Input, Select, Card,
+- [x] Wiederverwendbare Basis-Komponenten für dieses Frontend bauen (Button, Input, Select, Card,
       Modal/Dialog, Toast/Notification, Badge, Tabs, Avatar, Loading-/Skeleton-States, leere Zustände/
       "Empty States")
-- [ ] Komponenten-API/Props-Konventionen so gestalten, dass sie kompatibel zu Claude Design sind (gleiche
+- [x] Komponenten-API/Props-Konventionen so gestalten, dass sie kompatibel zu Claude Design sind (gleiche
       Grundprinzipien bei Benennung, Theming-Mechanismus und Komponentenstruktur), damit bestehende
       Claude-Design-Patterns/-Tooling ohne größere Anpassung wiederverwendet werden können
-- [ ] Komponenten-Dokumentation/-Katalog anlegen (z. B. Storybook oder eine einfache interne
+- [x] Komponenten-Dokumentation/-Katalog anlegen (z. B. Storybook oder eine einfache interne
       Katalog-Route im Frontend), damit M2/M3 auf denselben Bausteinen aufsetzen
-- [ ] Komponenten-Tests für die neuen Basis-Komponenten (Rendering, Interaktions-States, Barrierefreiheit
+- [x] Komponenten-Tests für die neuen Basis-Komponenten (Rendering, Interaktions-States, Barrierefreiheit
       wie Fokus-Reihenfolge/ARIA-Attribute)
 
 #### M1b — Plattformagnostischer Styleguide (Markdown)
 
-- [ ] Markdown-Styleguide anlegen (z. B. `docs/design-system/`), der Design-Tokens, Komponenten-Zustände,
+- [x] Markdown-Styleguide anlegen (z. B. `docs/design-system/`), der Design-Tokens, Komponenten-Zustände,
       Interaktionsmuster und Layout-Regeln implementierungsunabhängig beschreibt (Tabellen/Prosa statt
       Code), sodass er als Spezifikation für weitere UI-Technologien (Flutter, Angular, o. Ä.) dient
-- [ ] Pro Basis-Komponente aus M1a einen Markdown-Eintrag mit Zweck, visuellen Zuständen (Default/Hover/
+- [x] Pro Basis-Komponente aus M1a einen Markdown-Eintrag mit Zweck, visuellen Zuständen (Default/Hover/
       Focus/Disabled/Error), Barrierefreiheits-Anforderungen und Abbildungsvorschlägen anlegen
-- [ ] Abgleichsprozess definieren und dokumentieren, wie Änderungen an Tokens/Komponenten künftig sowohl
+- [x] Abgleichsprozess definieren und dokumentieren, wie Änderungen an Tokens/Komponenten künftig sowohl
       in der React-Bibliothek als auch im Markdown-Styleguide nachgezogen werden (z. B. als Teil der
       PR-Checkliste), damit beide Artefakte nicht auseinanderlaufen
 
