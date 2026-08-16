@@ -1,4 +1,8 @@
-/** Minimal, shared error state — no UI kit in this project yet. */
+/** Shared error state, styled with the design-system's semantic color vocabulary. */
 export function ErrorMessage({ message }: { message: string }) {
-  return <p role="alert">{message}</p>;
+  return (
+    <p role="alert" className="text-sm text-destructive">
+      {message}
+    </p>
+  );
 }

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { acceptInvite, previewInvite } from '../api/invite-api';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { Button, Card } from '../components/ui';
 import { useAuth } from '../auth/useAuth';
 import { mapInviteError } from '../household/mapInviteError';
 import { queryClient } from '../lib/query-client';
@@ -54,18 +55,30 @@ export function InviteAccept() {
 
   if (previewQuery.isLoading) {
     return (
-      <section>
-        <h1>{t('invite.preview.title')}</h1>
-        <p>{t('invite.preview.loading')}</p>
+      <section className="mx-auto w-full max-w-sm py-8">
+        <Card>
+          <Card.Header>
+            <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+          </Card.Header>
+          <Card.Body>
+            <p className="text-sm text-muted-foreground">{t('invite.preview.loading')}</p>
+          </Card.Body>
+        </Card>
       </section>
     );
   }
 
   if (previewQuery.error || !previewQuery.data) {
     return (
-      <section>
-        <h1>{t('invite.preview.title')}</h1>
-        <ErrorMessage message={t(mapInviteError(previewQuery.error))} />
+      <section className="mx-auto w-full max-w-sm py-8">
+        <Card>
+          <Card.Header>
+            <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+          </Card.Header>
+          <Card.Body>
+            <ErrorMessage message={t(mapInviteError(previewQuery.error))} />
+          </Card.Body>
+        </Card>
       </section>
     );
   }
@@ -74,47 +87,77 @@ export function InviteAccept() {
 
   if (preview.status !== 'valid') {
     return (
-      <section>
-        <h1>{t('invite.preview.title')}</h1>
-        <p>{t(NON_VALID_STATUS_KEY[preview.status])}</p>
+      <section className="mx-auto w-full max-w-sm py-8">
+        <Card>
+          <Card.Header>
+            <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+          </Card.Header>
+          <Card.Body>
+            <p className="text-sm text-muted-foreground">
+              {t(NON_VALID_STATUS_KEY[preview.status])}
+            </p>
+          </Card.Body>
+        </Card>
       </section>
     );
   }
 
   return (
-    <section>
-      <h1>{t('invite.preview.title')}</h1>
-      <p>{t('invite.preview.validDescription', { householdName: preview.householdName })}</p>
-      {preview.expiresAt && (
-        <p>
-          {t('invite.preview.expiresAtLabel')}: {new Date(preview.expiresAt).toLocaleDateString()}
-        </p>
-      )}
-
-      {isAuthenticated ? (
-        <>
-          <button
-            type="button"
-            onClick={() => acceptMutation.mutate()}
-            disabled={acceptMutation.isPending}
-          >
-            {t(acceptMutation.isPending ? 'invite.acceptButtonPending' : 'invite.acceptButton')}
-          </button>
-          {acceptMutation.isError && (
-            <ErrorMessage message={t(mapInviteError(acceptMutation.error))} />
+    <section className="mx-auto w-full max-w-sm py-8">
+      <Card>
+        <Card.Header>
+          <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+        </Card.Header>
+        <Card.Body className="flex flex-col gap-2">
+          <p className="text-sm">
+            {t('invite.preview.validDescription', { householdName: preview.householdName })}
+          </p>
+          {preview.expiresAt && (
+            <p className="text-xs text-muted-foreground">
+              {t('invite.preview.expiresAtLabel')}:{' '}
+              {new Date(preview.expiresAt).toLocaleDateString()}
+            </p>
           )}
-        </>
-      ) : (
-        <div>
-          <p>{t('invite.guestPrompt')}</p>
-          <Link to="/login" state={{ from: location }}>
-            {t('invite.loginLink')}
-          </Link>
-          <Link to="/register" state={{ from: location }}>
-            {t('invite.registerLink')}
-          </Link>
-        </div>
-      )}
+        </Card.Body>
+        <Card.Footer className="flex-col items-stretch">
+          {isAuthenticated ? (
+            <>
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full"
+                onClick={() => acceptMutation.mutate()}
+                isLoading={acceptMutation.isPending}
+              >
+                {t(acceptMutation.isPending ? 'invite.acceptButtonPending' : 'invite.acceptButton')}
+              </Button>
+              {acceptMutation.isError && (
+                <ErrorMessage message={t(mapInviteError(acceptMutation.error))} />
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">{t('invite.guestPrompt')}</p>
+              <div className="flex gap-2">
+                <Link
+                  to="/login"
+                  state={{ from: location }}
+                  className="flex-1 rounded-md bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  {t('invite.loginLink')}
+                </Link>
+                <Link
+                  to="/register"
+                  state={{ from: location }}
+                  className="flex-1 rounded-md bg-muted px-4 py-2 text-center text-sm font-medium text-foreground hover:bg-muted/80"
+                >
+                  {t('invite.registerLink')}
+                </Link>
+              </div>
+            </div>
+          )}
+        </Card.Footer>
+      </Card>
     </section>
   );
 }
