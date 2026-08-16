@@ -4,6 +4,7 @@ import { createFeedingEventOptimistic } from '../api/feeding-api';
 import { useAuth } from '../auth/useAuth';
 import { FeedingEventForm } from '../components/FeedingEventForm';
 import type { FeedingEventFormOutput } from '../components/FeedingEventForm';
+import { Card } from '../components/ui';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -33,12 +34,19 @@ export function FeedingBackfillCreate() {
   };
 
   return (
-    <section>
-      <Link to={`/households/${householdId}/children/${childId}/feeding`}>
+    <section className="mx-auto w-full max-w-sm">
+      <Link
+        to={`/households/${householdId}/children/${childId}/feeding`}
+        className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
+      >
         {t('feeding.backfill.backLink')}
       </Link>
-      <h1>{t('feeding.backfill.title')}</h1>
-      <FeedingEventForm mode="create" onSubmit={handleSubmit} />
+      <Card>
+        <Card.Body className="flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-foreground">{t('feeding.backfill.title')}</h1>
+          <FeedingEventForm mode="create" onSubmit={handleSubmit} />
+        </Card.Body>
+      </Card>
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEve
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { LoadingIndicator } from './LoadingIndicator';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
+import { Card } from './ui';
 
 export interface FeedingEventListProps {
   householdId: string;
@@ -56,30 +57,39 @@ export function FeedingEventList({ householdId, childId }: FeedingEventListProps
   );
 
   return (
-    <section>
-      <h2>{t('feeding.list.title')}</h2>
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+        {t('feeding.list.title')}
+      </h2>
       {isLoading ? (
         <LoadingIndicator />
       ) : events.length === 0 ? (
-        <p>{t('feeding.list.empty')}</p>
+        <p className="text-sm text-muted-foreground">{t('feeding.list.empty')}</p>
       ) : (
-        <ul>
+        <ul className="flex flex-col gap-2">
           {events.map(({ summary, localStatus }) => (
             <li key={summary.id}>
-              <Link
-                to={`/households/${householdId}/children/${childId}/feeding/${summary.id}/edit`}
-              >
-                <span>{entryLabel(t, summary)}</span>
-                <span>{new Date(summary.occurredAt).toLocaleString()}</span>
-                {summary.durationSeconds !== null && (
-                  <span>
-                    {t('feeding.list.durationMinutes', {
-                      minutes: Math.round(summary.durationSeconds / 60),
-                    })}
-                  </span>
-                )}
-                <OfflineStatusBadge status={localStatus} />
-              </Link>
+              <Card>
+                <Link
+                  to={`/households/${householdId}/children/${childId}/feeding/${summary.id}/edit`}
+                  className="block"
+                >
+                  <Card.Body className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-foreground">{entryLabel(t, summary)}</span>
+                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {summary.durationSeconds !== null && (
+                        <span>
+                          {t('feeding.list.durationMinutes', {
+                            minutes: Math.round(summary.durationSeconds / 60),
+                          })}
+                        </span>
+                      )}
+                      <span>{new Date(summary.occurredAt).toLocaleString()}</span>
+                      <OfflineStatusBadge status={localStatus} />
+                    </span>
+                  </Card.Body>
+                </Link>
+              </Card>
             </li>
           ))}
         </ul>

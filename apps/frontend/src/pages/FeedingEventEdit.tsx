@@ -13,6 +13,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { FeedingEventForm } from '../components/FeedingEventForm';
 import type { FeedingEventFormOutput } from '../components/FeedingEventForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { Button, Card } from '../components/ui';
 import { mapFeedingError } from '../feeding/mapFeedingError';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
@@ -97,41 +98,53 @@ export function FeedingEventEdit() {
   };
 
   return (
-    <section>
-      <Link to={`/households/${householdId}/children/${childId}/feeding`}>
+    <section className="mx-auto w-full max-w-sm">
+      <Link
+        to={`/households/${householdId}/children/${childId}/feeding`}
+        className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
+      >
         {t('feeding.edit.backLink')}
       </Link>
-      <h1>{t('feeding.edit.title')}</h1>
-      <FeedingEventForm
-        mode="edit"
-        initialValues={{
-          feedingType: event.feedingType,
-          occurredAt: event.occurredAt,
-          startedAt: event.startedAt ?? undefined,
-          endedAt: event.endedAt ?? undefined,
-          side: event.side ?? undefined,
-          amountMl: event.amountMl ?? undefined,
-          note: event.note ?? undefined,
-        }}
-        onSubmit={handleSubmit}
-      />
+      <Card>
+        <Card.Body className="flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-foreground">{t('feeding.edit.title')}</h1>
+          <FeedingEventForm
+            mode="edit"
+            initialValues={{
+              feedingType: event.feedingType,
+              occurredAt: event.occurredAt,
+              startedAt: event.startedAt ?? undefined,
+              endedAt: event.endedAt ?? undefined,
+              side: event.side ?? undefined,
+              amountMl: event.amountMl ?? undefined,
+              note: event.note ?? undefined,
+            }}
+            onSubmit={handleSubmit}
+          />
 
-      <button type="button" onClick={() => setIsDeleteDialogOpen(true)}>
-        {t('feeding.edit.deleteButton')}
-      </button>
-      <ConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        title={t('feeding.edit.deleteDialog.title')}
-        description={t('feeding.edit.deleteDialog.description')}
-        confirmLabel={t('feeding.edit.deleteDialog.confirmButton')}
-        cancelLabel={t('feeding.edit.deleteDialog.cancelButton')}
-        onConfirm={() => deleteMutation.mutate()}
-        onCancel={() => setIsDeleteDialogOpen(false)}
-        isConfirming={deleteMutation.isPending}
-      />
-      {deleteMutation.isError && (
-        <ErrorMessage message={t(mapFeedingError(deleteMutation.error, 'delete'))} />
-      )}
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            {t('feeding.edit.deleteButton')}
+          </Button>
+          <ConfirmDialog
+            isOpen={isDeleteDialogOpen}
+            title={t('feeding.edit.deleteDialog.title')}
+            description={t('feeding.edit.deleteDialog.description')}
+            confirmLabel={t('feeding.edit.deleteDialog.confirmButton')}
+            cancelLabel={t('feeding.edit.deleteDialog.cancelButton')}
+            onConfirm={() => deleteMutation.mutate()}
+            onCancel={() => setIsDeleteDialogOpen(false)}
+            isConfirming={deleteMutation.isPending}
+          />
+          {deleteMutation.isError && (
+            <ErrorMessage message={t(mapFeedingError(deleteMutation.error, 'delete'))} />
+          )}
+        </Card.Body>
+      </Card>
     </section>
   );
 }

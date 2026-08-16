@@ -63,27 +63,45 @@ export function FeedingHome() {
     : undefined;
 
   return (
-    <section>
-      <Link to={`/households/${householdId}`}>{t('feeding.home.backLink')}</Link>
-      <h1>{t('feeding.home.title', { name: child.name })}</h1>
+    <section className="flex flex-col gap-4">
+      <div>
+        <Link
+          to={`/households/${householdId}`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('feeding.home.backLink')}
+        </Link>
+        <h1 className="mt-1 text-xl font-bold text-foreground">
+          {t('feeding.home.title', { name: child.name })}
+        </h1>
+      </div>
 
-      {activeTimer && pendingStop ? (
-        <section>
-          <p>
-            {t('feeding.timer.stopped')} <OfflineStatusBadge status={pendingStop.status} />
-          </p>
-        </section>
-      ) : activeTimer ? (
-        <FeedingTimer householdId={householdId!} childId={childId!} event={activeTimer} />
-      ) : (
-        <FeedingQuickEntry householdId={householdId!} childId={childId!} />
-      )}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="flex flex-col gap-3 lg:w-[340px] lg:flex-none">
+          {activeTimer && pendingStop ? (
+            <section>
+              <p className="text-sm text-muted-foreground">
+                {t('feeding.timer.stopped')} <OfflineStatusBadge status={pendingStop.status} />
+              </p>
+            </section>
+          ) : activeTimer ? (
+            <FeedingTimer householdId={householdId!} childId={childId!} event={activeTimer} />
+          ) : (
+            <FeedingQuickEntry householdId={householdId!} childId={childId!} />
+          )}
 
-      <Link to={`/households/${householdId}/children/${childId}/feeding/new`}>
-        {t('feeding.home.backfillLink')}
-      </Link>
+          <Link
+            to={`/households/${householdId}/children/${childId}/feeding/new`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t('feeding.home.backfillLink')}
+          </Link>
+        </div>
 
-      <FeedingEventList householdId={householdId!} childId={childId!} />
+        <div className="flex-1">
+          <FeedingEventList householdId={householdId!} childId={childId!} />
+        </div>
+      </div>
     </section>
   );
 }
