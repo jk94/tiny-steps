@@ -98,6 +98,7 @@ export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryPro
             <button
               key={amountMl}
               type="button"
+              className="cursor-pointer"
               disabled={mutation.isPending}
               onClick={() => create({ feedingType: 'BOTTLE', amountMl })}
             >
