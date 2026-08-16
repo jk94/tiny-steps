@@ -12,9 +12,6 @@
     "EmptyState": { "skip": ["components-emptystate--default"] }
   },
   "storyImports": {
-    "shim": [
-      "src/components/ui/useToast.ts",
-      "src/components/ui/ToastContext.ts"
-    ]
+    "shim": ["src/components/ui/useToast.ts", "src/components/ui/ToastContext.ts"]
   }
 }
