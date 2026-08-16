@@ -9,6 +9,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { SleepEventForm } from '../components/SleepEventForm';
 import type { SleepEventFormOutput } from '../components/SleepEventForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { Button, Card } from '../components/ui';
 import { mapSleepError } from '../sleep/mapSleepError';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
@@ -83,36 +84,48 @@ export function SleepEventEdit() {
   };
 
   return (
-    <section>
-      <Link to={`/households/${householdId}/children/${childId}/sleep`}>
+    <section className="mx-auto w-full max-w-sm">
+      <Link
+        to={`/households/${householdId}/children/${childId}/sleep`}
+        className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
+      >
         {t('sleep.edit.backLink')}
       </Link>
-      <h1>{t('sleep.edit.title')}</h1>
-      <SleepEventForm
-        mode="edit"
-        initialValues={{
-          occurredAt: event.occurredAt,
-          endedAt: event.endedAt ?? undefined,
-        }}
-        onSubmit={handleSubmit}
-      />
+      <Card>
+        <Card.Body className="flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-foreground">{t('sleep.edit.title')}</h1>
+          <SleepEventForm
+            mode="edit"
+            initialValues={{
+              occurredAt: event.occurredAt,
+              endedAt: event.endedAt ?? undefined,
+            }}
+            onSubmit={handleSubmit}
+          />
 
-      <button type="button" onClick={() => setIsDeleteDialogOpen(true)}>
-        {t('sleep.edit.deleteButton')}
-      </button>
-      <ConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        title={t('sleep.edit.deleteDialog.title')}
-        description={t('sleep.edit.deleteDialog.description')}
-        confirmLabel={t('sleep.edit.deleteDialog.confirmButton')}
-        cancelLabel={t('sleep.edit.deleteDialog.cancelButton')}
-        onConfirm={() => deleteMutation.mutate()}
-        onCancel={() => setIsDeleteDialogOpen(false)}
-        isConfirming={deleteMutation.isPending}
-      />
-      {deleteMutation.isError && (
-        <ErrorMessage message={t(mapSleepError(deleteMutation.error, 'delete'))} />
-      )}
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            {t('sleep.edit.deleteButton')}
+          </Button>
+          <ConfirmDialog
+            isOpen={isDeleteDialogOpen}
+            title={t('sleep.edit.deleteDialog.title')}
+            description={t('sleep.edit.deleteDialog.description')}
+            confirmLabel={t('sleep.edit.deleteDialog.confirmButton')}
+            cancelLabel={t('sleep.edit.deleteDialog.cancelButton')}
+            onConfirm={() => deleteMutation.mutate()}
+            onCancel={() => setIsDeleteDialogOpen(false)}
+            isConfirming={deleteMutation.isPending}
+          />
+          {deleteMutation.isError && (
+            <ErrorMessage message={t(mapSleepError(deleteMutation.error, 'delete'))} />
+          )}
+        </Card.Body>
+      </Card>
     </section>
   );
 }

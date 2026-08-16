@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { CreateSleepEventInput } from '../api/sleep-api';
 import { mapSleepError, type SleepErrorKey } from '../sleep/mapSleepError';
 import { ErrorMessage } from './ErrorMessage';
+import { Button, Input } from './ui';
 
 /** `<input type="datetime-local">` max attribute + the JS not-in-the-future check. */
 function nowAsDatetimeLocalValue(): string {
@@ -148,57 +149,45 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
         : 'sleep.form.saveButton';
 
   return (
-    <form className="sleep-event-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
-      <div className="sleep-event-form__field">
-        <label htmlFor="sleep-occurred-at">{t('sleep.fields.occurredAtLabel')}</label>
-        <input
-          id="sleep-occurred-at"
-          type="datetime-local"
-          required
-          max={nowAsDatetimeLocalValue()}
-          value={occurredAt}
-          onChange={(event) => {
-            setOccurredAt(event.target.value);
-            clearFieldError('occurredAt');
-          }}
-          aria-invalid={!!fieldErrorKeys.occurredAt}
-          aria-describedby={fieldErrorKeys.occurredAt ? 'sleep-occurred-at-error' : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrorKeys.occurredAt && (
-          <div id="sleep-occurred-at-error">
-            <ErrorMessage message={t(fieldErrorKeys.occurredAt)} />
-          </div>
-        )}
-      </div>
+    <form
+      className="flex w-full flex-col gap-4"
+      noValidate
+      onSubmit={(event) => void handleSubmit(event)}
+    >
+      <Input
+        id="sleep-occurred-at"
+        label={t('sleep.fields.occurredAtLabel')}
+        type="datetime-local"
+        required
+        max={nowAsDatetimeLocalValue()}
+        value={occurredAt}
+        onChange={(event) => {
+          setOccurredAt(event.target.value);
+          clearFieldError('occurredAt');
+        }}
+        error={fieldErrorKeys.occurredAt ? t(fieldErrorKeys.occurredAt) : undefined}
+        disabled={isSubmitting}
+      />
 
-      <div className="sleep-event-form__field">
-        <label htmlFor="sleep-ended-at">{t('sleep.fields.endedAtLabel')}</label>
-        <input
-          id="sleep-ended-at"
-          type="datetime-local"
-          max={nowAsDatetimeLocalValue()}
-          value={endedAt}
-          onChange={(event) => {
-            setEndedAt(event.target.value);
-            clearFieldError('endedAt');
-          }}
-          aria-invalid={!!fieldErrorKeys.endedAt}
-          aria-describedby={fieldErrorKeys.endedAt ? 'sleep-ended-at-error' : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrorKeys.endedAt && (
-          <div id="sleep-ended-at-error">
-            <ErrorMessage message={t(fieldErrorKeys.endedAt)} />
-          </div>
-        )}
-      </div>
+      <Input
+        id="sleep-ended-at"
+        label={t('sleep.fields.endedAtLabel')}
+        type="datetime-local"
+        max={nowAsDatetimeLocalValue()}
+        value={endedAt}
+        onChange={(event) => {
+          setEndedAt(event.target.value);
+          clearFieldError('endedAt');
+        }}
+        error={fieldErrorKeys.endedAt ? t(fieldErrorKeys.endedAt) : undefined}
+        disabled={isSubmitting}
+      />
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <button type="submit" disabled={isSubmitting}>
+      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
         {t(submitButtonTextKey)}
-      </button>
+      </Button>
     </form>
   );
 }

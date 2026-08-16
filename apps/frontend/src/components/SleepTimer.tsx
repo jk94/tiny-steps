@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { stopSleepTimerOptimistic } from '../api/sleep-api';
 import type { SleepEventSummary } from '../api/sleep-api';
+import { Badge, Button, Card } from './ui';
 
 const TICK_INTERVAL_MS = 1000;
 
@@ -60,12 +61,23 @@ export function SleepTimer({ householdId, childId, event }: SleepTimerProps) {
   });
 
   return (
-    <section>
-      <h2>{t('sleep.timer.title')}</h2>
-      <p role="timer">{formatElapsed(elapsedSeconds)}</p>
-      <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-        {t(mutation.isPending ? 'sleep.timer.stopButtonPending' : 'sleep.timer.stopButton')}
-      </button>
-    </section>
+    <Card>
+      <Card.Body className="flex flex-col items-center gap-3 py-8">
+        <Badge variant="sleep" className="text-sm">
+          {t('sleep.timer.title')}
+        </Badge>
+        <p role="timer" className="text-4xl font-extrabold tabular-nums text-foreground">
+          {formatElapsed(elapsedSeconds)}
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          isLoading={mutation.isPending}
+          onClick={() => mutation.mutate()}
+        >
+          {t(mutation.isPending ? 'sleep.timer.stopButtonPending' : 'sleep.timer.stopButton')}
+        </Button>
+      </Card.Body>
+    </Card>
   );
 }
