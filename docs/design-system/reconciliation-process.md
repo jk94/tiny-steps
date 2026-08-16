@@ -47,3 +47,5 @@ checklist** (per the Phase 6 roadmap's own suggestion).
 - [ ] `bun run format:check`
 - [ ] `bun run --cwd apps/frontend test`
 - [ ] `bun run --cwd apps/frontend build-storybook`
+- [ ] `bun run --cwd apps/frontend build` (`tsc -b && vite build`) — catches type errors in
+      `*.stories.tsx`/`*.spec.tsx` files that `test`/`build-storybook` alone can miss.
