@@ -1,30 +1,37 @@
 /* GENERATED FILE — do not edit by hand. Run 'bun run design-tokens:build' to regenerate. Source: design-system/tokens/*.json */
 
 :root {
-  /* Color (light / default) */
-  --color-background: #ffffff;
-  --color-foreground: #1f2933;
-  --color-primary: #4f46e5;
-  --color-primary-foreground: #ffffff;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-success: #16a34a;
-  --color-success-foreground: #ffffff;
-  --color-warning: #d97706;
-  --color-warning-foreground: #ffffff;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-border: #e2e8f0;
-  --color-ring: #4f46e5;
-  --color-feeding: #f59e0b;
-  --color-feeding-breast: #ec4899;
-  --color-feeding-bottle: #3b82f6;
-  --color-feeding-solid: #f97316;
-  --color-sleep: #8b5cf6;
-  --color-diaper: #0d9488;
-  --color-diaper-pee: #eab308;
-  --color-diaper-stool: #a16207;
-  --color-diaper-both: #0d9488;
+  /* Color (light / default). Declared under an `--rt-color-*` (runtime
+     token) name distinct from the `--color-*` names Tailwind's `@theme`
+     generates below — referencing the SAME name from both sides would make
+     Tailwind's own `:root,:host` companion declaration for `--color-*` a
+     self-reference (`--color-x: var(--color-x)`), which is invalid at
+     computed-value time and resolves to nothing. See the Tailwind docs
+     "Referencing other variables with @theme inline" example, which uses
+     this same distinct-name pattern. */
+  --rt-color-background: #ffffff;
+  --rt-color-foreground: #1f2933;
+  --rt-color-primary: #4f46e5;
+  --rt-color-primary-foreground: #ffffff;
+  --rt-color-muted: #f1f5f9;
+  --rt-color-muted-foreground: #64748b;
+  --rt-color-success: #16a34a;
+  --rt-color-success-foreground: #ffffff;
+  --rt-color-warning: #d97706;
+  --rt-color-warning-foreground: #ffffff;
+  --rt-color-destructive: #dc2626;
+  --rt-color-destructive-foreground: #ffffff;
+  --rt-color-border: #e2e8f0;
+  --rt-color-ring: #4f46e5;
+  --rt-color-feeding: #f59e0b;
+  --rt-color-feeding-breast: #ec4899;
+  --rt-color-feeding-bottle: #3b82f6;
+  --rt-color-feeding-solid: #f97316;
+  --rt-color-sleep: #8b5cf6;
+  --rt-color-diaper: #0d9488;
+  --rt-color-diaper-pee: #eab308;
+  --rt-color-diaper-stool: #a16207;
+  --rt-color-diaper-both: #0d9488;
 
   /* Breakpoints */
   --breakpoint-sm: 480px;
@@ -78,101 +85,101 @@
 /* System-preference dark mode (opt out per-subtree with [data-theme='light']). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-background: #0f172a;
-    --color-foreground: #e2e8f0;
-    --color-primary: #818cf8;
-    --color-primary-foreground: #0f172a;
-    --color-muted: #1e293b;
-    --color-muted-foreground: #94a3b8;
-    --color-success: #4ade80;
-    --color-success-foreground: #052e16;
-    --color-warning: #fbbf24;
-    --color-warning-foreground: #451a03;
-    --color-destructive: #f87171;
-    --color-destructive-foreground: #450a0a;
-    --color-border: #334155;
-    --color-ring: #818cf8;
-    --color-feeding: #fbbf24;
-    --color-feeding-breast: #f472b6;
-    --color-feeding-bottle: #60a5fa;
-    --color-feeding-solid: #fb923c;
-    --color-sleep: #a78bfa;
-    --color-diaper: #2dd4bf;
-    --color-diaper-pee: #facc15;
-    --color-diaper-stool: #d0a15a;
-    --color-diaper-both: #2dd4bf;
+    --rt-color-background: #0f172a;
+    --rt-color-foreground: #e2e8f0;
+    --rt-color-primary: #818cf8;
+    --rt-color-primary-foreground: #0f172a;
+    --rt-color-muted: #1e293b;
+    --rt-color-muted-foreground: #94a3b8;
+    --rt-color-success: #4ade80;
+    --rt-color-success-foreground: #052e16;
+    --rt-color-warning: #fbbf24;
+    --rt-color-warning-foreground: #451a03;
+    --rt-color-destructive: #f87171;
+    --rt-color-destructive-foreground: #450a0a;
+    --rt-color-border: #334155;
+    --rt-color-ring: #818cf8;
+    --rt-color-feeding: #fbbf24;
+    --rt-color-feeding-breast: #f472b6;
+    --rt-color-feeding-bottle: #60a5fa;
+    --rt-color-feeding-solid: #fb923c;
+    --rt-color-sleep: #a78bfa;
+    --rt-color-diaper: #2dd4bf;
+    --rt-color-diaper-pee: #facc15;
+    --rt-color-diaper-stool: #d0a15a;
+    --rt-color-diaper-both: #2dd4bf;
   }
 }
 
 /* Explicit override hook (no theme-toggle UI in M1 — just the CSS mechanism). */
 :root[data-theme='dark'] {
-  --color-background: #0f172a;
-  --color-foreground: #e2e8f0;
-  --color-primary: #818cf8;
-  --color-primary-foreground: #0f172a;
-  --color-muted: #1e293b;
-  --color-muted-foreground: #94a3b8;
-  --color-success: #4ade80;
-  --color-success-foreground: #052e16;
-  --color-warning: #fbbf24;
-  --color-warning-foreground: #451a03;
-  --color-destructive: #f87171;
-  --color-destructive-foreground: #450a0a;
-  --color-border: #334155;
-  --color-ring: #818cf8;
-  --color-feeding: #fbbf24;
-  --color-feeding-breast: #f472b6;
-  --color-feeding-bottle: #60a5fa;
-  --color-feeding-solid: #fb923c;
-  --color-sleep: #a78bfa;
-  --color-diaper: #2dd4bf;
-  --color-diaper-pee: #facc15;
-  --color-diaper-stool: #d0a15a;
-  --color-diaper-both: #2dd4bf;
+  --rt-color-background: #0f172a;
+  --rt-color-foreground: #e2e8f0;
+  --rt-color-primary: #818cf8;
+  --rt-color-primary-foreground: #0f172a;
+  --rt-color-muted: #1e293b;
+  --rt-color-muted-foreground: #94a3b8;
+  --rt-color-success: #4ade80;
+  --rt-color-success-foreground: #052e16;
+  --rt-color-warning: #fbbf24;
+  --rt-color-warning-foreground: #451a03;
+  --rt-color-destructive: #f87171;
+  --rt-color-destructive-foreground: #450a0a;
+  --rt-color-border: #334155;
+  --rt-color-ring: #818cf8;
+  --rt-color-feeding: #fbbf24;
+  --rt-color-feeding-breast: #f472b6;
+  --rt-color-feeding-bottle: #60a5fa;
+  --rt-color-feeding-solid: #fb923c;
+  --rt-color-sleep: #a78bfa;
+  --rt-color-diaper: #2dd4bf;
+  --rt-color-diaper-pee: #facc15;
+  --rt-color-diaper-stool: #d0a15a;
+  --rt-color-diaper-both: #2dd4bf;
 }
 
 @theme inline {
   /* Colors */
-  --color-background: var(--color-background);
-  --color-foreground: var(--color-foreground);
-  --color-primary: var(--color-primary);
-  --color-primary-foreground: var(--color-primary-foreground);
-  --color-muted: var(--color-muted);
-  --color-muted-foreground: var(--color-muted-foreground);
-  --color-success: var(--color-success);
-  --color-success-foreground: var(--color-success-foreground);
-  --color-warning: var(--color-warning);
-  --color-warning-foreground: var(--color-warning-foreground);
-  --color-destructive: var(--color-destructive);
-  --color-destructive-foreground: var(--color-destructive-foreground);
-  --color-border: var(--color-border);
-  --color-ring: var(--color-ring);
-  --color-feeding: var(--color-feeding);
-  --color-feeding-breast: var(--color-feeding-breast);
-  --color-feeding-bottle: var(--color-feeding-bottle);
-  --color-feeding-solid: var(--color-feeding-solid);
-  --color-sleep: var(--color-sleep);
-  --color-diaper: var(--color-diaper);
-  --color-diaper-pee: var(--color-diaper-pee);
-  --color-diaper-stool: var(--color-diaper-stool);
-  --color-diaper-both: var(--color-diaper-both);
+  --color-background: var(--rt-color-background);
+  --color-foreground: var(--rt-color-foreground);
+  --color-primary: var(--rt-color-primary);
+  --color-primary-foreground: var(--rt-color-primary-foreground);
+  --color-muted: var(--rt-color-muted);
+  --color-muted-foreground: var(--rt-color-muted-foreground);
+  --color-success: var(--rt-color-success);
+  --color-success-foreground: var(--rt-color-success-foreground);
+  --color-warning: var(--rt-color-warning);
+  --color-warning-foreground: var(--rt-color-warning-foreground);
+  --color-destructive: var(--rt-color-destructive);
+  --color-destructive-foreground: var(--rt-color-destructive-foreground);
+  --color-border: var(--rt-color-border);
+  --color-ring: var(--rt-color-ring);
+  --color-feeding: var(--rt-color-feeding);
+  --color-feeding-breast: var(--rt-color-feeding-breast);
+  --color-feeding-bottle: var(--rt-color-feeding-bottle);
+  --color-feeding-solid: var(--rt-color-feeding-solid);
+  --color-sleep: var(--rt-color-sleep);
+  --color-diaper: var(--rt-color-diaper);
+  --color-diaper-pee: var(--rt-color-diaper-pee);
+  --color-diaper-stool: var(--rt-color-diaper-stool);
+  --color-diaper-both: var(--rt-color-diaper-both);
   /* Breakpoints (literal — media queries cannot read a CSS variable) */
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
-  /* Spacing */
-  --spacing-0: var(--spacing-0);
-  --spacing-1: var(--spacing-1);
-  --spacing-2: var(--spacing-2);
-  --spacing-3: var(--spacing-3);
-  --spacing-4: var(--spacing-4);
-  --spacing-5: var(--spacing-5);
-  --spacing-6: var(--spacing-6);
-  --spacing-8: var(--spacing-8);
-  --spacing-10: var(--spacing-10);
-  --spacing-12: var(--spacing-12);
-  --spacing-16: var(--spacing-16);
+  /* Spacing (literal — no runtime override exists to reference) */
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
   /* Typography */
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);
@@ -186,17 +193,17 @@
   --leading-tight: var(--line-height-tight);
   --leading-normal: var(--line-height-normal);
   --leading-relaxed: var(--line-height-relaxed);
-  --font-weight-normal: var(--font-weight-normal);
-  --font-weight-medium: var(--font-weight-medium);
-  --font-weight-semibold: var(--font-weight-semibold);
-  --font-weight-bold: var(--font-weight-bold);
-  /* Radii */
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-full: var(--radius-full);
-  /* Shadows */
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  /* Radii (literal — no runtime override exists to reference) */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+  /* Shadows (literal — no runtime override exists to reference) */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }

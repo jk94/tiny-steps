@@ -55,8 +55,15 @@ function cssVars(prefix: string, record: ScaleTokens): string[] {
 
 function buildCss(): string {
   const rootLines: string[] = [
-    '  /* Color (light / default) */',
-    ...colorNames.map((name) => `  --color-${name}: ${color[name].light};`),
+    '  /* Color (light / default). Declared under an `--rt-color-*` (runtime',
+    "     token) name distinct from the `--color-*` names Tailwind's `@theme`",
+    '     generates below — referencing the SAME name from both sides would make',
+    "     Tailwind's own `:root,:host` companion declaration for `--color-*` a",
+    '     self-reference (`--color-x: var(--color-x)`), which is invalid at',
+    '     computed-value time and resolves to nothing. See the Tailwind docs',
+    '     "Referencing other variables with @theme inline" example, which uses',
+    '     this same distinct-name pattern. */',
+    ...colorNames.map((name) => `  --rt-color-${name}: ${color[name].light};`),
     '',
     '  /* Breakpoints */',
     ...cssVars('breakpoint', breakpoints),
@@ -77,23 +84,29 @@ function buildCss(): string {
     ...cssVars('shadow', shadows),
   ];
 
-  const darkColorLines = colorNames.map((name) => `    --color-${name}: ${color[name].dark};`);
-  const darkOverrideLines = colorNames.map((name) => `  --color-${name}: ${color[name].dark};`);
+  const darkColorLines = colorNames.map((name) => `    --rt-color-${name}: ${color[name].dark};`);
+  const darkOverrideLines = colorNames.map((name) => `  --rt-color-${name}: ${color[name].dark};`);
 
   // `@theme inline` maps our runtime custom properties into Tailwind v4's
   // utility namespaces (see ADR-0013). `inline` means Tailwind substitutes the
   // `var(...)` reference into generated utilities instead of re-emitting the
   // variable to `:root`, so our own `:root`/dark-mode definitions above stay
-  // the single source of the value (no circular self-definition). Breakpoints
-  // are the one exception: media-query conditions can't read a CSS variable, so
-  // they carry literal values here.
+  // the single source of the value. Colors reference the renamed `--rt-color-*`
+  // runtime variables above (see the comment on `rootLines`) — same name on
+  // both sides would make Tailwind's own `:root,:host` companion declaration
+  // self-referencing and invalid. Spacing/radii/shadows/font-weight have no
+  // runtime-varying override (unlike color, nothing swaps these at runtime),
+  // so they carry literal values directly — the same self-reference risk would
+  // otherwise apply since those don't need a distinct raw/theme name split,
+  // just no var() indirection at all. Breakpoints are the other literal
+  // exception: media-query conditions can't read a CSS variable anyway.
   const themeLines: string[] = [
     '  /* Colors */',
-    ...colorNames.map((name) => `  --color-${name}: var(--color-${name});`),
+    ...colorNames.map((name) => `  --color-${name}: var(--rt-color-${name});`),
     '  /* Breakpoints (literal — media queries cannot read a CSS variable) */',
     ...Object.entries(breakpoints).map(([key, value]) => `  --breakpoint-${key}: ${value};`),
-    '  /* Spacing */',
-    ...Object.keys(spacing).map((key) => `  --spacing-${key}: var(--spacing-${key});`),
+    '  /* Spacing (literal — no runtime override exists to reference) */',
+    ...Object.entries(spacing).map(([key, value]) => `  --spacing-${key}: ${value};`),
     '  /* Typography */',
     ...Object.keys(typography.fontFamily).map(
       (key) => `  --font-${key}: var(--font-family-${key});`,
@@ -102,13 +115,13 @@ function buildCss(): string {
     ...Object.keys(typography.lineHeight).map(
       (key) => `  --leading-${key}: var(--line-height-${key});`,
     ),
-    ...Object.keys(typography.fontWeight).map(
-      (key) => `  --font-weight-${key}: var(--font-weight-${key});`,
+    ...Object.entries(typography.fontWeight).map(
+      ([key, value]) => `  --font-weight-${key}: ${value};`,
     ),
-    '  /* Radii */',
-    ...Object.keys(radii).map((key) => `  --radius-${key}: var(--radius-${key});`),
-    '  /* Shadows */',
-    ...Object.keys(shadows).map((key) => `  --shadow-${key}: var(--shadow-${key});`),
+    '  /* Radii (literal — no runtime override exists to reference) */',
+    ...Object.entries(radii).map(([key, value]) => `  --radius-${key}: ${value};`),
+    '  /* Shadows (literal — no runtime override exists to reference) */',
+    ...Object.entries(shadows).map(([key, value]) => `  --shadow-${key}: ${value};`),
   ];
 
   return [
