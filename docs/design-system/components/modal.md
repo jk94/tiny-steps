@@ -20,7 +20,7 @@ slot-based component built on the native `<dialog>` element.
 | Prop              | Type                        | Default | Description                                     |
 | ----------------- | --------------------------- | ------- | ----------------------------------------------- |
 | `isOpen`          | `boolean` (required)        | —       | Controlled open state.                          |
-| `onOpenChange`    | `(open: boolean) => void`   | —       | Called with `false` on close (✕, ESC, backdrop-driven `close`). |
+| `onOpenChange`    | `(open: boolean) => void`   | —       | Called with `false` on close (✕ or ESC). No backdrop-click dismissal — matching `ConfirmDialog`'s existing native-`<dialog>` behavior, the backdrop is not interactive. |
 | `aria-label`      | `string`                    | —       | Accessible name when no header id is referenced. |
 | `aria-labelledby` | `string`                    | —       | Id of the header element naming the dialog.     |
 | `className`       | `string`                    | —       | Merged onto the `<dialog>`.                     |
