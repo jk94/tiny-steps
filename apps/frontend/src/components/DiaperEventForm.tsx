@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreateDiaperEventInput, DiaperType } from '../api/diaper-api';
 import { mapDiaperError, type DiaperErrorKey } from '../diaper/mapDiaperError';
 import { ErrorMessage } from './ErrorMessage';
+import { Button, Input, Select } from './ui';
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -68,6 +69,8 @@ export interface DiaperEventFormProps {
  */
 export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFormProps) {
   const { t } = useTranslation();
+  const noteId = useId();
+  const noteErrorId = `${noteId}-error`;
   const [diaperType, setDiaperType] = useState<DiaperType | ''>(initialValues?.diaperType ?? '');
   const [occurredAt, setOccurredAt] = useState(
     initialValues?.occurredAt ? isoToDatetimeLocalValue(initialValues.occurredAt) : '',
@@ -148,62 +151,52 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
         : 'diaper.form.saveButton';
 
   return (
-    <form className="diaper-event-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
-      <div className="diaper-event-form__field">
-        <label htmlFor="diaper-type">{t('diaper.fields.diaperTypeLabel')}</label>
-        <select
-          id="diaper-type"
-          required
-          value={diaperType}
-          disabled={isSubmitting}
-          onChange={(event) => {
-            setDiaperType(event.target.value as DiaperType);
-            clearFieldError('diaperType');
-          }}
-          aria-invalid={!!fieldErrorKeys.diaperType}
-          aria-describedby={fieldErrorKeys.diaperType ? 'diaper-type-error' : undefined}
-        >
-          <option value="" disabled>
-            {t('diaper.fields.diaperTypePlaceholder')}
-          </option>
-          <option value="PEE">{t('diaper.fields.diaperTypeOptionPee')}</option>
-          <option value="STOOL">{t('diaper.fields.diaperTypeOptionStool')}</option>
-          <option value="BOTH">{t('diaper.fields.diaperTypeOptionBoth')}</option>
-        </select>
-        {fieldErrorKeys.diaperType && (
-          <div id="diaper-type-error">
-            <ErrorMessage message={t(fieldErrorKeys.diaperType)} />
-          </div>
-        )}
-      </div>
+    <form
+      className="flex w-full flex-col gap-4"
+      noValidate
+      onSubmit={(event) => void handleSubmit(event)}
+    >
+      <Select
+        id="diaper-type"
+        label={t('diaper.fields.diaperTypeLabel')}
+        required
+        value={diaperType}
+        disabled={isSubmitting}
+        onChange={(event) => {
+          setDiaperType(event.target.value as DiaperType);
+          clearFieldError('diaperType');
+        }}
+        error={fieldErrorKeys.diaperType ? t(fieldErrorKeys.diaperType) : undefined}
+      >
+        <option value="" disabled>
+          {t('diaper.fields.diaperTypePlaceholder')}
+        </option>
+        <option value="PEE">{t('diaper.fields.diaperTypeOptionPee')}</option>
+        <option value="STOOL">{t('diaper.fields.diaperTypeOptionStool')}</option>
+        <option value="BOTH">{t('diaper.fields.diaperTypeOptionBoth')}</option>
+      </Select>
 
-      <div className="diaper-event-form__field">
-        <label htmlFor="diaper-occurred-at">{t('diaper.fields.occurredAtLabel')}</label>
-        <input
-          id="diaper-occurred-at"
-          type="datetime-local"
-          required
-          max={nowAsDatetimeLocalValue()}
-          value={occurredAt}
-          onChange={(event) => {
-            setOccurredAt(event.target.value);
-            clearFieldError('occurredAt');
-          }}
-          aria-invalid={!!fieldErrorKeys.occurredAt}
-          aria-describedby={fieldErrorKeys.occurredAt ? 'diaper-occurred-at-error' : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrorKeys.occurredAt && (
-          <div id="diaper-occurred-at-error">
-            <ErrorMessage message={t(fieldErrorKeys.occurredAt)} />
-          </div>
-        )}
-      </div>
+      <Input
+        id="diaper-occurred-at"
+        label={t('diaper.fields.occurredAtLabel')}
+        type="datetime-local"
+        required
+        max={nowAsDatetimeLocalValue()}
+        value={occurredAt}
+        onChange={(event) => {
+          setOccurredAt(event.target.value);
+          clearFieldError('occurredAt');
+        }}
+        error={fieldErrorKeys.occurredAt ? t(fieldErrorKeys.occurredAt) : undefined}
+        disabled={isSubmitting}
+      />
 
-      <div className="diaper-event-form__field">
-        <label htmlFor="diaper-note">{t('diaper.fields.noteLabel')}</label>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={noteId} className="text-sm font-medium text-foreground">
+          {t('diaper.fields.noteLabel')}
+        </label>
         <textarea
-          id="diaper-note"
+          id={noteId}
           maxLength={MAX_NOTE_LENGTH}
           value={note}
           onChange={(event) => {
@@ -211,11 +204,13 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
             clearFieldError('note');
           }}
           aria-invalid={!!fieldErrorKeys.note}
-          aria-describedby={fieldErrorKeys.note ? 'diaper-note-error' : undefined}
+          aria-describedby={fieldErrorKeys.note ? noteErrorId : undefined}
           disabled={isSubmitting}
+          rows={3}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         />
         {fieldErrorKeys.note && (
-          <div id="diaper-note-error">
+          <div id={noteErrorId}>
             <ErrorMessage message={t(fieldErrorKeys.note)} />
           </div>
         )}
@@ -223,9 +218,9 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <button type="submit" disabled={isSubmitting}>
+      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
         {t(submitButtonTextKey)}
-      </button>
+      </Button>
     </form>
   );
 }

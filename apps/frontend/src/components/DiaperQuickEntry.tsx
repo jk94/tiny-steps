@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { mapDiaperError } from '../diaper/mapDiaperError';
 import { queryClient } from '../lib/query-client';
 import { ErrorMessage } from './ErrorMessage';
+import { Button } from './ui';
 
 export interface DiaperQuickEntryProps {
   householdId: string;
@@ -40,30 +41,38 @@ export function DiaperQuickEntry({ householdId, childId }: DiaperQuickEntryProps
   const create = (input: CreateDiaperEventInput) => mutation.mutate(input);
 
   return (
-    <section>
-      <h2>{t('diaper.quickEntry.title')}</h2>
-      <div>
-        <button
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+        {t('diaper.quickEntry.title')}
+      </h2>
+      <div className="grid grid-cols-3 gap-2">
+        <Button
           type="button"
+          variant="secondary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => create({ diaperType: 'PEE' })}
         >
           {t('diaper.quickEntry.peeButton')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => create({ diaperType: 'STOOL' })}
         >
           {t('diaper.quickEntry.stoolButton')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="primary"
+          className="h-14"
           disabled={mutation.isPending}
           onClick={() => create({ diaperType: 'BOTH' })}
         >
           {t('diaper.quickEntry.bothButton')}
-        </button>
+        </Button>
       </div>
 
       {mutation.isError && <ErrorMessage message={t(mapDiaperError(mutation.error, 'create'))} />}
