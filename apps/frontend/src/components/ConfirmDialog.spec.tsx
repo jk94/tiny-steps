@@ -1,23 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConfirmDialog } from './ConfirmDialog';
-
-// jsdom doesn't implement `HTMLDialogElement.showModal()`/`.close()` (see
-// https://github.com/jsdom/jsdom/issues/3294) — polyfill just enough of the
-// native behaviour (toggling the reflected `open` attribute, and `close()`
-// firing a `close` event) for these tests to exercise the same
-// showModal/close/close-event wiring `ConfirmDialog` relies on in real
-// browsers.
-beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
-    this.setAttribute('open', '');
-  });
-  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-    this.removeAttribute('open');
-    this.dispatchEvent(new Event('close'));
-  });
-});
 
 const baseProps = {
   title: 'Delete child profile?',
@@ -29,28 +13,15 @@ const baseProps = {
 };
 
 describe('ConfirmDialog', () => {
-  it('calls showModal() when isOpen becomes true', () => {
-    const { rerender } = render(<ConfirmDialog {...baseProps} isOpen={false} />);
-    expect(HTMLDialogElement.prototype.showModal).not.toHaveBeenCalled();
-
-    rerender(<ConfirmDialog {...baseProps} isOpen={true} />);
-
-    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalledTimes(1);
+  it('renders nothing while closed', () => {
+    render(<ConfirmDialog {...baseProps} isOpen={false} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('calls close() when isOpen becomes false after being open', () => {
-    const { rerender } = render(<ConfirmDialog {...baseProps} isOpen={true} />);
-    expect(HTMLDialogElement.prototype.close).not.toHaveBeenCalled();
-
-    rerender(<ConfirmDialog {...baseProps} isOpen={false} />);
-
-    expect(HTMLDialogElement.prototype.close).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders the title, description, and both buttons', () => {
+  it('renders the title, description, and both buttons when open', () => {
     render(<ConfirmDialog {...baseProps} isOpen={true} />);
 
-    expect(screen.getByText('Delete child profile?')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Delete child profile?');
     expect(screen.getByText("This action can't be undone.")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
@@ -76,45 +47,57 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onCancel when the dialog fires its native close event (e.g. ESC)', () => {
+  it('calls onCancel on ESC, so ESC behaves like clicking "Cancel"', async () => {
     const onCancel = vi.fn();
+    const user = userEvent.setup();
     render(<ConfirmDialog {...baseProps} isOpen={true} onCancel={onCancel} />);
 
-    const dialog = document.querySelector('dialog')!;
-    dialog.dispatchEvent(new Event('close'));
+    await user.keyboard('{Escape}');
 
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('prevents the native cancel event (ESC) from closing the dialog while isConfirming is true', () => {
+  it('calls onCancel when the shared close (✕) button is clicked', async () => {
     const onCancel = vi.fn();
+    const user = userEvent.setup();
+    render(<ConfirmDialog {...baseProps} isOpen={true} onCancel={onCancel} />);
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores ESC while isConfirming, leaving the dialog open', async () => {
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
     render(<ConfirmDialog {...baseProps} isOpen={true} onCancel={onCancel} isConfirming={true} />);
 
-    const dialog = document.querySelector('dialog')!;
-    const cancelEvent = new Event('cancel', { cancelable: true });
-    dialog.dispatchEvent(cancelEvent);
+    await user.keyboard('{Escape}');
 
-    expect(cancelEvent.defaultPrevented).toBe(true);
     expect(onCancel).not.toHaveBeenCalled();
-    expect(dialog).toHaveAttribute('open');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('does not prevent the native cancel event (ESC) when isConfirming is false, so the ensuing close still calls onCancel', () => {
+  it('ignores the close (✕) button while isConfirming, for the same reason as ESC', async () => {
     const onCancel = vi.fn();
-    render(<ConfirmDialog {...baseProps} isOpen={true} onCancel={onCancel} isConfirming={false} />);
+    const user = userEvent.setup();
+    render(<ConfirmDialog {...baseProps} isOpen={true} onCancel={onCancel} isConfirming={true} />);
 
-    const dialog = document.querySelector('dialog')!;
-    const cancelEvent = new Event('cancel', { cancelable: true });
-    dialog.dispatchEvent(cancelEvent);
-    expect(cancelEvent.defaultPrevented).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
 
-    // In a real browser, an unprevented `cancel` event is immediately
-    // followed by the browser's own `close()` call (and its `close` event)
-    // — jsdom doesn't wire that chain up automatically, so trigger it
-    // explicitly here to cover the regression: ESC still behaves like
-    // clicking "Cancel" when no confirm action is in flight.
-    dialog.dispatchEvent(new Event('close'));
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('does not dismiss when the backdrop is clicked', async () => {
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
+    render(<ConfirmDialog {...baseProps} isOpen={true} onCancel={onCancel} />);
+
+    await user.click(document.querySelector('[data-slot="dialog-overlay"]') as Element);
+
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('disables both buttons while isConfirming is true', () => {
