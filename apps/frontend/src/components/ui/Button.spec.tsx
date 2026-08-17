@@ -51,4 +51,33 @@ describe('Button', () => {
     render(<Button ref={ref}>Save</Button>);
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
+
+  describe('asChild', () => {
+    it('renders the child element with the button styling merged in', () => {
+      render(
+        <Button asChild variant="ghost" className="custom">
+          <a href="/households">Households</a>
+        </Button>,
+      );
+
+      const link = screen.getByRole('link', { name: 'Households' });
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      expect(link).toHaveClass('custom', 'inline-flex');
+      expect(link).toHaveAttribute('data-slot', 'button');
+    });
+
+    it('mirrors the loading state onto aria-disabled, since a link ignores `disabled`', () => {
+      render(
+        <Button asChild isLoading>
+          <a href="/households">Households</a>
+        </Button>,
+      );
+
+      const link = screen.getByRole('link', { name: 'Households' });
+      expect(link).toHaveAttribute('aria-disabled', 'true');
+      expect(link).toHaveAttribute('aria-busy', 'true');
+      expect(link).not.toHaveAttribute('disabled');
+      expect(link.querySelector('svg')).not.toBeNull();
+    });
+  });
 });

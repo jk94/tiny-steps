@@ -19,6 +19,19 @@ export const Destructive: Story = { args: { variant: 'destructive' } };
 export const Loading: Story = { args: { isLoading: true } };
 export const Disabled: Story = { args: { disabled: true } };
 
+/**
+ * `asChild` renders the single child element with the button's styling and
+ * props merged in — the "link that looks like a button" case.
+ */
+export const AsChildLink: Story = {
+  args: { variant: 'secondary', asChild: true },
+  render: (args) => (
+    <Button {...args}>
+      <a href="#households">Go to households</a>
+    </Button>
+  ),
+};
+
 export const Sizes: Story = {
   render: (args) => (
     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
