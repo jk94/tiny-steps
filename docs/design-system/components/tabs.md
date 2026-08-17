@@ -3,7 +3,7 @@
 ## Purpose
 
 Switch between mutually-exclusive views within the same context (e.g. Feeding / Sleep / Diaper
-sections of a child's page) without navigating away. Hand-built on the WAI-ARIA APG tabs pattern.
+sections of a child's page) without navigating away. Implements the WAI-ARIA APG tabs pattern.
 
 ## Anatomy / sub-components
 
@@ -38,9 +38,20 @@ sections of a child's page) without navigating away. Hand-built on the WAI-ARIA 
 - `role="tablist"` › `role="tab"` › `role="tabpanel"` structure.
 - The selected tab has `aria-selected="true"`; each tab has `aria-controls` referencing its panel,
   and each panel has `aria-labelledby` referencing its tab.
-- Roving `tabindex`: only the selected tab is in the tab order (`tabindex=0`); the rest are `-1`.
+- The tab list is a **single tab stop**: pressing `Tab` enters on the selected tab, and pressing
+  `Tab` again leaves the list rather than stepping through the remaining tabs. (Radix implements
+  this by holding the tab stop on the `tablist` container and forwarding entry focus to the active
+  tab; a port to another UI technology may instead put `tabindex=0` on the selected tab and `-1` on
+  the rest — the observable keyboard behavior is what matters.)
 - Keyboard: `ArrowRight`/`ArrowLeft` move focus between tabs (wrapping) and **activate** the newly
   focused tab (automatic activation, per the APG).
+
+## Implementation note
+
+Backed by Radix UI's Tabs primitive (`Root`/`List`/`Trigger`/`Content`), which owns the roles,
+focus management and keyboard behavior above. The slot names stay `Tabs.List` / `Tabs.Tab` /
+`Tabs.Panel` (not Radix's `Trigger`/`Content`), and selected-state styling is driven off the
+`data-state="active"` attribute Radix emits.
 
 ## Icon / illustration suggestion
 

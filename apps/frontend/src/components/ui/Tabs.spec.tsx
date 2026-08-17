@@ -5,16 +5,19 @@ import { Tabs } from './Tabs';
 
 function renderTabs() {
   return render(
-    <Tabs defaultValue="feeding">
-      <Tabs.List>
-        <Tabs.Tab value="feeding">Feeding</Tabs.Tab>
-        <Tabs.Tab value="sleep">Sleep</Tabs.Tab>
-        <Tabs.Tab value="diaper">Diaper</Tabs.Tab>
-      </Tabs.List>
-      <Tabs.Panel value="feeding">Feeding content</Tabs.Panel>
-      <Tabs.Panel value="sleep">Sleep content</Tabs.Panel>
-      <Tabs.Panel value="diaper">Diaper content</Tabs.Panel>
-    </Tabs>,
+    <>
+      <button type="button">before</button>
+      <Tabs defaultValue="feeding">
+        <Tabs.List>
+          <Tabs.Tab value="feeding">Feeding</Tabs.Tab>
+          <Tabs.Tab value="sleep">Sleep</Tabs.Tab>
+          <Tabs.Tab value="diaper">Diaper</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="feeding">Feeding content</Tabs.Panel>
+        <Tabs.Panel value="sleep">Sleep content</Tabs.Panel>
+        <Tabs.Panel value="diaper">Diaper content</Tabs.Panel>
+      </Tabs>
+    </>,
   );
 }
 
@@ -27,10 +30,20 @@ describe('Tabs', () => {
     expect(screen.queryByText('Sleep content')).not.toBeInTheDocument();
   });
 
-  it('applies a roving tabindex (only the selected tab is tabbable)', () => {
+  it('is a single tab stop: Tab enters on the selected tab, not on every tab', async () => {
+    const user = userEvent.setup();
     renderTabs();
-    expect(screen.getByRole('tab', { name: 'Feeding' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('tab', { name: 'Sleep' })).toHaveAttribute('tabindex', '-1');
+    screen.getByRole('button', { name: 'before' }).focus();
+
+    await user.tab();
+    expect(screen.getByRole('tab', { name: 'Feeding' })).toHaveFocus();
+
+    // A second Tab leaves the tab list entirely rather than stepping through
+    // the remaining tabs (those are reached with the arrow keys instead).
+    await user.tab();
+    expect(screen.getByRole('tab', { name: 'Sleep' })).not.toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Diaper' })).not.toHaveFocus();
+    expect(screen.getByRole('tabpanel')).toHaveFocus();
   });
 
   it('switches panel when a tab is clicked', async () => {
