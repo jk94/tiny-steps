@@ -8,13 +8,7 @@ export { Select, type SelectProps } from './Select';
 export { Card, type CardProps } from './Card';
 export { Tabs, type TabsProps, type TabProps, type TabPanelProps } from './Tabs';
 export { Dialog, type DialogProps } from './Dialog';
-export {
-  Toast,
-  type ToastProps,
-  type ToastOptions,
-  type ToastRecord,
-  type ToastVariant,
-} from './Toast';
-export { ToastProvider, type ToastProviderProps } from './ToastProvider';
-export { useToast } from './useToast';
-export { type ToastContextValue } from './ToastContext';
+export { Toaster, type ToasterProps } from './Toaster';
+// Re-exported from Sonner so consumers keep importing the whole design system
+// from this one barrel rather than reaching for the library directly.
+export { toast } from 'sonner';
