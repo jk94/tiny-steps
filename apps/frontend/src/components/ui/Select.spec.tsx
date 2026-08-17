@@ -57,14 +57,27 @@ describe('Select', () => {
 
   it('marks a disabled item as unselectable', async () => {
     const onValueChange = vi.fn();
-    const user = userEvent.setup();
+    // `pointerEventsCheck` is disabled because the visual guard is a Tailwind
+    // class (`data-[disabled]:pointer-events-none`) and no stylesheet is
+    // applied in jsdom, so the check would reject the click below on styling
+    // grounds. The point of this test is the layer underneath: that the
+    // primitive ignores the interaction even if the event does arrive.
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderSelect({ onValueChange });
 
     await user.click(screen.getByRole('combobox'));
 
     const disabledOption = await screen.findByRole('option', { name: 'Solid food' });
     expect(disabledOption).toHaveAttribute('aria-disabled', 'true');
+
+    // Actually attempt the selection — asserting only that onValueChange was
+    // never called, without clicking first, would pass no matter what the
+    // component does.
+    await user.click(disabledOption);
+
     expect(onValueChange).not.toHaveBeenCalled();
+    // The listbox stays open, since nothing was selected.
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
   it('wires aria-invalid and aria-describedby when errored', () => {

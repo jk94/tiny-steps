@@ -15,9 +15,11 @@ replaced.
 
 | Export      | Shape                                              | Description                                              |
 | ----------- | -------------------------------------------------- | -------------------------------------------------------- |
-| `Toaster`   | `(props: ToasterProps) => JSX`                     | The host. Defaults to bottom-right, with a manual close button and the design tokens bridged in. |
-| `toast`     | `toast(title, options?)`                           | Neutral/informational toast.                             |
+| `Toaster`   | `(props: ToasterProps) => JSX`                     | The host. Defaults to bottom-right, follows the OS color scheme, and has a manual close button and the design tokens bridged in. |
+| `toast`     | `toast(title, options?)`                           | Neutral toast.                                            |
 |             | `toast.success(title, options?)`                   | Success variant.                                          |
+|             | `toast.info(title, options?)`                      | Informational variant.                                    |
+|             | `toast.warning(title, options?)`                   | Warning variant.                                          |
 |             | `toast.error(title, options?)`                     | Error/destructive variant.                                |
 |             | `toast.dismiss(id?)`                               | Dismiss one toast, or all of them.                        |
 
@@ -40,15 +42,29 @@ replaced.
 
 | State        | Appearance                                                                        |
 | ------------ | ---------------------------------------------------------------------------------- |
-| Info         | `popover` surface, neutral `border`-token border, no status icon.                  |
-| Success      | Same surface with a success-colored border and a check icon.                        |
-| Error        | Same surface with a destructive-colored border and an error icon.                   |
+| Neutral      | `popover` surface, neutral `border`-token border, no status icon.                  |
+| Success      | Same surface with a `success`-colored border and a check icon.                      |
+| Info         | Same surface with a `primary`-colored border and an info icon.                      |
+| Warning      | Same surface with a `warning`-colored border and a warning icon.                    |
+| Error        | Same surface with a `destructive`-colored border and an error icon.                 |
 | Hover/Focus  | The dismiss (✕) button shows hover/focus affordances; hovering pauses auto-dismiss. |
 | Auto-dismiss | Removed after `duration` ms unless `duration: Infinity`.                            |
 
-Colors are not the library's defaults: the host maps its `--normal-*` / `--success-*` / `--error-*` /
-`--warning-*` CSS custom properties onto this system's `popover`, `border`, `success`, `destructive`
-and `warning` tokens, so toasts flip with dark mode along with everything else.
+Every variant shares the same neutral surface and differs only in border color — status is signalled
+the same way as elsewhere in this system, rather than by tinting the whole background.
+
+Colors are not the library's defaults: the host maps **all five** of its variant groups
+(`--normal-*`, `--success-*`, `--info-*`, `--warning-*`, `--error-*`) onto this system's `popover`,
+`border`, `success`, `primary`, `warning` and `destructive` tokens, so toasts flip with dark mode
+along with everything else. Two host settings make that work and must be reproduced by any port:
+
+- The library gates its per-variant colors behind an opt-in "rich colors" mode; without it, every
+  variant silently renders with the neutral group and the mappings above never apply.
+- The host must follow the OS color scheme explicitly. The library's default is light-only, which
+  pins description text to a hard-coded near-black — around 1.3:1 against the dark `popover`
+  surface. (The manual `[data-theme]` override hook in `tokens.generated.css` is *not* picked up by
+  the library's OS-level detection; only `prefers-color-scheme` is. A theme-toggle UI would need to
+  drive the host's theme prop as well — there is no such UI today.)
 
 ## Accessibility
 

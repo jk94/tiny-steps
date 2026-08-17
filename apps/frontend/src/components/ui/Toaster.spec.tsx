@@ -81,7 +81,7 @@ describe('Toaster', () => {
     });
   });
 
-  it('bridges the design tokens onto Sonner’s CSS custom properties', async () => {
+  it('bridges every one of Sonner’s variant groups onto the design tokens', async () => {
     const { baseElement } = render(<Toaster />);
     // Sonner only mounts its styled container once there is something to show.
     act(() => {
@@ -90,8 +90,60 @@ describe('Toaster', () => {
     expect(await screen.findByText('Saved')).toBeInTheDocument();
 
     const style = baseElement.querySelector('[data-sonner-toaster]')?.getAttribute('style') ?? '';
-    expect(style).toContain('--normal-bg: var(--rt-color-popover)');
+    // Missing any one group would silently fall back to Sonner's own palette
+    // for that variant, ignoring both the tokens and dark mode.
+    for (const group of ['normal', 'success', 'info', 'warning', 'error']) {
+      expect(style).toContain(`--${group}-bg: var(--rt-color-popover)`);
+      expect(style).toContain(`--${group}-text: var(--rt-color-popover-foreground)`);
+    }
     expect(style).toContain('--success-border: var(--rt-color-success)');
+    expect(style).toContain('--info-border: var(--rt-color-primary)');
+    expect(style).toContain('--warning-border: var(--rt-color-warning)');
     expect(style).toContain('--error-border: var(--rt-color-destructive)');
+  });
+
+  it('follows the OS color scheme rather than Sonner’s light-only default', async () => {
+    // Sonner's default is theme="light", which pins its description text to a
+    // hard-coded near-black regardless of the OS preference — unreadable on
+    // the dark popover surface. Simulate a dark preference and assert Sonner
+    // actually switches, which only happens because theme="system" is passed.
+    const nativeMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      ...nativeMatchMedia(query),
+      matches: query.includes('dark'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    })) as typeof window.matchMedia;
+
+    try {
+      const { baseElement } = render(<Toaster />);
+      act(() => {
+        toast('Saved');
+      });
+      expect(await screen.findByText('Saved')).toBeInTheDocument();
+
+      expect(baseElement.querySelector('[data-sonner-toaster]')).toHaveAttribute(
+        'data-sonner-theme',
+        'dark',
+      );
+    } finally {
+      window.matchMedia = nativeMatchMedia;
+    }
+  });
+
+  it('enables richColors, without which the variant bridge would be inert', async () => {
+    const { baseElement } = render(<Toaster />);
+    act(() => {
+      toast.success('Saved');
+    });
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+
+    // Sonner gates its per-type colors behind [data-rich-colors=true]; without
+    // it every toast falls back to the --normal-* group and the success /
+    // info / warning / error mappings never apply.
+    expect(baseElement.querySelector('[data-rich-colors="true"]')).not.toBeNull();
   });
 });

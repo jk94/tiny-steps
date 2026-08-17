@@ -20,10 +20,24 @@ function Demo() {
         variant="secondary"
         onClick={() => toast('Heads up', { description: 'Just so you know.' })}
       >
-        Info
+        Neutral
       </Button>
       <Button onClick={() => toast.success('Saved', { description: 'Your entry was saved.' })}>
         Success
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={() => toast.info('Syncing', { description: 'Catching up on offline entries.' })}
+      >
+        Info
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={() =>
+          toast.warning('Still offline', { description: 'Entries are queued locally.' })
+        }
+      >
+        Warning
       </Button>
       <Button
         variant="destructive"

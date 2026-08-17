@@ -150,10 +150,14 @@ function SelectItem({ value, disabled, children, className }: SelectItemProps) {
  * `Tabs.Tab` naming convention) rather than raw `<option>` elements, selection
  * is reported through `onValueChange(value)` rather than a change event, and
  * the empty-value placeholder `<option>` is replaced by the `placeholder` prop.
- * The change was free at the time it was made — the component had no call
- * sites — and it buys a fully stylable, keyboard- and typeahead-navigable
- * dropdown, which the native control could not offer cross-browser
- * (the limitation previously documented in the styleguide).
+ * All three call sites — `HouseholdSwitcher`, `FeedingEventForm` and
+ * `DiaperEventForm` — were migrated along with it.
+ *
+ * What it buys: a fully stylable, keyboard- and typeahead-navigable dropdown,
+ * which the native control could not offer cross-browser (the limitation
+ * previously documented in the styleguide). What it costs: the native OS picker
+ * on mobile, including inside the Capacitor WebView — a trade-off accepted
+ * deliberately, see `docs/design-system/components/select.md`.
  */
 export const Select = Object.assign(SelectRoot, {
   Item: SelectItem,
