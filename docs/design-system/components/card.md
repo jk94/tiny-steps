@@ -14,13 +14,14 @@ ago"), list rows, or form sections. A compound component with optional Header/Bo
 | `Card.Body`   | `<div>`   | Primary content area.                               |
 | `Card.Footer` | `<div>`   | Actions/metadata, separated by a top border.        |
 
-All parts accept native `<div>` attributes and a `className` merged over the defaults.
+All parts accept native `<div>` attributes and a `className` merged over the defaults, and expose a
+`data-slot` attribute (`card` / `card-header` / `card-content` / `card-footer`) as a styling hook.
 
 ## Visual states
 
 | State   | Appearance                                                          |
 | ------- | ------------------------------------------------------------------ |
-| Default | Rounded corners, 1px border, subtle shadow, token background.      |
+| Default | Rounded corners, 1px `border` token border, subtle shadow, `card` surface with `card-foreground` text. |
 | Hover/Focus | None by default; a clickable card should wrap/associate a real control. |
 
 ## Accessibility
