@@ -14,6 +14,11 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  * `error` is set, the input gets `aria-invalid="true"` and `aria-describedby`
  * pointing at the rendered error message (itself `role="alert"`). Forwards
  * `ref` and spreads native `<input>` props.
+ *
+ * Deliberately uses a native `<label htmlFor>` rather than Radix's Label
+ * primitive: that primitive exists to make labels work for *non-native*
+ * controls, and this component wraps a real `<input>`, where `htmlFor`/`id`
+ * already provides the full association and click-to-focus behavior.
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, id, className, ...props },
@@ -24,18 +29,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const errorId = `${inputId}-error`;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div data-slot="input-field" className="flex flex-col gap-1">
       <label htmlFor={inputId} className="text-sm font-medium text-foreground">
         {label}
       </label>
       <input
         ref={ref}
         id={inputId}
+        data-slot="input"
         aria-invalid={error ? true : false}
         aria-describedby={error ? errorId : undefined}
+        // Ported from shadcn/ui's Input reference: the `input` border token
+        // (distinct from the generic `border` role), placeholder/selection
+        // colors, file-input normalization, and — instead of a JS-computed
+        // error class — an `aria-invalid:` variant, so the visual state can
+        // never drift from the announced one.
         className={cn(
-          'h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-          error && 'border-destructive',
+          'h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground file:inline-flex file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive',
           className,
         )}
         {...props}

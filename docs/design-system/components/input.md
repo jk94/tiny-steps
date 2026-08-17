@@ -20,14 +20,16 @@ entry).
 
 | State    | Appearance                                                                 |
 | -------- | -------------------------------------------------------------------------- |
-| Default  | Bordered field, background/foreground from tokens.                         |
+| Default  | Field bordered with the `input` token, `background`/`foreground` fill and text. |
 | Focus    | Visible focus ring (`ring` token).                                         |
-| Disabled | Native disabled styling (reduced affordance).                              |
-| Error    | Destructive-colored border; message text below in the destructive color.   |
+| Disabled | Reduced opacity and a not-allowed cursor.                                  |
+| Error    | Destructive-colored border (driven off `aria-invalid`, so the visual and announced states cannot drift apart); message text below in the destructive color. |
 
 ## Accessibility
 
 - `<label htmlFor>` ↔ `<input id>` association (auto-generated id via `useId` when none supplied).
+  A native `<label>` is used deliberately — a headless "Label" primitive only earns its keep for
+  non-native controls, and this component wraps a real `<input>`.
 - Error state sets `aria-invalid="true"` and `aria-describedby` referencing the message element,
   which is `role="alert"` so it is announced; without an error, `aria-invalid="false"`.
 - Never relies on placeholder as a label substitute.
