@@ -17,7 +17,7 @@ and layout shift. Used in lists/cards before data arrives (e.g. timeline rows, s
 
 | State   | Appearance                                                        |
 | ------- | ---------------------------------------------------------------- |
-| Default | Muted-background block with a subtle pulsing animation.           |
+| Default | `accent`-background block with a subtle pulsing animation.        |
 | Hover/Focus/Disabled | Not applicable — purely decorative and non-interactive. |
 
 Respect `prefers-reduced-motion` at the app level when the pulse animation is undesirable.

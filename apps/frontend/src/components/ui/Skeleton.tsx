@@ -2,7 +2,10 @@ import type { HTMLAttributes } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/cn';
 
-const skeletonVariants = cva('animate-pulse bg-muted', {
+// Base ported from shadcn/ui's Skeleton reference (`bg-accent animate-pulse
+// rounded-md`); the `shape` variant is this design system's own addition, so
+// `rect` carries shadcn's default radius and the other shapes override it.
+const skeletonVariants = cva('animate-pulse bg-accent', {
   variants: {
     shape: {
       rect: 'rounded-md',
@@ -26,6 +29,11 @@ export interface SkeletonProps
  */
 export function Skeleton({ shape, className, ...props }: SkeletonProps) {
   return (
-    <div aria-hidden="true" className={cn(skeletonVariants({ shape }), className)} {...props} />
+    <div
+      data-slot="skeleton"
+      aria-hidden="true"
+      className={cn(skeletonVariants({ shape }), className)}
+      {...props}
+    />
   );
 }

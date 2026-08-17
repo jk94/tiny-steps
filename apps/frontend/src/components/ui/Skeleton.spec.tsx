@@ -10,9 +10,15 @@ describe('Skeleton', () => {
     expect(el).not.toHaveAttribute('role');
   });
 
+  it('defaults to the rect shape', () => {
+    const { container } = render(<Skeleton />);
+    expect(container.firstChild).toHaveClass('rounded-md');
+  });
+
   it('applies the shape variant class', () => {
     const { container } = render(<Skeleton shape="circle" />);
     expect(container.firstChild).toHaveClass('rounded-full');
+    expect(container.firstChild).not.toHaveClass('rounded-md');
   });
 
   it('merges consumer sizing className', () => {
