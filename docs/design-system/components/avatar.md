@@ -22,14 +22,22 @@ child profile or the "logged by" attribution on a timeline entry.
 | --------------- | -------------------------------------------------------------------------- |
 | Default (image) | Circular, cover-cropped photo.                                             |
 | Fallback        | Circular muted background with one- or two-letter uppercase initials.      |
-| Load error      | Automatically switches from image to the initials fallback.                |
+| Loading         | The initials fallback is shown until the image has actually decoded, so there is never a broken/half-painted image flash. |
+| Load error      | Stays on the initials fallback.                                            |
 | Hover/Focus     | None — non-interactive (wrap in a button/link if interaction is required). |
+
+## Implementation note
+
+Backed by Radix UI's Avatar primitive (`Root`/`Image`/`Fallback`), which owns the image
+loading state machine: the `<img>` is only committed to the DOM once the browser reports it as
+decoded, and the fallback is rendered for every other state (`idle`/`loading`/`error`). A port to
+another UI technology should reproduce that three-state behavior, not just an `onerror` swap.
 
 ## Accessibility
 
-- With an image, renders `<img>` with `alt={name}`.
-- Without an image (or after a load error), the fallback container is `role="img"` with
-  `aria-label={name}`, so both presentations announce identically; the visible initials are
+- Once the image has loaded, renders `<img>` with `alt={name}`.
+- Before it loads, or when there is no image / it failed, the fallback container is `role="img"`
+  with `aria-label={name}`, so both presentations announce identically; the visible initials are
   `aria-hidden`.
 - Not focusable by itself.
 
