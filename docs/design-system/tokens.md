@@ -17,10 +17,18 @@ appear both here and in the Event-type table below.
 | --- | --- | --- |
 | `--color-background` | `#ffffff` | `#0f172a` |
 | `--color-foreground` | `#1f2933` | `#e2e8f0` |
+| `--color-card` | `#ffffff` | `#0f172a` |
+| `--color-card-foreground` | `#1f2933` | `#e2e8f0` |
+| `--color-popover` | `#ffffff` | `#0f172a` |
+| `--color-popover-foreground` | `#1f2933` | `#e2e8f0` |
 | `--color-primary` | `#4f46e5` | `#818cf8` |
 | `--color-primary-foreground` | `#ffffff` | `#0f172a` |
+| `--color-secondary` | `#f1f5f9` | `#1e293b` |
+| `--color-secondary-foreground` | `#1f2933` | `#e2e8f0` |
 | `--color-muted` | `#f1f5f9` | `#1e293b` |
 | `--color-muted-foreground` | `#64748b` | `#94a3b8` |
+| `--color-accent` | `#f1f5f9` | `#1e293b` |
+| `--color-accent-foreground` | `#1f2933` | `#e2e8f0` |
 | `--color-success` | `#16a34a` | `#4ade80` |
 | `--color-success-foreground` | `#ffffff` | `#052e16` |
 | `--color-warning` | `#d97706` | `#fbbf24` |
@@ -28,6 +36,7 @@ appear both here and in the Event-type table below.
 | `--color-destructive` | `#dc2626` | `#f87171` |
 | `--color-destructive-foreground` | `#ffffff` | `#450a0a` |
 | `--color-border` | `#e2e8f0` | `#334155` |
+| `--color-input` | `#e2e8f0` | `#334155` |
 | `--color-ring` | `#4f46e5` | `#818cf8` |
 | `--color-feeding` | `#f59e0b` | `#fbbf24` |
 | `--color-feeding-breast` | `#ec4899` | `#f472b6` |
