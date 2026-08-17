@@ -159,21 +159,19 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
       <Select
         id="diaper-type"
         label={t('diaper.fields.diaperTypeLabel')}
+        placeholder={t('diaper.fields.diaperTypePlaceholder')}
         required
         value={diaperType}
         disabled={isSubmitting}
-        onChange={(event) => {
-          setDiaperType(event.target.value as DiaperType);
+        onValueChange={(value) => {
+          setDiaperType(value as DiaperType);
           clearFieldError('diaperType');
         }}
         error={fieldErrorKeys.diaperType ? t(fieldErrorKeys.diaperType) : undefined}
       >
-        <option value="" disabled>
-          {t('diaper.fields.diaperTypePlaceholder')}
-        </option>
-        <option value="PEE">{t('diaper.fields.diaperTypeOptionPee')}</option>
-        <option value="STOOL">{t('diaper.fields.diaperTypeOptionStool')}</option>
-        <option value="BOTH">{t('diaper.fields.diaperTypeOptionBoth')}</option>
+        <Select.Item value="PEE">{t('diaper.fields.diaperTypeOptionPee')}</Select.Item>
+        <Select.Item value="STOOL">{t('diaper.fields.diaperTypeOptionStool')}</Select.Item>
+        <Select.Item value="BOTH">{t('diaper.fields.diaperTypeOptionBoth')}</Select.Item>
       </Select>
 
       <Input

@@ -8,10 +8,14 @@ import * as useAuthModule from '../auth/useAuth';
 import * as householdApi from '../api/household-api';
 import { queryClient } from '../lib/query-client';
 import * as useRealtimeConnectionModule from '../realtime/useRealtimeConnection';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../auth/useAuth');
 vi.mock('../api/household-api');
 vi.mock('../realtime/useRealtimeConnection');
+
+// Layout embeds HouseholdSwitcher, a Radix combobox — see the helper's doc comment.
+stubPopupLayoutApis();
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedHouseholdApi = vi.mocked(householdApi);
@@ -187,8 +191,11 @@ describe('Layout', () => {
 
     renderLayout();
 
-    expect(await screen.findByRole('combobox', { name: 'Switch household' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Team Müller' })).toBeInTheDocument();
+    const user = userEvent.setup();
+
+    // Options only exist while the combobox is open.
+    await user.click(await screen.findByRole('combobox', { name: 'Switch household' }));
+    expect(await screen.findByRole('option', { name: 'Team Müller' })).toBeInTheDocument();
   });
 
   it('shows no connection status when unauthenticated (no socket exists yet)', () => {

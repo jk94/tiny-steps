@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 
 /**
- * Floating/overlay UI (Sonner's toasts, and any popper-based primitive that
- * measures a floating layer) relies on browser layout and pointer APIs that
- * jsdom does not implement at all: `ResizeObserver`, `DOMRect.fromRect`,
- * pointer capture, and `scrollIntoView`. Without them, e.g. a pointer-down on a
- * toast throws `setPointerCapture is not a function`.
+ * Floating/overlay UI — Radix's popper-based `Select` and Sonner's toasts —
+ * relies on browser layout and pointer APIs that jsdom does not implement at
+ * all: `ResizeObserver`, `DOMRect.fromRect`, pointer capture, and
+ * `scrollIntoView`. Without them a `Select` throws as soon as it opens, and a
+ * pointer-down on a toast throws `setPointerCapture is not a function`.
  *
  * `stubPopupLayoutApis()` installs no-op implementations for the duration of a
  * spec file and restores whatever was there before. It only fills in missing

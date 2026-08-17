@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { FeedingEventForm } from './FeedingEventForm';
 import type { FeedingEventFormInitialValues } from './FeedingEventForm';
 import { ApiError } from '../api/http-client';
+import { chooseSelectOption } from '../test/chooseSelectOption';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
+
+// The feeding-type field is a Radix combobox — see the helper's doc comment.
+stubPopupLayoutApis();
 
 function renderForm(
   mode: 'create' | 'edit',
@@ -32,7 +37,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', vi.fn());
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Breastfeeding');
+    await chooseSelectOption(user, 'Feeding type', 'Breastfeeding');
 
     expect(screen.getByText('Side')).toBeInTheDocument();
     expect(screen.getByLabelText('Left')).toBeInTheDocument();
@@ -46,7 +51,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', vi.fn());
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Bottle');
+    await chooseSelectOption(user, 'Feeding type', 'Bottle');
 
     expect(screen.getByLabelText('Amount (ml)')).toBeInTheDocument();
     expect(screen.queryByText('Side')).not.toBeInTheDocument();
@@ -56,7 +61,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', vi.fn());
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Solid food');
+    await chooseSelectOption(user, 'Feeding type', 'Solid food');
 
     expect(screen.queryByLabelText('Amount (ml)')).not.toBeInTheDocument();
     expect(screen.queryByText('Side')).not.toBeInTheDocument();
@@ -67,7 +72,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Bottle');
+    await chooseSelectOption(user, 'Feeding type', 'Bottle');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
@@ -80,7 +85,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Breastfeeding');
+    await chooseSelectOption(user, 'Feeding type', 'Breastfeeding');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByLabelText('Left'));
     fireEvent.change(screen.getByLabelText('Start time (optional)'), {
@@ -100,7 +105,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Bottle');
+    await chooseSelectOption(user, 'Feeding type', 'Bottle');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     fireEvent.change(screen.getByLabelText('Amount (ml)'), { target: { value: '90' } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
@@ -115,7 +120,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Breastfeeding');
+    await chooseSelectOption(user, 'Feeding type', 'Breastfeeding');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByLabelText('Right'));
     fireEvent.change(screen.getByLabelText('End time (optional)'), {
@@ -133,7 +138,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Breastfeeding');
+    await chooseSelectOption(user, 'Feeding type', 'Breastfeeding');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByLabelText('Left'));
     fireEvent.change(screen.getByLabelText('Start time (optional)'), {
@@ -150,7 +155,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Solid food');
+    await chooseSelectOption(user, 'Feeding type', 'Solid food');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
@@ -164,7 +169,7 @@ describe('FeedingEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Solid food');
+    await chooseSelectOption(user, 'Feeding type', 'Solid food');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
