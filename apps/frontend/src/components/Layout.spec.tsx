@@ -224,6 +224,24 @@ describe('Layout', () => {
 
       expect(screen.queryByRole('dialog', { name: 'Main menu' })).not.toBeInTheDocument();
     });
+
+    // `Layout` isn't unmounted by logging out — it wraps the login route too —
+    // so an unclosed sheet would stay open on top of the login page.
+    it('closes when logging out from inside it', async () => {
+      const logout = vi.fn().mockResolvedValue(undefined);
+      mockAuthenticated({ logout });
+
+      const user = userEvent.setup();
+      renderLayout();
+
+      await user.click(screen.getByRole('button', { name: 'Open menu' }));
+      const sheet = screen.getByRole('dialog', { name: 'Main menu' });
+
+      await user.click(within(sheet).getByRole('button', { name: 'Log out' }));
+
+      expect(logout).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('dialog', { name: 'Main menu' })).not.toBeInTheDocument();
+    });
   });
 
   describe('connection status', () => {

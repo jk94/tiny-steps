@@ -261,7 +261,10 @@ export function Layout() {
                     variant="ghost"
                     size="sm"
                     className="justify-start"
-                    onClick={() => void logout()}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      void logout();
+                    }}
                   >
                     <LogOut aria-hidden="true" />
                     {t('layout.logoutButton')}
