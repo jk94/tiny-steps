@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { HouseholdSwitcher } from './HouseholdSwitcher';
 import * as householdApi from '../api/household-api';
 import { queryClient } from '../lib/query-client';
@@ -94,18 +94,25 @@ describe('HouseholdSwitcher', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/households/h1');
   });
 
-  it('resets to the placeholder after navigating, so it stays a one-shot trigger', async () => {
+  it('shows the household from the current URL as selected', async () => {
     mockedHouseholdApi.listHouseholds.mockResolvedValueOnce([
       { id: 'h1', name: 'Team Müller', role: 'OWNER', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'h2', name: 'Team Schmidt', role: 'CO_PARENT', createdAt: '2026-01-02T00:00:00.000Z' },
     ]);
-    const user = userEvent.setup();
 
-    renderHouseholdSwitcher();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/households/h2']}>
+          <Routes>
+            <Route path="/households/:householdId" element={<HouseholdSwitcher />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
 
-    await chooseSelectOption(user, 'Switch household', 'Team Müller');
-
-    const select = screen.getByRole('combobox', { name: 'Switch household' });
-    expect(select).toHaveTextContent('Choose a household…');
-    expect(select).not.toHaveTextContent('Team Müller');
+    // The trigger is a Radix combobox button, not a native <select>, so the
+    // selected household shows up as its text content rather than a form value.
+    const select = await screen.findByRole('combobox', { name: 'Switch household' });
+    expect(select).toHaveTextContent('Team Schmidt');
   });
 });

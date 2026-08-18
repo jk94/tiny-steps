@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { listHouseholds } from '../api/household-api';
 import { Select } from './ui';
 
@@ -12,15 +12,15 @@ const HOUSEHOLDS_QUERY_KEY = ['households'] as const;
  * cache entry — no duplicate fetch just because both happen to be mounted
  * (e.g. `Layout` + `/households`).
  *
- * A one-shot navigation trigger, not persistent state: selecting an option
- * navigates and the control resets to its placeholder — there's no global
- * "current household" concept anywhere in the app. That reset is what the
- * pinned `value=""` achieves: no item carries the empty value, and the
- * primitive shows the placeholder for it.
+ * Reflects the household currently in the URL (`householdId` route param) as
+ * its selected value, falling back to the placeholder on routes without one
+ * (e.g. the household list) — there's still no separate global "current
+ * household" state, this just mirrors the URL.
  */
 export function HouseholdSwitcher() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { householdId } = useParams<{ householdId?: string }>();
   const { data } = useQuery({
     queryKey: HOUSEHOLDS_QUERY_KEY,
     queryFn: listHouseholds,
@@ -36,7 +36,7 @@ export function HouseholdSwitcher() {
       <Select
         label={t('household.switcher.label')}
         placeholder={t('household.switcher.placeholder')}
-        value=""
+        value={householdId ?? ''}
         onValueChange={(householdId) => void navigate(`/households/${householdId}`)}
         className="h-9 w-44"
       >
