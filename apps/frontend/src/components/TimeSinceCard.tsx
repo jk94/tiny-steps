@@ -1,30 +1,8 @@
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { EventType } from '../api/event-api';
+import { TICK_INTERVAL_MS, formatTimeSince, timeSinceTitle } from '../lib/formatTimeSince';
 import { useTick } from '../lib/useTick';
 import { Card } from './ui';
-
-const TICK_INTERVAL_MS = 30_000;
-const MS_PER_MINUTE = 60_000;
-const MINUTES_PER_HOUR = 60;
-
-/**
- * A `switch` calling `t()` with a literal key directly in each branch, not a
- * `Record<EventType, string>` lookup table — see `TimelineFilter.tsx`'s
- * identical `filterLabel` doc comment for why: `t()`'s literal-key typing
- * (via this repo's `i18next.d.ts`) rejects a widened-to-`string` value,
- * which is what indexing a `Record` (or returning the key itself) produces.
- */
-function titleFor(t: TFunction, eventType: EventType): string {
-  switch (eventType) {
-    case 'FEEDING':
-      return t('stats.timeSince.feedingTitle');
-    case 'SLEEP':
-      return t('stats.timeSince.sleepTitle');
-    case 'DIAPER':
-      return t('stats.timeSince.diaperTitle');
-  }
-}
 
 export interface TimeSinceCardProps {
   eventType: EventType;
@@ -45,7 +23,7 @@ export function TimeSinceCard({ eventType, lastEventAt }: TimeSinceCardProps) {
   return (
     <Card className="flex-1">
       <Card.Body className="flex flex-col gap-1 p-3">
-        <h3 className="text-xs text-muted-foreground">{titleFor(t, eventType)}</h3>
+        <h3 className="text-xs text-muted-foreground">{timeSinceTitle(t, eventType)}</h3>
         <p className="text-sm font-semibold text-foreground">
           {lastEventAt === null
             ? t('stats.timeSince.noEntries')
@@ -54,21 +32,4 @@ export function TimeSinceCard({ eventType, lastEventAt }: TimeSinceCardProps) {
       </Card.Body>
     </Card>
   );
-}
-
-function formatTimeSince(
-  t: ReturnType<typeof useTranslation>['t'],
-  lastEventAt: string,
-  now: number,
-) {
-  const elapsedMinutes = Math.max(
-    0,
-    Math.floor((now - new Date(lastEventAt).getTime()) / MS_PER_MINUTE),
-  );
-
-  if (elapsedMinutes < MINUTES_PER_HOUR) {
-    return t('stats.timeSince.minutesAgo', { minutes: elapsedMinutes });
-  }
-
-  return t('stats.timeSince.hoursAgo', { hours: Math.floor(elapsedMinutes / MINUTES_PER_HOUR) });
 }

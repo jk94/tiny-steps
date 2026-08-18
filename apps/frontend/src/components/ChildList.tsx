@@ -20,11 +20,11 @@ const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-9
  * creation is restricted server-side to OWNER — see `ChildController`),
  * completely hidden rather than disabled for a CO_PARENT. Each child row is
  * the entry point into that child's routes — there's no other UI to pick a
- * "current child". Clicking the row itself (photo + name) goes straight to
- * the daily timeline; the pills below cover the remaining per-type quick
- * actions (Export/Settings live on the settings page and per-child nav
- * instead, not duplicated here), styled using the same per-event-type
- * colors as `Badge`.
+ * "current child". Clicking the row itself (photo + name) opens that child's
+ * home dashboard (`ChildHome`), which links onward to the daily timeline;
+ * the pills below cover the remaining per-type quick actions
+ * (Export/Settings live on the settings page and per-child nav instead, not
+ * duplicated here), styled using the same per-event-type colors as `Badge`.
  */
 export function ChildList({ householdId, role }: ChildListProps) {
   const { t } = useTranslation();
@@ -58,7 +58,7 @@ export function ChildList({ householdId, role }: ChildListProps) {
               <Card>
                 <Card.Body className="flex flex-col gap-3">
                   <Link
-                    to={`/households/${householdId}/children/${child.id}/timeline`}
+                    to={`/households/${householdId}/children/${child.id}`}
                     className="flex items-center gap-3"
                   >
                     <ChildPhoto

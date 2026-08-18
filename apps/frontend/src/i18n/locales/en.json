@@ -141,6 +141,14 @@
     }
   },
   "child": {
+    "home": {
+      "greetingMorning": "Good morning 👋",
+      "greetingAfternoon": "Good afternoon ☀️",
+      "greetingEvening": "Good evening 🌙",
+      "ageMonths_one": "{{count}} month old",
+      "ageMonths_other": "{{count}} months old",
+      "timelineLink": "Go to daily timeline"
+    },
     "list": {
       "title": "Children",
       "empty": "No child profiles have been created for this household yet.",
