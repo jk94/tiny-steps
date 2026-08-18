@@ -178,7 +178,7 @@ export function ChildSettings() {
         </Card>
 
         <Button asChild variant="secondary" className="w-full">
-          <Link to={`/households/${household.id}/children/${child.id}/export`}>
+          <Link to={`/households/${household.id}/children/${child.id}/settings/export`}>
             {t('settings.exportButton')}
           </Link>
         </Button>

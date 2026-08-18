@@ -70,11 +70,11 @@ function App() {
             path="households/:householdId/children/:childId/timeline"
             element={<DailyTimeline />}
           />
-          <Route path="households/:householdId/children/:childId/export" element={<Export />} />
           <Route
             path="households/:householdId/children/:childId/settings"
             element={<ChildSettings />}
           />
+          <Route path="households/:householdId/children/:childId/settings/export" element={<Export />} />
         </Route>
         <Route element={<GuestOnlyRoute />}>
           <Route path="login" element={<Login />} />
