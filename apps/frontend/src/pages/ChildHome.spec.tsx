@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { ChildHome } from './ChildHome';
@@ -89,12 +89,17 @@ describe('ChildHome', () => {
     expect(screen.getByText('4 months old')).toBeInTheDocument();
   });
 
-  it.each([
-    [8, 'Good morning 👋'],
-    [14, 'Good afternoon ☀️'],
-    [21, 'Good evening 🌙'],
-  ])('greets with the local time of day (%i:00)', async (hour, expectedGreeting) => {
-    vi.setSystemTime(new Date(2026, 0, 1, hour, 0, 0));
+  // Both ends of each band, so an off-by-one boundary constant or a `<`
+  // silently turned into a `<=` fails here instead of passing on mid-band times.
+  it.each<[string, number, number, string]>([
+    ['00:00', 0, 0, 'Good morning 👋'],
+    ['11:59', 11, 59, 'Good morning 👋'],
+    ['12:00', 12, 0, 'Good afternoon ☀️'],
+    ['17:59', 17, 59, 'Good afternoon ☀️'],
+    ['18:00', 18, 0, 'Good evening 🌙'],
+    ['23:59', 23, 59, 'Good evening 🌙'],
+  ])('greets with the local time of day (%s)', async (_label, hour, minute, expectedGreeting) => {
+    vi.setSystemTime(new Date(2026, 0, 1, hour, minute, 0));
 
     renderChildHome();
 
@@ -114,6 +119,32 @@ describe('ChildHome', () => {
     await screen.findByText('1h ago');
     expect(screen.getByText('Last diaper change')).toBeInTheDocument();
     expect(screen.getAllByText('No entries yet')).toHaveLength(1);
+  });
+
+  it('shows a loading state instead of the badges while the stats query is in flight', async () => {
+    mockedEventApi.fetchEventStats.mockReturnValue(new Promise(() => {}));
+
+    renderChildHome();
+
+    // The child card is driven by its own query and must not wait for stats.
+    expect(await screen.findByRole('heading', { name: 'Alex' })).toBeInTheDocument();
+    expect(screen.getByText('4 months old')).toBeInTheDocument();
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    // "No entries yet" is a claim about the child's history — not something
+    // pending stats are allowed to assert.
+    expect(screen.queryByText('No entries yet')).not.toBeInTheDocument();
+  });
+
+  it('renders no badges at all, rather than a false no-entries claim, when the stats query fails', async () => {
+    mockedEventApi.fetchEventStats.mockRejectedValue(new ApiError(500, 'Internal Server Error'));
+
+    renderChildHome();
+
+    expect(await screen.findByRole('heading', { name: 'Alex' })).toBeInTheDocument();
+    expect(screen.getByText('4 months old')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Loading…')).not.toBeInTheDocument());
+    expect(screen.queryByText('No entries yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Last diaper change')).not.toBeInTheDocument();
   });
 
   it('links onward to the daily timeline', async () => {

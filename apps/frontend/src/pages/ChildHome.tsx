@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { fetchChild } from '../api/child-api';
-import { fetchEventStats } from '../api/event-api';
+import { type EventStatsSummary, fetchEventStats } from '../api/event-api';
 import { mapChildError } from '../child/mapChildError';
 import { ChildPhoto } from '../components/ChildPhoto';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -41,6 +41,42 @@ function greetingFor(t: TFunction, now: Date): string {
   return t('child.home.greetingEvening');
 }
 
+interface TimeSinceSectionProps {
+  isLoading: boolean;
+  /** The stats query's payload, or `undefined` while it is loading or after it failed. */
+  lastEventAt: EventStatsSummary['lastEventAt'] | undefined;
+}
+
+/**
+ * The three "time since last <event type>" cards, rendered only once the stats
+ * query has actually answered. Mirrors `DailyStatsSummary`'s posture: a
+ * loading indicator while in flight, and nothing at all when the query failed —
+ * this section is supplementary to the child card above, so it neither blocks
+ * the page nor raises a second error UI.
+ *
+ * Crucially, a failed query must NOT fall through to the cards' "no entries
+ * yet" state: that is a factual claim about the child's history, and it would
+ * be a lie for a child that does have events but whose stats just couldn't be
+ * loaded right now.
+ */
+function TimeSinceSection({ isLoading, lastEventAt }: TimeSinceSectionProps) {
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
+
+  if (!lastEventAt) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <TimeSinceBadgeCard eventType="FEEDING" lastEventAt={lastEventAt.FEEDING} />
+      <TimeSinceBadgeCard eventType="SLEEP" lastEventAt={lastEventAt.SLEEP} />
+      <TimeSinceBadgeCard eventType="DIAPER" lastEventAt={lastEventAt.DIAPER} />
+    </div>
+  );
+}
+
 /**
  * Per-child home/dashboard — the landing screen after drilling into a
  * household and picking a child (`ChildList` links here). Shows who you're
@@ -50,18 +86,22 @@ function greetingFor(t: TFunction, now: Date): string {
  * Deliberately not the app's `/` route: that stays the generic post-login
  * welcome page, since there is no global "current child" concept.
  *
- * The greeting and the stats day-range are both computed once via lazy
- * `useState` initializers rather than on every render — the same reasoning as
- * `DailyTimeline`: a page mounted across a boundary (noon, or local midnight)
- * should not silently reshuffle itself mid-session.
+ * The greeting and the stats day-range are both derived once, from a single
+ * `mountedAt` capture in a lazy `useState` initializer rather than on every
+ * render — the same reasoning as `DailyTimeline`: a page mounted across a
+ * boundary (noon, or local midnight) should not silently reshuffle itself
+ * mid-session.
  */
 export function ChildHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
   useHouseholdRoom(householdId);
 
-  const [dayBoundaries] = useState(() => getLocalDayBoundaries());
+  // One single `Date` capture feeds both the greeting/age and the stats
+  // day-range, so they can never disagree about which day it is (two separate
+  // captures could straddle local midnight).
   const [mountedAt] = useState(() => new Date());
+  const [dayBoundaries] = useState(() => getLocalDayBoundaries(mountedAt));
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -97,10 +137,6 @@ export function ChildHome() {
   }
 
   const child = childQuery.data;
-  // Supplementary to the child card, exactly like `DailyStatsSummary`: while
-  // the stats are loading or after they fail, the cards render their
-  // "no entries" state rather than blocking or duplicating an error UI.
-  const lastEventAt = statsQuery.data?.lastEventAt;
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -125,11 +161,10 @@ export function ChildHome() {
         </Card.Body>
       </Card>
 
-      <div className="flex flex-col gap-2">
-        <TimeSinceBadgeCard eventType="FEEDING" lastEventAt={lastEventAt?.FEEDING ?? null} />
-        <TimeSinceBadgeCard eventType="SLEEP" lastEventAt={lastEventAt?.SLEEP ?? null} />
-        <TimeSinceBadgeCard eventType="DIAPER" lastEventAt={lastEventAt?.DIAPER ?? null} />
-      </div>
+      <TimeSinceSection
+        isLoading={statsQuery.isLoading}
+        lastEventAt={statsQuery.data?.lastEventAt}
+      />
 
       <Link
         to={`/households/${householdId}/children/${childId}/timeline`}
