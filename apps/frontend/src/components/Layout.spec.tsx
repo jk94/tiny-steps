@@ -263,6 +263,7 @@ describe('Layout', () => {
       const dot = screen.getByTestId('realtime-connection-status');
       expect(dot).toHaveAttribute('aria-label', 'Connected');
       expect(dot).toHaveAttribute('title', 'Connected');
+      expect(dot).toHaveTextContent('Connected');
     });
 
     it('labels the dot "Disconnected" when the socket is not (yet) connected', () => {
@@ -274,6 +275,31 @@ describe('Layout', () => {
       const dot = screen.getByTestId('realtime-connection-status');
       expect(dot).toHaveAttribute('aria-label', 'Disconnected');
       expect(dot).toHaveAttribute('title', 'Disconnected');
+      expect(dot).toHaveTextContent('Disconnected');
+    });
+
+    // Colour is not a signal a screen reader can perceive, and the live region
+    // only announces anything if its *content* changes — hence the visually
+    // hidden status text inside the dot, and this assertion on the transition.
+    it('swaps the visually hidden status text when the connection drops', () => {
+      mockAuthenticated();
+      mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
+
+      const { rerender } = renderLayout();
+      expect(screen.getByTestId('realtime-connection-status')).toHaveTextContent('Connected');
+
+      mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: false });
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <Layout />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+      const dot = screen.getByTestId('realtime-connection-status');
+      expect(dot).toHaveAttribute('role', 'status');
+      expect(dot).toHaveTextContent('Disconnected');
     });
 
     // The dot must live outside the mobile sheet so it stays readable at a
