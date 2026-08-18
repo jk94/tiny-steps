@@ -173,6 +173,7 @@
       "nameLabel": "Name",
       "birthDateLabel": "Birth date",
       "photoLabel": "Photo (optional)",
+      "photoPlaceholder": "Add photo",
       "photoHint": "JPEG, PNG, or WebP, maximum 2 MB."
     },
     "validation": {

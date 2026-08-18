@@ -6,7 +6,6 @@ import { createChild } from '../api/child-api';
 import { ChildForm } from '../components/ChildForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
-import { Card } from '../components/ui';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
@@ -50,19 +49,15 @@ export function ChildCreate() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-sm">
+    <section className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <Link
         to={`/households/${household.id}`}
-        className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
+        className="inline-block self-start text-sm font-medium text-primary hover:underline"
       >
         {household.name}
       </Link>
-      <Card>
-        <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('child.create.title')}</h1>
-          <ChildForm mode="create" onSubmit={handleSubmit} />
-        </Card.Body>
-      </Card>
+      <h1 className="text-xl font-bold text-foreground">{t('child.create.title')}</h1>
+      <ChildForm mode="create" onSubmit={handleSubmit} />
     </section>
   );
 }

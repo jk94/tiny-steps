@@ -1,8 +1,9 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildChildFormData } from '../api/child-api';
 import { ALLOWED_PHOTO_MIME_TYPES, MAX_PHOTO_BYTES } from '../child/childPhotoConstraints';
 import { mapChildError, type ChildErrorKey } from '../child/mapChildError';
+import { cn } from '../lib/cn';
 import { ChildPhoto } from './ChildPhoto';
 import { ErrorMessage } from './ErrorMessage';
 import { Button, Input } from './ui';
@@ -42,6 +43,20 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
   const [fieldErrorKeys, setFieldErrorKeys] = useState<FieldErrorKeys>({});
   const [formErrorKey, setFormErrorKey] = useState<ChildErrorKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Local preview of a newly picked (not-yet-uploaded) photo, shown inside the
+  // circular dropzone instead of the stale `ChildPhoto` in edit mode.
+  const photoPreviewUrl = useMemo(
+    () => (photoFile ? URL.createObjectURL(photoFile) : null),
+    [photoFile],
+  );
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) {
+        URL.revokeObjectURL(photoPreviewUrl);
+      }
+    };
+  }, [photoPreviewUrl]);
 
   const validate = (): FieldErrorKeys => {
     const errors: FieldErrorKeys = {};
@@ -115,10 +130,60 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
 
   return (
     <form
-      className="flex w-full flex-col gap-4"
+      className="flex w-full flex-col gap-6"
       noValidate
       onSubmit={(event) => void handleSubmit(event)}
     >
+      <div className="flex flex-col items-center gap-1 self-center">
+        <label
+          htmlFor="child-photo"
+          className={cn(
+            'flex h-28 w-28 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-border text-center text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary',
+            fieldErrorKeys.photo && 'border-destructive text-destructive',
+          )}
+        >
+          {photoPreviewUrl ? (
+            <img
+              src={photoPreviewUrl}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover"
+            />
+          ) : mode === 'edit' && initialValues?.hasPhoto ? (
+            <ChildPhoto
+              aria-hidden="true"
+              childId={initialValues.childId}
+              householdId={initialValues.householdId}
+              hasPhoto={initialValues.hasPhoto}
+              name={initialValues.name}
+              size="lg"
+              className="h-full w-full"
+            />
+          ) : (
+            <span aria-hidden="true">{t('child.fields.photoPlaceholder')}</span>
+          )}
+        </label>
+        <input
+          id="child-photo"
+          type="file"
+          accept={ALLOWED_PHOTO_MIME_TYPES.join(',')}
+          onChange={handlePhotoChange}
+          aria-label={t('child.fields.photoLabel')}
+          aria-invalid={!!fieldErrorKeys.photo}
+          aria-describedby={fieldErrorKeys.photo ? 'child-photo-error' : 'child-photo-hint'}
+          disabled={isSubmitting}
+          className="sr-only"
+        />
+        <p id="child-photo-hint" className="text-center text-xs text-muted-foreground">
+          {t('child.fields.photoHint')}
+        </p>
+        {fieldErrorKeys.photo && (
+          <div id="child-photo-error">
+            <ErrorMessage message={t(fieldErrorKeys.photo)} />
+          </div>
+        )}
+      </div>
+
       <Input
         id="child-name"
         label={t('child.fields.nameLabel')}
@@ -153,42 +218,9 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
         disabled={isSubmitting}
       />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="child-photo" className="text-sm font-medium text-foreground">
-          {t('child.fields.photoLabel')}
-        </label>
-        {mode === 'edit' && initialValues && (
-          <ChildPhoto
-            childId={initialValues.childId}
-            householdId={initialValues.householdId}
-            hasPhoto={initialValues.hasPhoto}
-            name={initialValues.name}
-            size="lg"
-          />
-        )}
-        <input
-          id="child-photo"
-          type="file"
-          accept={ALLOWED_PHOTO_MIME_TYPES.join(',')}
-          onChange={handlePhotoChange}
-          aria-invalid={!!fieldErrorKeys.photo}
-          aria-describedby={fieldErrorKeys.photo ? 'child-photo-error' : 'child-photo-hint'}
-          disabled={isSubmitting}
-          className="text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-muted/80"
-        />
-        <p id="child-photo-hint" className="text-xs text-muted-foreground">
-          {t('child.fields.photoHint')}
-        </p>
-        {fieldErrorKeys.photo && (
-          <div id="child-photo-error">
-            <ErrorMessage message={t(fieldErrorKeys.photo)} />
-          </div>
-        )}
-      </div>
-
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" variant="primary" className="self-start" disabled={isSubmitting}>
         {t(submitButtonTextKey)}
       </Button>
     </form>

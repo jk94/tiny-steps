@@ -3,6 +3,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChildForm } from './ChildForm';
 import { ApiError } from '../api/http-client';
+import { stubImageLoading } from '../test/stubImageLoading';
+
+// ChildForm renders the existing photo via ChildPhoto, which is backed by
+// the Radix-based Avatar primitive — its image load is async in a real
+// browser, so jsdom needs this stub to resolve synchronously in tests.
+stubImageLoading();
 
 function renderChildForm(
   mode: 'create' | 'edit',
@@ -229,11 +235,42 @@ describe('ChildForm (edit mode)', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 
-  it('renders the existing photo (placeholder) via ChildPhoto', () => {
+  it('shows the "add photo" placeholder when the child has no existing photo', () => {
     renderChildForm('edit', vi.fn(), initialValues);
 
-    // hasPhoto: false -> ChildPhoto/Avatar renders its initials fallback, not an <img>.
-    expect(screen.getByRole('img', { name: 'Alex' }).tagName).not.toBe('IMG');
-    expect(screen.getByText('AL')).toBeInTheDocument();
+    expect(screen.getByText('Add photo')).toBeInTheDocument();
+  });
+
+  it('renders the existing photo via ChildPhoto when the child has one', async () => {
+    renderChildForm('edit', vi.fn(), { ...initialValues, hasPhoto: true });
+
+    // Avatar's initials fallback also carries `role="img"` (with the same
+    // `name` as its accessible label), so a role query can't tell it apart
+    // from the real `<img>` — query by alt text instead, which only the
+    // actual image element has (matches the precedent in ChildPhoto.spec.tsx).
+    // The image load resolves on a microtask (see stubImageLoading), so this
+    // must await: on the first synchronous check, only the fallback exists.
+    const img = (await screen.findByAltText('Alex')) as HTMLImageElement;
+    expect(img.src).toContain('/children/c1/photo');
+  });
+});
+
+describe('ChildForm photo dropzone', () => {
+  it('shows the "add photo" placeholder when creating with no photo selected', () => {
+    renderChildForm('create', vi.fn());
+
+    expect(screen.getByText('Add photo')).toBeInTheDocument();
+  });
+
+  it('replaces the placeholder with a preview once a photo is selected', async () => {
+    const user = userEvent.setup();
+    const { container } = renderChildForm('create', vi.fn());
+
+    const photo = new File(['x'], 'photo.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText('Photo (optional)'), photo);
+
+    expect(screen.queryByText('Add photo')).not.toBeInTheDocument();
+    // Decorative preview (`alt=""`), so queried directly rather than via role.
+    expect(container.querySelector('label[for="child-photo"] img')).toBeInTheDocument();
   });
 });
