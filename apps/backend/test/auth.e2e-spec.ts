@@ -223,6 +223,7 @@ describe('Auth (e2e)', () => {
     it.each([
       ['a missing name', { password: 'correct-pass1' }],
       ['an empty name', { password: 'correct-pass1', name: '' }],
+      ['a whitespace-only name', { password: 'correct-pass1', name: '   ' }],
       ['an over-long name', { password: 'correct-pass1', name: 'B'.repeat(121) }],
     ])('rejects registering with %s', async (_label, body) => {
       await request(app.getHttpServer())
@@ -292,6 +293,7 @@ describe('Auth (e2e)', () => {
       it.each([
         ['a missing name', {}],
         ['an empty name', { name: '' }],
+        ['a whitespace-only name', { name: '   ' }],
         ['an over-long name', { name: 'B'.repeat(121) }],
       ])('rejects %s with 400', async (_label, body) => {
         const { cookies, csrfToken } = await registerForPatch('patch-me-invalid');
