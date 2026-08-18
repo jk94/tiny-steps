@@ -27,6 +27,11 @@ export function SleepEventEdit() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const listQueryKey = ['households', householdId, 'children', childId, 'sleep-events'];
+  // Type-independent prefix: also reaches the daily-timeline/stats queries
+  // (see event-api.ts), which aren't scoped to a single event type and so
+  // aren't covered by listQueryKey alone — mirrors RealtimeProvider's
+  // handleEventChanged invalidation for the same reason.
+  const eventsQueryKey = ['households', householdId, 'children', childId, 'events'];
 
   // JC-5: seed initial form values from a pending local edit's overlay, then the
   // cached list row, so the edit page renders offline (see FeedingEventEdit).
@@ -49,7 +54,10 @@ export function SleepEventEdit() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteSleepEvent(householdId!, childId!, eventId!),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: listQueryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listQueryKey }),
+        queryClient.invalidateQueries({ queryKey: eventsQueryKey }),
+      ]);
       navigate(`/households/${householdId}/children/${childId}/sleep`, { replace: true });
     },
   });
@@ -79,7 +87,10 @@ export function SleepEventEdit() {
     } catch {
       // Buffered locally; surfaced via the list overlay / conflict banner.
     }
-    await queryClient.invalidateQueries({ queryKey: listQueryKey });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: listQueryKey }),
+      queryClient.invalidateQueries({ queryKey: eventsQueryKey }),
+    ]);
     navigate(`/households/${householdId}/children/${childId}/sleep`, { replace: true });
   };
 

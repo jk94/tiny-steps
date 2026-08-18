@@ -31,6 +31,11 @@ export function FeedingEventEdit() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const listQueryKey = ['households', householdId, 'children', childId, 'feeding-events'];
+  // Type-independent prefix: also reaches the daily-timeline/stats queries
+  // (see event-api.ts), which aren't scoped to a single event type and so
+  // aren't covered by listQueryKey alone — mirrors RealtimeProvider's
+  // handleEventChanged invalidation for the same reason.
+  const eventsQueryKey = ['households', householdId, 'children', childId, 'events'];
 
   // JC-5: seed the initial form values from what's already available offline —
   // a pending local edit's overlay first, then the cached list row — so the edit
@@ -55,7 +60,10 @@ export function FeedingEventEdit() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteFeedingEvent(householdId!, childId!, eventId!),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: listQueryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listQueryKey }),
+        queryClient.invalidateQueries({ queryKey: eventsQueryKey }),
+      ]);
       navigate(`/households/${householdId}/children/${childId}/feeding`, { replace: true });
     },
   });
@@ -93,7 +101,10 @@ export function FeedingEventEdit() {
     } catch {
       // Buffered locally; surfaced via the list overlay / conflict banner.
     }
-    await queryClient.invalidateQueries({ queryKey: listQueryKey });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: listQueryKey }),
+      queryClient.invalidateQueries({ queryKey: eventsQueryKey }),
+    ]);
     navigate(`/households/${householdId}/children/${childId}/feeding`, { replace: true });
   };
 
