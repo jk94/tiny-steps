@@ -57,7 +57,7 @@ export function DailyTimeline() {
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div>
         <Link
-          to={`/households/${householdId}`}
+          to={`/households/${householdId}/children/${childId}`}
           className="text-sm font-medium text-primary hover:underline"
         >
           {t('timeline.backLink')}

@@ -108,12 +108,11 @@ export function Layout() {
   const childNavItems: ChildNavItem[] = hasChildContext
     ? [
         {
-          to: `/households/${householdId}/children/${childId}/timeline`,
+          to: `/households/${householdId}/children/${childId}`,
           label: t('child.list.timelineLink'),
           Icon: ClipboardList,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/timeline`,
-          ),
+          isActive: location.pathname === `/households/${householdId}/children/${childId}` ||
+           location.pathname === `/households/${householdId}/children/${childId}/timeline`,
         },
         {
           to: `/households/${householdId}/children/${childId}/feeding`,

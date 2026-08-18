@@ -402,7 +402,7 @@
   },
   "timeline": {
     "title": "Daily timeline — {{name}}",
-    "backLink": "Back to household",
+    "backLink": "Back to overview",
     "filter": {
       "feedingLabel": "Feeding",
       "sleepLabel": "Sleep",

@@ -402,7 +402,7 @@
   },
   "timeline": {
     "title": "Tagesübersicht — {{name}}",
-    "backLink": "Zurück zum Haushalt",
+    "backLink": "Zurück zur Übersicht",
     "filter": {
       "feedingLabel": "Füttern",
       "sleepLabel": "Schlaf",
