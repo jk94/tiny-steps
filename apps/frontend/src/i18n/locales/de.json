@@ -141,6 +141,14 @@
     }
   },
   "child": {
+    "home": {
+      "greetingMorning": "Guten Morgen 👋",
+      "greetingAfternoon": "Guten Tag ☀️",
+      "greetingEvening": "Guten Abend 🌙",
+      "ageMonths_one": "{{count}} Monat alt",
+      "ageMonths_other": "{{count}} Monate alt",
+      "timelineLink": "Zur Tagesübersicht"
+    },
     "list": {
       "title": "Kinder",
       "empty": "Für diesen Haushalt sind noch keine Kind-Profile angelegt.",

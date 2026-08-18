@@ -10,6 +10,7 @@ import { HouseholdList } from './pages/HouseholdList';
 import { HouseholdCreate } from './pages/HouseholdCreate';
 import { HouseholdDetail } from './pages/HouseholdDetail';
 import { ChildCreate } from './pages/ChildCreate';
+import { ChildHome } from './pages/ChildHome';
 import { ChildSettings } from './pages/ChildSettings';
 import { FeedingHome } from './pages/FeedingHome';
 import { FeedingBackfillCreate } from './pages/FeedingBackfillCreate';
@@ -36,6 +37,7 @@ function App() {
           <Route path="households/new" element={<HouseholdCreate />} />
           <Route path="households/:householdId" element={<HouseholdDetail />} />
           <Route path="households/:householdId/children/new" element={<ChildCreate />} />
+          <Route path="households/:householdId/children/:childId" element={<ChildHome />} />
           <Route
             path="households/:householdId/children/:childId/feeding"
             element={<FeedingHome />}
