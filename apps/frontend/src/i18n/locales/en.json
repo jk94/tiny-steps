@@ -463,7 +463,8 @@
     "nameLabel": "Name",
     "submitButton": "Continue",
     "submitButtonPending": "Saving…",
-    "error": "Couldn't save your name. Please try again."
+    "error": "Couldn't save your name. Please try again.",
+    "logoutButton": "Log out instead"
   },
   "notifications": {
     "title": "Notification settings",

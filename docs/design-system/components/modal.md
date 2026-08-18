@@ -54,7 +54,9 @@ native attributes and a merged `className`, and expose a `data-slot` styling hoo
 - The close button has a translated `aria-label`; its icon is decorative.
 - A **blocking** dialog (`hideCloseButton` + a `preventDefault()`ing `onEscapeKeyDown`) has no
   dismissal affordance at all, so its content must make the one way forward obvious. Use it only
-  where continuing without the user's input is genuinely impossible.
+  where continuing without the user's input is genuinely impossible — and give its body a
+  de-emphasized escape action (log out, cancel the flow, …) for the case where the way forward keeps
+  failing, so a network or server error can't strand the user with no route out of the app.
 
 ## Related
 

@@ -8,7 +8,10 @@ vi.mock('../auth/useAuth');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
-function renderDialog(updateName = vi.fn().mockResolvedValue(undefined)) {
+function renderDialog(
+  updateName = vi.fn().mockResolvedValue(undefined),
+  logout = vi.fn().mockResolvedValue(undefined),
+) {
   mockedUseAuth.mockReturnValue({
     user: {
       id: '1',
@@ -22,10 +25,10 @@ function renderDialog(updateName = vi.fn().mockResolvedValue(undefined)) {
     login: vi.fn(),
     register: vi.fn(),
     updateName,
-    logout: vi.fn(),
+    logout,
   });
   const utils = render(<MandatoryNameDialog />);
-  return { ...utils, updateName };
+  return { ...utils, updateName, logout };
 }
 
 describe('MandatoryNameDialog', () => {
@@ -40,7 +43,7 @@ describe('MandatoryNameDialog', () => {
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
 
-  it('offers no dismissal affordance at all', async () => {
+  it('suppresses every dismissal route — ✕, ESC and backdrop click', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -87,5 +90,16 @@ describe('MandatoryNameDialog', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByLabelText('Name')).toHaveValue('Bernd');
+  });
+
+  // The only way out of an otherwise fully blocking dialog, for when saving
+  // keeps failing — without it, clearing cookies is the sole recovery.
+  it('offers logging out as an escape hatch', async () => {
+    const user = userEvent.setup();
+    const { logout } = renderDialog();
+
+    await user.click(screen.getByRole('button', { name: 'Log out instead' }));
+
+    expect(logout).toHaveBeenCalledTimes(1);
   });
 });

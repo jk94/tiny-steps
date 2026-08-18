@@ -463,7 +463,8 @@
     "nameLabel": "Name",
     "submitButton": "Weiter",
     "submitButtonPending": "Speichert…",
-    "error": "Dein Name konnte nicht gespeichert werden. Bitte versuche es erneut."
+    "error": "Dein Name konnte nicht gespeichert werden. Bitte versuche es erneut.",
+    "logoutButton": "Stattdessen abmelden"
   },
   "notifications": {
     "title": "Benachrichtigungseinstellungen",

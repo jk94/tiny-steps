@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { NameForm } from './NameForm';
-import { Dialog } from './ui';
+import { Button, Dialog } from './ui';
 
 /**
  * Blocks the app until the signed-in user supplies a display name. Needed
@@ -14,10 +14,16 @@ import { Dialog } from './ui';
  * clicks. There is no local open state either: `Layout` mounts this only while
  * `user.name` is falsy, so the successful submit's cache update is what
  * unmounts it.
+ *
+ * The one way out is logging out. Without it a user whose `PATCH /auth/me`
+ * keeps failing (offline, server error) is trapped with no route to any other
+ * part of the app, recoverable only by clearing cookies. It's styled as a
+ * de-emphasized `ghost` link under the primary submit so it reads as the
+ * escape hatch it is, not as an alternative to entering a name.
  */
 export function MandatoryNameDialog() {
   const { t } = useTranslation();
-  const { updateName } = useAuth();
+  const { updateName, logout } = useAuth();
 
   return (
     <Dialog
@@ -41,6 +47,15 @@ export function MandatoryNameDialog() {
           errorMessage={t('mandatoryNameDialog.error')}
           onSubmit={updateName}
         />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="mt-2 w-full"
+          onClick={() => void logout()}
+        >
+          {t('mandatoryNameDialog.logoutButton')}
+        </Button>
       </Dialog.Body>
     </Dialog>
   );
