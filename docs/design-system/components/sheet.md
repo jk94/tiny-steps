@@ -39,7 +39,7 @@ Deliberately flatter than `Dialog`: a sheet holds a `nav` and a couple of contro
 | ------- | -------------------------------------------------------------------------------- |
 | Open    | Full-height panel flush to the right edge (85% width, capped at `max-w-xs`), left border + shadow, dimmed backdrop. |
 | Closed  | Not rendered at all (the whole subtree is unmounted).                             |
-| Opening/closing | Slides horizontally over ~300ms; the closed position is translated fully off-screen. |
+| Opening/closing | Slides horizontally over 300ms, between fully off-screen and flush to the edge. Under `prefers-reduced-motion: reduce` it appears and disappears with no slide. |
 | Focus   | Focus moves into the panel on open and is trapped there; controls show a focus ring. |
 
 ## Accessibility
@@ -54,8 +54,17 @@ Deliberately flatter than `Dialog`: a sheet holds a `nav` and a couple of contro
   to lose. A port to another UI technology should keep this asymmetry.
 - The ✕ is kept even though ESC exists, because ESC isn't discoverable on touch and there is no
   reliable swipe-to-dismiss gesture. It reuses the shared `ui.dialog.close` string.
-- The slide transition is a transform, so it respects the platform's reduced-motion handling of
-  transforms and never moves layout.
+- The slide animates a transform only, so it never moves surrounding layout, and it is **switched
+  off entirely** under `prefers-reduced-motion: reduce` — the panel then simply appears and
+  disappears. A port must honour the platform's reduced-motion setting the same way.
+
+## Implementation note (web)
+
+The slide must be a real `@keyframes` animation (`src/styles/animations.css`), not a CSS
+transition. Radix's `Presence` keeps a closing panel mounted only while it observes an
+`animationend` event; a transition emits `transitionend`, which it ignores, so the panel would be
+unmounted before anything became visible. The backdrop is deliberately not animated, matching
+[Modal](modal.md).
 
 ## Icon / illustration suggestion
 

@@ -1,0 +1,56 @@
+/*
+ * Enter/exit keyframes for the design system's Radix-backed overlays.
+ *
+ * These have to be real `@keyframes` animations, not CSS transitions: Radix's
+ * `Presence` (under `Dialog.Content`, which both `Dialog` and `Sheet` build on)
+ * keeps a closing element mounted only while it observes an `animationend`
+ * event. A `transition` fires `transitionend`, which Presence ignores — the
+ * element is unmounted on the spot and nothing is ever visible.
+ *
+ * Declared here rather than pulling in `tailwindcss-animate`/`tw-animate-css`:
+ * two keyframes are a small, self-contained addition, and this repo prefers
+ * that over a dependency (same reasoning as the hand-rolled design-token
+ * build). The `--animate-*` theme entries below are what turn them into the
+ * `animate-slide-in-from-right` / `animate-slide-out-to-right` utilities, so
+ * they compose with variants (`data-[state=open]:…`) like any other utility.
+ */
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@theme {
+  --animate-slide-in-from-right: slide-in-from-right 300ms ease-in-out;
+  /* `forwards` holds the off-screen end frame until Radix unmounts the node,
+     instead of snapping back for one frame after `animationend`. */
+  --animate-slide-out-to-right: slide-out-to-right 300ms ease-in-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * Motion safety: no slide at all — Presence explicitly treats a computed
+   * `animation-name: none` as "already finished" and unmounts immediately, so
+   * dropping the animation can't strand a closing panel on screen.
+   *
+   * `!important` is load-bearing: the utilities this overrides are applied
+   * through a `data-[state=…]:` variant, which compiles to an extra attribute
+   * selector and therefore outranks any plain selector we could write here.
+   */
+  [data-slot='sheet-content'] {
+    animation: none !important;
+  }
+}

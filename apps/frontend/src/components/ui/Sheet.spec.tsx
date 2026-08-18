@@ -79,6 +79,20 @@ describe('Sheet', () => {
     expect(panel.className).toContain('inset-y-0');
   });
 
+  // Keyframe animations, not a CSS transition: Radix's Presence defers
+  // unmounting only for an `animationend` event, so a transition-based exit
+  // would be cut off before it could play. jsdom applies no stylesheets, so
+  // this asserts the wiring (classes + gating attribute), not the playback.
+  it('drives its slide from data-state-gated keyframe animations', () => {
+    renderSheet(true);
+
+    const panel = screen.getByRole('dialog');
+    expect(panel).toHaveAttribute('data-state', 'open');
+    expect(panel.className).toContain('data-[state=open]:animate-slide-in-from-right');
+    expect(panel.className).toContain('data-[state=closed]:animate-slide-out-to-right');
+    expect(panel.className).not.toContain('transition-transform');
+  });
+
   it('unmounts the panel when isOpen goes back to false', () => {
     const { rerender } = renderSheet(true);
     expect(screen.getByRole('dialog')).toBeInTheDocument();

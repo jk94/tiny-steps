@@ -27,8 +27,14 @@ export interface SheetProps {
  * Unlike this design system's `Dialog`, a Sheet **does** dismiss on an outside
  * click: it holds navigation rather than a decision to confirm, and tapping
  * the dimmed area beside a slide-out menu is the expected way to close it on
- * touch. The enter/exit slide is plain Tailwind transform utilities gated on
- * Radix's `data-state`, so no animation plugin is required.
+ * touch.
+ *
+ * The enter/exit slide runs on hand-rolled `@keyframes` (see
+ * `src/styles/animations.css`) gated on Radix's `data-state`, so no animation
+ * plugin is required. Keyframes rather than a CSS transition on purpose:
+ * Radix's `Presence` defers unmounting only for an `animationend` event, so a
+ * transition-based exit would never be seen. That file also disables the slide
+ * under `prefers-reduced-motion: reduce`.
  */
 export function Sheet({
   isOpen,
@@ -52,7 +58,7 @@ export function Sheet({
           data-side={side}
           className={cn(
             'fixed inset-y-0 right-0 z-50 flex h-full w-[85%] max-w-xs flex-col border-l border-border bg-background text-foreground shadow-lg focus-visible:outline-none',
-            'transition-transform duration-300 ease-in-out data-[state=closed]:translate-x-full data-[state=open]:translate-x-0',
+            'data-[state=closed]:animate-slide-out-to-right data-[state=open]:animate-slide-in-from-right',
             className,
           )}
           {...aria}
