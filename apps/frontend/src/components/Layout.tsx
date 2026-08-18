@@ -111,8 +111,9 @@ export function Layout() {
           to: `/households/${householdId}/children/${childId}`,
           label: t('child.list.timelineLink'),
           Icon: ClipboardList,
-          isActive: location.pathname === `/households/${householdId}/children/${childId}` ||
-           location.pathname === `/households/${householdId}/children/${childId}/timeline`,
+          isActive:
+            location.pathname === `/households/${householdId}/children/${childId}` ||
+            location.pathname === `/households/${householdId}/children/${childId}/timeline`,
         },
         {
           to: `/households/${householdId}/children/${childId}/feeding`,
@@ -150,35 +151,15 @@ export function Layout() {
     : [];
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground lg:flex-row">
-      {hasChildContext && (
-        <aside className="hidden lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-1 lg:border-r lg:border-border lg:bg-background lg:p-4">
-          <Link to="/" className="mb-4 flex items-center gap-2 px-2">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3">
+        <div className="flex items-center gap-4">
+          <Link to="/" className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
               T
             </span>
             <span className="text-sm font-bold text-foreground">TinySteps</span>
           </Link>
-          <nav aria-label={t('nav.childNavLabel')} className="flex flex-col gap-1">
-            {childNavItems.map(({ to, label, Icon, isActive }) => (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted',
-                  isActive && 'bg-primary/10 text-primary hover:bg-primary/10',
-                )}
-              >
-                <Icon aria-hidden="true" className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-      )}
-
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3">
           <nav className="hidden items-center gap-4 text-sm font-medium lg:flex">
             {globalNavItems.map(({ to, label }) => (
               <Link key={to} to={to} className="text-foreground hover:text-primary">
@@ -186,115 +167,134 @@ export function Layout() {
               </Link>
             ))}
           </nav>
-          <Link to="/" className="text-sm font-bold text-foreground lg:hidden">
-            TinySteps
-          </Link>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-1 lg:flex">
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-1 lg:flex">
+            <LanguageButtons
+              currentLanguage={i18n.language}
+              onChangeLanguage={(lng) => void i18n.changeLanguage(lng)}
+            />
+          </div>
+
+          {/* Dot-only, outside both the desktop cluster and the mobile
+                sheet, so it stays visible at a glance at every viewport
+                width without opening the menu. The sheet repeats it below
+                the language buttons, expanded with a visible label. */}
+          {showSessionControls && <ConnectionStatusDot isConnected={isConnected} />}
+
+          {showSessionControls && (
+            <div className="hidden items-center gap-2 lg:flex">
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 rounded-md px-1 py-1 text-sm text-foreground hover:bg-muted"
+              >
+                <Avatar name={displayName} size="sm" />
+                <span>{displayName}</span>
+              </Link>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={t('layout.logoutButton')}
+                onClick={() => void logout()}
+              >
+                <LogOut aria-hidden="true" />
+              </Button>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="lg:hidden"
+            aria-label={t('nav.openMenu')}
+            onClick={() => setIsMenuOpen(true)}
+          >
+            <Menu aria-hidden="true" />
+          </Button>
+        </div>
+
+        <Sheet
+          isOpen={isMenuOpen}
+          onOpenChange={setIsMenuOpen}
+          aria-label={t('nav.mobileMenuLabel')}
+        >
+          <div className="flex flex-col gap-4">
+            {showSessionControls && (
+              <Link
+                to="/profile"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+              >
+                <Avatar name={displayName} size="sm" />
+                <span>{displayName}</span>
+              </Link>
+            )}
+
+            <nav className="flex flex-col gap-1 border-t border-border pt-4">
+              {sheetNavItems.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-1 border-t border-border pt-4">
               <LanguageButtons
                 currentLanguage={i18n.language}
                 onChangeLanguage={(lng) => void i18n.changeLanguage(lng)}
               />
             </div>
 
-            {/* Dot-only, outside both the desktop cluster and the mobile
-                sheet, so it stays visible at a glance at every viewport
-                width without opening the menu. The sheet repeats it below
-                the language buttons, expanded with a visible label. */}
-            {showSessionControls && <ConnectionStatusDot isConnected={isConnected} />}
-
             {showSessionControls && (
-              <div className="hidden items-center gap-2 lg:flex">
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-2 rounded-md px-1 py-1 text-sm text-foreground hover:bg-muted"
-                >
-                  <Avatar name={displayName} size="sm" />
-                  <span>{displayName}</span>
-                </Link>
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <ConnectionStatusDot isConnected={isConnected} showLabel />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label={t('layout.logoutButton')}
-                  onClick={() => void logout()}
+                  className="justify-start"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    void logout();
+                  }}
                 >
                   <LogOut aria-hidden="true" />
+                  {t('layout.logoutButton')}
                 </Button>
               </div>
             )}
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              aria-label={t('nav.openMenu')}
-              onClick={() => setIsMenuOpen(true)}
-            >
-              <Menu aria-hidden="true" />
-            </Button>
           </div>
+        </Sheet>
+      </header>
 
-          <Sheet
-            isOpen={isMenuOpen}
-            onOpenChange={setIsMenuOpen}
-            aria-label={t('nav.mobileMenuLabel')}
-          >
-            <div className="flex flex-col gap-4">
-              {showSessionControls && (
+      <div className="flex flex-1 flex-col lg:flex-row">
+        {hasChildContext && (
+          <aside className="hidden lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-1 lg:border-r lg:border-border lg:bg-background lg:p-4">
+            <nav aria-label={t('nav.childNavLabel')} className="flex flex-col gap-1">
+              {childNavItems.map(({ to, label, Icon, isActive }) => (
                 <Link
-                  to="/profile"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  key={to}
+                  to={to}
+                  className={cn(
+                    'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted',
+                    isActive && 'bg-primary/10 text-primary hover:bg-primary/10',
+                  )}
                 >
-                  <Avatar name={displayName} size="sm" />
-                  <span>{displayName}</span>
+                  <Icon aria-hidden="true" className="h-4 w-4" />
+                  {label}
                 </Link>
-              )}
-
-              <nav className="flex flex-col gap-1 border-t border-border pt-4">
-                {sheetNavItems.map(({ to, label }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </nav>
-
-              <div className="flex items-center gap-1 border-t border-border pt-4">
-                <LanguageButtons
-                  currentLanguage={i18n.language}
-                  onChangeLanguage={(lng) => void i18n.changeLanguage(lng)}
-                />
-              </div>
-
-              {showSessionControls && (
-                <div className="flex flex-col gap-2 border-t border-border pt-4">
-                  <ConnectionStatusDot isConnected={isConnected} showLabel />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      void logout();
-                    }}
-                  >
-                    <LogOut aria-hidden="true" />
-                    {t('layout.logoutButton')}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Sheet>
-        </header>
+              ))}
+            </nav>
+          </aside>
+        )}
 
         <main className={cn('flex-1 p-4', hasChildContext && 'pb-20 lg:pb-4')}>
           <Outlet />

@@ -41,20 +41,23 @@ export function HouseholdList() {
           {data.map((household) => (
             <li key={household.id}>
               <Card>
-                <Card.Body className="flex items-center justify-between">
+                <Card.Body className="p-0">
                   <Link
                     to={`/households/${household.id}`}
-                    className="font-semibold text-foreground hover:text-primary"
+                    aria-label={household.name}
+                    className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50"
                   >
-                    {household.name}
+                    <span aria-hidden="true" className="font-semibold text-foreground">
+                      {household.name}
+                    </span>
+                    <Badge>
+                      {t(
+                        household.role === 'OWNER'
+                          ? 'household.list.roleOwner'
+                          : 'household.list.roleCoParent',
+                      )}
+                    </Badge>
                   </Link>
-                  <Badge>
-                    {t(
-                      household.role === 'OWNER'
-                        ? 'household.list.roleOwner'
-                        : 'household.list.roleCoParent',
-                    )}
-                  </Badge>
                 </Card.Body>
               </Card>
             </li>
