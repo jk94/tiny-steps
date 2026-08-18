@@ -2,6 +2,9 @@ node_modules
 dist
 build
 data
+# Storybook's build output — gitignored, but `bun run build-storybook` leaves
+# it in the tree, where it would otherwise fail `format:check`.
+apps/frontend/storybook-static
 apps/backend/prisma/dev.db*
 *.md
 # Generated Capacitor native projects (not our source) — see ADR-0012.
