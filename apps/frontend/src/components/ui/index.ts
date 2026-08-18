@@ -8,6 +8,7 @@ export { Select, type SelectProps, type SelectItemProps } from './Select';
 export { Card, type CardProps } from './Card';
 export { Tabs, type TabsProps, type TabProps, type TabPanelProps } from './Tabs';
 export { Dialog, type DialogProps } from './Dialog';
+export { Sheet, type SheetProps } from './Sheet';
 export { Toaster, type ToasterProps } from './Toaster';
 // Re-exported from Sonner so consumers keep importing the whole design system
 // from this one barrel rather than reaching for the library directly.

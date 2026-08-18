@@ -24,6 +24,7 @@ it rather than maintaining a parallel one.
 | `isOpen`          | `boolean` (required)             | —       | Controlled open state.                          |
 | `onOpenChange`    | `(open: boolean) => void`        | —       | Called with `false` on close (✕ or ESC). **No backdrop-click dismissal** — the backdrop is not interactive. |
 | `onEscapeKeyDown` | `(event: KeyboardEvent) => void` | no-op   | Called when ESC is pressed; call `event.preventDefault()` to suppress the dismissal (e.g. while an action is in flight). |
+| `hideCloseButton` | `boolean`                        | `false` | Omits the ✕ entirely. Only for a dialog the user genuinely must not dismiss — pair it with a suppressing `onEscapeKeyDown`, since a ✕ that does nothing is worse than none at all. |
 | `aria-label`      | `string`                         | —       | Accessible name when no `Dialog.Title` is rendered. |
 | `aria-labelledby` | `string`                         | —       | Id of the element naming the dialog; overrides the automatic `Dialog.Title` wiring. |
 | `className`       | `string`                         | —       | Merged onto the dialog surface.                 |
@@ -35,7 +36,7 @@ native attributes and a merged `className`, and expose a `data-slot` styling hoo
 
 | State  | Appearance                                                                 |
 | ------ | -------------------------------------------------------------------------- |
-| Open   | Centered card with a dimmed backdrop; a ✕ close button in the top-right.   |
+| Open   | Centered card with a dimmed backdrop; a ✕ close button in the top-right (omitted when `hideCloseButton` is set). |
 | Closed | Not rendered at all (the whole subtree is unmounted).                      |
 | Focus  | Focus moves into the dialog on open and is trapped there; the ✕ and interactive controls show a focus ring. |
 
@@ -51,6 +52,14 @@ native attributes and a merged `className`, and expose a `data-slot` styling hoo
   half-filled form can't be lost to a stray tap. A port to another UI technology must reproduce
   this; most modal libraries dismiss on outside-click by default and have to be opted out.
 - The close button has a translated `aria-label`; its icon is decorative.
+- A **blocking** dialog (`hideCloseButton` + a `preventDefault()`ing `onEscapeKeyDown`) has no
+  dismissal affordance at all, so its content must make the one way forward obvious. Use it only
+  where continuing without the user's input is genuinely impossible.
+
+## Related
+
+For an edge-anchored panel (mobile navigation), use [Sheet](sheet.md) instead — it shares the same
+Radix Dialog foundation but slides in from an edge and *does* dismiss on an outside click.
 
 ## Icon / illustration suggestion
 

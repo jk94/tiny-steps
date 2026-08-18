@@ -20,6 +20,12 @@ export interface DialogProps {
    * closes the dialog.
    */
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  /**
+   * Hides the ✕ button. Only for dialogs the user genuinely must not dismiss
+   * (paired with a suppressing `onEscapeKeyDown`) — rendering a ✕ that does
+   * nothing is worse than rendering none. Defaults to `false`.
+   */
+  hideCloseButton?: boolean;
   /** Accessible name when no `Dialog.Title` is rendered. */
   'aria-label'?: string;
   /** Id of the element (e.g. a `Dialog.Title`) naming the dialog. */
@@ -32,6 +38,7 @@ function DialogRoot({
   children,
   className,
   onEscapeKeyDown,
+  hideCloseButton = false,
   ...aria
 }: DialogProps) {
   const { t } = useTranslation();
@@ -61,15 +68,17 @@ function DialogRoot({
           {...aria}
         >
           <div className="relative">
-            <DialogPrimitive.Close asChild>
-              <button
-                type="button"
-                aria-label={t('ui.dialog.close')}
-                className="absolute top-3 right-3 rounded-md p-1 text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                <X aria-hidden="true" className="h-4 w-4" />
-              </button>
-            </DialogPrimitive.Close>
+            {!hideCloseButton && (
+              <DialogPrimitive.Close asChild>
+                <button
+                  type="button"
+                  aria-label={t('ui.dialog.close')}
+                  className="absolute top-3 right-3 rounded-md p-1 text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </DialogPrimitive.Close>
+            )}
             {children}
           </div>
         </DialogPrimitive.Content>
@@ -137,7 +146,8 @@ function DialogFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
  * the dialog's `aria-labelledby`/`aria-describedby`) plus the layout slots
  * `Dialog.Header` / `Dialog.Body` / `Dialog.Footer`. A close (✕) button and ESC
  * both call `onOpenChange(false)`; clicking the backdrop deliberately does
- * **not** dismiss. Pass `onEscapeKeyDown` to suppress ESC conditionally.
+ * **not** dismiss. Pass `onEscapeKeyDown` to suppress ESC conditionally, and
+ * `hideCloseButton` to drop the ✕ for a genuinely blocking dialog.
  */
 export const Dialog = Object.assign(DialogRoot, {
   Title: DialogTitle,

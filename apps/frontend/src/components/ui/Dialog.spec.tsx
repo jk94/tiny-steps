@@ -95,6 +95,13 @@ describe('Dialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('renders no close button when hideCloseButton is set, leaving the rest intact', () => {
+    renderDialog(true, { hideCloseButton: true });
+
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+    expect(screen.getByText('Delete entry?')).toBeInTheDocument();
+  });
+
   it('unmounts the dialog when isOpen goes back to false', () => {
     const { rerender } = renderDialog(true);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
