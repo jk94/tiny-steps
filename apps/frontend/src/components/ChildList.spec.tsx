@@ -48,7 +48,7 @@ describe('ChildList', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders a link per child, pointing at its daily timeline', async () => {
+  it('renders a link per child, pointing at its home dashboard', async () => {
     mockedChildApi.listChildren.mockResolvedValueOnce([
       {
         id: 'c1',
@@ -63,7 +63,7 @@ describe('ChildList', () => {
     renderChildList('OWNER');
 
     const link = await screen.findByRole('link', { name: 'Alex' });
-    expect(link).toHaveAttribute('href', '/households/h1/children/c1/timeline');
+    expect(link).toHaveAttribute('href', '/households/h1/children/c1');
   });
 
   it('renders a "Feeding" link per child, pointing at its feeding home', async () => {
