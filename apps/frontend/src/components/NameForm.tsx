@@ -49,8 +49,9 @@ export function NameForm({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Trimmed before validating and submitting, so a whitespace-only name
-    // can't slip past the backend's `@IsNotEmpty()` (which doesn't trim).
+    // Trimmed before validating and submitting, so a whitespace-only name is
+    // rejected here with an inline message rather than as a backend 400 (the
+    // backend trims and rejects it too — see `trim-string.transform.ts`).
     const trimmedName = name.trim();
     if (trimmedName.length === 0) {
       setFieldErrorKey('auth.validation.nameRequired');
