@@ -10,7 +10,7 @@ It is one of three related pieces that must stay in sync:
 | Piece | Location | Role |
 | ----- | -------- | ---- |
 | **Token source of truth** | [`design-system/tokens/*.json`](../../design-system/README.md) | Platform-neutral values (color, typography, spacing, radii, shadows, breakpoints, event-types). Everything else is generated from or specified against these. |
-| **React component library** | `apps/frontend/src/components/ui/` | The concrete implementation for this frontend (Tailwind v4 + cva + native-element primitives — see [ADR-0013](../adr/0013-design-system-styling-approach.md)), cataloged in Storybook. |
+| **React component library** | `apps/frontend/src/components/ui/` | The concrete implementation for this frontend (Tailwind v4 + cva, with most primitives now backed by Radix UI — Badge/Skeleton/EmptyState/Card stay hand-built, Toast uses Sonner instead of Radix; see [ADR-0013](../adr/0013-design-system-styling-approach.md) and its addendum), cataloged in Storybook. |
 | **This styleguide** | `docs/design-system/` | The binding, framework-independent spec the React library (and future ports) are checked against. |
 
 ## Contents
