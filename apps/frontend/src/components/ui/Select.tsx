@@ -150,8 +150,8 @@ function SelectItem({ value, disabled, children, className }: SelectItemProps) {
  * `Tabs.Tab` naming convention) rather than raw `<option>` elements, selection
  * is reported through `onValueChange(value)` rather than a change event, and
  * the empty-value placeholder `<option>` is replaced by the `placeholder` prop.
- * All three call sites — `HouseholdSwitcher`, `FeedingEventForm` and
- * `DiaperEventForm` — were migrated along with it.
+ * Both call sites — `FeedingEventForm` and `DiaperEventForm` — were migrated
+ * along with it.
  *
  * What it buys: a fully stylable, keyboard- and typeahead-navigable dropdown,
  * which the native control could not offer cross-browser (the limitation

@@ -41,9 +41,9 @@ export function InviteAccept() {
   const acceptMutation = useMutation({
     mutationFn: () => acceptInvite(token!),
     onSuccess: async (result) => {
-      // So `HouseholdSwitcher` (which reads the shared `['households']`
-      // query) picks up the newly joined household immediately, instead of
-      // waiting for some unrelated refetch trigger.
+      // So `HouseholdList` (which reads the shared `['households']` query)
+      // picks up the newly joined household immediately, instead of waiting
+      // for some unrelated refetch trigger.
       await queryClient.invalidateQueries({ queryKey: ['households'] });
       navigate(`/households/${result.household.id}`, { replace: true });
     },

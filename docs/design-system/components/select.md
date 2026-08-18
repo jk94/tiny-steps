@@ -19,8 +19,7 @@ backed by Radix UI's Select primitive and its API is **not** source-compatible w
 
 It buys a fully stylable, keyboard- and typeahead-navigable dropdown, which the native control could
 not provide cross-browser (that limitation was previously documented here as an accepted trade-off).
-All three call sites — the household switcher and the feeding- and diaper-type form fields — were
-migrated with it.
+Both call sites — the feeding- and diaper-type form fields — were migrated with it.
 
 ### Accepted trade-off: no native mobile picker
 

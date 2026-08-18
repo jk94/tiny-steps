@@ -6,8 +6,9 @@ import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Badge, Card, EmptyState } from '../components/ui';
 
 /**
- * `['households']` query key — shared with `HouseholdSwitcher` (see
- * `components/HouseholdSwitcher.tsx`) so both read the same cache entry.
+ * `['households']` query key — also invalidated by `HouseholdCreate`,
+ * `InviteAccept` and `RealtimeProvider`, so this list picks up a newly
+ * created/joined household without waiting for an unrelated refetch.
  */
 const HOUSEHOLDS_QUERY_KEY = ['households'] as const;
 

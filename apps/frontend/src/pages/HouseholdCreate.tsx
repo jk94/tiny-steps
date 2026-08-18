@@ -44,9 +44,9 @@ export function HouseholdCreate() {
     setIsSubmitting(true);
     try {
       const household = await createHousehold(name);
-      // So `HouseholdSwitcher` (which reads the shared `['households']`
-      // query) picks up the newly created household immediately, instead of
-      // waiting for some unrelated refetch trigger.
+      // So `HouseholdList` (which reads the shared `['households']` query)
+      // picks up the newly created household immediately, instead of waiting
+      // for some unrelated refetch trigger.
       await queryClient.invalidateQueries({ queryKey: ['households'] });
       navigate(`/households/${household.id}`, { replace: true });
     } catch (err) {
