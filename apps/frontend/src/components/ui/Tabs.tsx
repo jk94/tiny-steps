@@ -2,35 +2,9 @@
    Compound component: the root and its List/Tab/Panel sub-components (plus the
    exported prop types) intentionally live in one file; the one-export-per-file
    fast-refresh rule doesn't fit this shadcn-style pattern. */
-import {
-  createContext,
-  useContext,
-  useId,
-  useState,
-  type HTMLAttributes,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { Tabs as TabsPrimitive } from 'radix-ui';
 import { cn } from '../../lib/cn';
-
-interface TabsContextValue {
-  value: string;
-  setValue: (value: string) => void;
-  baseId: string;
-}
-
-const TabsContext = createContext<TabsContextValue | null>(null);
-
-function useTabsContext(): TabsContextValue {
-  const ctx = useContext(TabsContext);
-  if (!ctx) {
-    throw new Error('Tabs.List / Tabs.Tab / Tabs.Panel must be used within <Tabs>');
-  }
-  return ctx;
-}
-
-const tabId = (baseId: string, value: string) => `${baseId}-tab-${value}`;
-const panelId = (baseId: string, value: string) => `${baseId}-panel-${value}`;
 
 export interface TabsProps {
   /** Uncontrolled initial selected value. */
@@ -42,33 +16,33 @@ export interface TabsProps {
   className?: string;
 }
 
-function TabsBase({
-  defaultValue,
-  value: controlled,
-  onValueChange,
-  children,
-  className,
-}: TabsProps) {
-  const baseId = useId();
-  const [uncontrolled, setUncontrolled] = useState(defaultValue);
-  const value = controlled ?? uncontrolled;
-  const setValue = (next: string) => {
-    if (controlled === undefined) {
-      setUncontrolled(next);
-    }
-    onValueChange?.(next);
-  };
-
+function TabsBase({ defaultValue, value, onValueChange, children, className }: TabsProps) {
   return (
-    <TabsContext.Provider value={{ value, setValue, baseId }}>
-      <div className={className}>{children}</div>
-    </TabsContext.Provider>
+    <TabsPrimitive.Root
+      data-slot="tabs"
+      defaultValue={defaultValue}
+      value={value}
+      onValueChange={onValueChange}
+      // Radix's default: ArrowLeft/ArrowRight move focus AND select, wrapping
+      // at the ends — the WAI-ARIA APG "automatic activation" behavior this
+      // component has always had. Spelled out rather than left implicit,
+      // because it is a documented part of the public contract.
+      activationMode="automatic"
+      className={className}
+    >
+      {children}
+    </TabsPrimitive.Root>
   );
 }
 
-function TabsList({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+function TabsList({ className, ...props }: ComponentPropsWithoutRef<typeof TabsPrimitive.List>) {
   return (
-    <div role="tablist" className={cn('flex gap-1 border-b border-border', className)} {...props} />
+    <TabsPrimitive.List
+      data-slot="tabs-list"
+      loop
+      className={cn('flex gap-1 border-b border-border', className)}
+      {...props}
+    />
   );
 }
 
@@ -79,53 +53,20 @@ export interface TabProps {
 }
 
 function Tab({ value, children, className }: TabProps) {
-  const { value: selected, setValue, baseId } = useTabsContext();
-  const isSelected = selected === value;
-
-  // WAI-ARIA APG tabs pattern with automatic activation: arrow keys move focus
-  // to the adjacent tab (wrapping) and activate it immediately.
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
-      return;
-    }
-    const list = event.currentTarget.closest('[role="tablist"]');
-    if (!list) {
-      return;
-    }
-    const tabs = Array.from(
-      list.querySelectorAll<HTMLButtonElement>('[role="tab"]:not([disabled])'),
-    );
-    const currentIndex = tabs.indexOf(event.currentTarget);
-    if (currentIndex === -1) {
-      return;
-    }
-    event.preventDefault();
-    const delta = event.key === 'ArrowRight' ? 1 : -1;
-    const next = tabs[(currentIndex + delta + tabs.length) % tabs.length];
-    next.focus();
-    next.click();
-  };
-
   return (
-    <button
-      type="button"
-      role="tab"
-      id={tabId(baseId, value)}
-      aria-selected={isSelected}
-      aria-controls={panelId(baseId, value)}
-      tabIndex={isSelected ? 0 : -1}
-      onClick={() => setValue(value)}
-      onKeyDown={onKeyDown}
+    <TabsPrimitive.Trigger
+      data-slot="tabs-trigger"
+      value={value}
+      // Selected/unselected styling comes off Radix's `data-state` attribute
+      // rather than a React-computed boolean, so the DOM stays the single
+      // source of truth for the visual state.
       className={cn(
-        '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-        isSelected
-          ? 'border-primary text-primary'
-          : 'border-transparent text-muted-foreground hover:text-foreground',
+        '-mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-primary data-[state=active]:text-primary',
         className,
       )}
     >
       {children}
-    </button>
+    </TabsPrimitive.Trigger>
   );
 }
 
@@ -136,30 +77,28 @@ export interface TabPanelProps {
 }
 
 function TabPanel({ value, children, className }: TabPanelProps) {
-  const { value: selected, baseId } = useTabsContext();
-  if (selected !== value) {
-    return null;
-  }
   return (
-    <div
-      role="tabpanel"
-      id={panelId(baseId, value)}
-      aria-labelledby={tabId(baseId, value)}
-      tabIndex={0}
+    <TabsPrimitive.Content
+      data-slot="tabs-content"
+      value={value}
       className={cn('py-3 focus-visible:outline-none', className)}
     >
       {children}
-    </div>
+    </TabsPrimitive.Content>
   );
 }
 
 /**
- * Hand-built tabs following the WAI-ARIA APG tabs pattern (see ADR-0013): a
- * `role="tablist"` with `role="tab"` buttons (roving `tabindex`, correct
- * `aria-selected`) controlling `role="tabpanel"` regions. Arrow keys move focus
- * and activate the newly focused tab. Compound API: `Tabs.List` / `Tabs.Tab` /
- * `Tabs.Panel`. Controlled (`value` + `onValueChange`) or uncontrolled
- * (`defaultValue`).
+ * Tabs backed by Radix UI's Tabs primitive: `role="tablist"` › `role="tab"` ›
+ * `role="tabpanel"`, roving `tabindex`, `aria-selected`/`aria-controls`/
+ * `aria-labelledby` wiring and wrapping arrow-key navigation with automatic
+ * activation, all owned by Radix.
+ *
+ * The compound slot names stay this design system's own (`Tabs.List` /
+ * `Tabs.Tab` / `Tabs.Panel`, not Radix's `Trigger`/`Content`), and the
+ * controlled (`value` + `onValueChange`) / uncontrolled (`defaultValue`) API is
+ * unchanged — this is a drop-in replacement for the previous hand-built
+ * implementation.
  */
 export const Tabs = Object.assign(TabsBase, {
   List: TabsList,

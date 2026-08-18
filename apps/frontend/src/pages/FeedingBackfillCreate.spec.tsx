@@ -7,10 +7,15 @@ import { FeedingBackfillCreate } from './FeedingBackfillCreate';
 import * as feedingApi from '../api/feeding-api';
 import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
+import { chooseSelectOption } from '../test/chooseSelectOption';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../api/feeding-api');
 vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
+
+// The feeding-type field is a Radix combobox — see the helper's doc comment.
+stubPopupLayoutApis();
 
 const mockedFeedingApi = vi.mocked(feedingApi);
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
@@ -97,7 +102,7 @@ describe('FeedingBackfillCreate', () => {
 
     renderBackfillCreate();
 
-    await user.selectOptions(screen.getByLabelText('Feeding type'), 'Solid food');
+    await chooseSelectOption(user, 'Feeding type', 'Solid food');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: '2026-01-01T10:00' } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 

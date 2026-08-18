@@ -31,4 +31,22 @@ describe('Input', () => {
     expect(message).toHaveTextContent('Please enter an amount.');
     expect(input.getAttribute('aria-describedby')).toBe(message.id);
   });
+
+  it('generates a unique id per instance so labels do not cross-associate', () => {
+    render(
+      <>
+        <Input label="First name" />
+        <Input label="Last name" />
+      </>,
+    );
+
+    const first = screen.getByLabelText('First name');
+    const last = screen.getByLabelText('Last name');
+    expect(first.id).not.toBe(last.id);
+  });
+
+  it('honors an explicitly supplied id', () => {
+    render(<Input id="household-name" label="Household name" />);
+    expect(screen.getByLabelText('Household name')).toHaveAttribute('id', 'household-name');
+  });
 });

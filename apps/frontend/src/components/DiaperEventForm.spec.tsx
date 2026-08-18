@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { DiaperEventForm } from './DiaperEventForm';
 import type { DiaperEventFormInitialValues } from './DiaperEventForm';
 import { ApiError } from '../api/http-client';
+import { chooseSelectOption } from '../test/chooseSelectOption';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
+
+// The diaper-type field is a Radix combobox — see the helper's doc comment.
+stubPopupLayoutApis();
 
 function renderForm(
   mode: 'create' | 'edit',
@@ -43,7 +48,7 @@ describe('DiaperEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Pee');
+    await chooseSelectOption(user, 'Diaper type', 'Pee');
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
     expect(screen.getByText('Please enter a time.')).toBeInTheDocument();
@@ -55,7 +60,7 @@ describe('DiaperEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Pee');
+    await chooseSelectOption(user, 'Diaper type', 'Pee');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     fireEvent.change(screen.getByLabelText('Consistency note (optional)'), {
       target: { value: 'a'.repeat(501) },
@@ -71,7 +76,7 @@ describe('DiaperEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Pee');
+    await chooseSelectOption(user, 'Diaper type', 'Pee');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
@@ -85,7 +90,7 @@ describe('DiaperEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Both');
+    await chooseSelectOption(user, 'Diaper type', 'Both');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     fireEvent.change(screen.getByLabelText('Consistency note (optional)'), {
       target: { value: 'Slight rash' },
@@ -102,7 +107,7 @@ describe('DiaperEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Stool');
+    await chooseSelectOption(user, 'Diaper type', 'Stool');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
@@ -116,7 +121,7 @@ describe('DiaperEventForm (create mode)', () => {
     const user = userEvent.setup();
     renderForm('create', onSubmit);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Pee');
+    await chooseSelectOption(user, 'Diaper type', 'Pee');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: OCCURRED_AT_VALUE } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 
@@ -135,7 +140,8 @@ describe('DiaperEventForm (edit mode)', () => {
   it('pre-fills the fields from initialValues', () => {
     renderForm('edit', vi.fn(), initialValues);
 
-    expect(screen.getByLabelText('Diaper type')).toHaveValue('STOOL');
+    // The combobox trigger shows the selected option's label, not its value.
+    expect(screen.getByLabelText('Diaper type')).toHaveTextContent('Stool');
     expect(screen.getByLabelText('Consistency note (optional)')).toHaveValue('Loose stool');
   });
 
@@ -160,7 +166,7 @@ describe('DiaperEventForm (edit mode)', () => {
     const user = userEvent.setup();
     renderForm('edit', onSubmit, initialValues);
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Both');
+    await chooseSelectOption(user, 'Diaper type', 'Both');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ diaperType: 'BOTH' }));

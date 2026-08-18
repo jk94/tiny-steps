@@ -13,8 +13,10 @@ const HOUSEHOLDS_QUERY_KEY = ['households'] as const;
  * (e.g. `Layout` + `/households`).
  *
  * A one-shot navigation trigger, not persistent state: selecting an option
- * navigates and the `<select>` resets to its placeholder — there's no
- * global "current household" concept anywhere in the app.
+ * navigates and the control resets to its placeholder — there's no global
+ * "current household" concept anywhere in the app. That reset is what the
+ * pinned `value=""` achieves: no item carries the empty value, and the
+ * primitive shows the placeholder for it.
  */
 export function HouseholdSwitcher() {
   const { t } = useTranslation();
@@ -33,17 +35,15 @@ export function HouseholdSwitcher() {
     <div className="[&_label]:sr-only">
       <Select
         label={t('household.switcher.label')}
+        placeholder={t('household.switcher.placeholder')}
         value=""
-        onChange={(event) => navigate(`/households/${event.target.value}`)}
+        onValueChange={(householdId) => void navigate(`/households/${householdId}`)}
         className="h-9 w-44"
       >
-        <option value="" disabled>
-          {t('household.switcher.placeholder')}
-        </option>
         {data.map((household) => (
-          <option key={household.id} value={household.id}>
+          <Select.Item key={household.id} value={household.id}>
             {household.name}
-          </option>
+          </Select.Item>
         ))}
       </Select>
     </div>

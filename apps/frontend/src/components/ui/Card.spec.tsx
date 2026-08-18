@@ -27,4 +27,15 @@ describe('Card', () => {
     );
     expect(screen.getByTestId('stat-card')).toHaveAttribute('aria-label', 'Statistics');
   });
+
+  it('lets a consumer className win over the default surface classes', () => {
+    render(
+      <Card data-testid="stat-card" className="rounded-none bg-muted">
+        <Card.Body>content</Card.Body>
+      </Card>,
+    );
+    const card = screen.getByTestId('stat-card');
+    expect(card).toHaveClass('rounded-none', 'bg-muted');
+    expect(card).not.toHaveClass('rounded-lg', 'bg-card');
+  });
 });

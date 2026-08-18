@@ -7,10 +7,15 @@ import { DiaperBackfillCreate } from './DiaperBackfillCreate';
 import * as diaperApi from '../api/diaper-api';
 import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
+import { chooseSelectOption } from '../test/chooseSelectOption';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../api/diaper-api');
 vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
+
+// The diaper-type field is a Radix combobox — see the helper's doc comment.
+stubPopupLayoutApis();
 
 const mockedDiaperApi = vi.mocked(diaperApi);
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
@@ -92,7 +97,7 @@ describe('DiaperBackfillCreate', () => {
 
     renderBackfillCreate();
 
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Pee');
+    await chooseSelectOption(user, 'Diaper type', 'Pee');
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: '2026-01-01T10:00' } });
     await user.click(screen.getByRole('button', { name: 'Save entry' }));
 

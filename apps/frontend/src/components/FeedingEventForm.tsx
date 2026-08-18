@@ -215,21 +215,19 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
       <Select
         id="feeding-type"
         label={t('feeding.fields.feedingTypeLabel')}
+        placeholder={t('feeding.fields.feedingTypePlaceholder')}
         required
         value={feedingType}
         disabled={mode === 'edit' || isSubmitting}
-        onChange={(event) => {
-          setFeedingType(event.target.value as FeedingType);
+        onValueChange={(value) => {
+          setFeedingType(value as FeedingType);
           clearFieldError('feedingType');
         }}
         error={fieldErrorKeys.feedingType ? t(fieldErrorKeys.feedingType) : undefined}
       >
-        <option value="" disabled>
-          {t('feeding.fields.feedingTypePlaceholder')}
-        </option>
-        <option value="BREAST">{t('feeding.fields.feedingTypeOptionBreast')}</option>
-        <option value="BOTTLE">{t('feeding.fields.feedingTypeOptionBottle')}</option>
-        <option value="SOLID">{t('feeding.fields.feedingTypeOptionSolid')}</option>
+        <Select.Item value="BREAST">{t('feeding.fields.feedingTypeOptionBreast')}</Select.Item>
+        <Select.Item value="BOTTLE">{t('feeding.fields.feedingTypeOptionBottle')}</Select.Item>
+        <Select.Item value="SOLID">{t('feeding.fields.feedingTypeOptionSolid')}</Select.Item>
       </Select>
 
       <Input

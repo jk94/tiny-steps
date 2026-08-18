@@ -476,6 +476,7 @@
       "close": "Schließen"
     },
     "toast": {
+      "containerLabel": "Benachrichtigungen",
       "dismiss": "Benachrichtigung schließen"
     },
     "emptyState": {

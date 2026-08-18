@@ -25,12 +25,16 @@ the `offline-badge` classes referenced but never defined in `OfflineStatusBadge.
 | Focus   | None — not focusable.                                                                    |
 | Disabled | Not applicable.                                                                         |
 
-Semantic variants use the `success`/`warning`/`destructive`/`muted` token pairs; event-type variants
-use the per-event-type color tokens (`feeding`, `sleep`, `diaper`, and sub-types) with white text.
+Semantic variants use the `secondary`/`success`/`warning`/`destructive` token pairs; event-type
+variants use the per-event-type color tokens (`feeding`, `sleep`, `diaper`, and sub-types) with white
+text. Every variant carries a transparent border so a consumer can outline a badge purely via
+`className` without the layout shifting.
 
 ## Accessibility
 
 - Renders a non-interactive `<span>`; it must never expose a `button`/`link` role or receive focus.
+  It deliberately offers **no** `asChild`/polymorphic escape hatch (unlike shadcn/ui's own Badge),
+  precisely so this invariant cannot be broken from a call site.
 - Not focusable and not keyboard-operable by design.
 - Color is not the sole carrier of meaning: the badge always contains a text label.
 - Consumers must ensure adequate contrast when overriding colors; the built-in event-type variants

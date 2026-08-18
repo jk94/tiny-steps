@@ -18,14 +18,10 @@ function ControlledDialogDemo() {
   return (
     <>
       <Button onClick={() => setOpen(true)}>Open dialog</Button>
-      <Dialog isOpen={open} onOpenChange={setOpen} aria-labelledby="story-dialog-title">
+      <Dialog isOpen={open} onOpenChange={setOpen}>
         <Dialog.Header>
-          <h2 id="story-dialog-title" style={{ margin: 0 }}>
-            Delete entry?
-          </h2>
-          <span style={{ color: 'var(--color-muted-foreground)' }}>
-            This action can&apos;t be undone.
-          </span>
+          <Dialog.Title>Delete entry?</Dialog.Title>
+          <Dialog.Description>This action can&apos;t be undone.</Dialog.Description>
         </Dialog.Header>
         <Dialog.Body>The entry will be permanently removed for everyone.</Dialog.Body>
         <Dialog.Footer>

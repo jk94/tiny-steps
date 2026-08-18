@@ -8,6 +8,7 @@ import { queryClient } from './lib/query-client.ts';
 import { RealtimeProvider } from './realtime/RealtimeProvider.tsx';
 import { SyncQueueProvider } from './offline/SyncQueueProvider.tsx';
 import { ConflictNoticeBanner } from './components/ConflictNoticeBanner.tsx';
+import { Toaster } from './components/ui';
 import { registerServiceWorker } from './pwa/registerServiceWorker.ts';
 import './index.css';
 import App from './App.tsx';
@@ -33,6 +34,10 @@ createRoot(document.getElementById('root')!).render(
               {/* App-root, non-blocking Last-Write-Wins conflict notices
                   (see ConflictNoticeBanner / ADR-0011). */}
               <ConflictNoticeBanner />
+              {/* App-root toast host. Sonner needs no context provider —
+                  mounting it once here is what makes `toast()` callable from
+                  anywhere (see components/ui/Toaster.tsx). */}
+              <Toaster />
               <App />
             </SyncQueueProvider>
           </RealtimeProvider>

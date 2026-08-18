@@ -1,84 +1,110 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Dialog } from './Dialog';
 
-// jsdom doesn't implement HTMLDialogElement.showModal()/.close() — polyfill
-// just enough (toggling the reflected `open` attribute + a `close` event) to
-// exercise the same wiring the component relies on in real browsers (same
-// approach as ConfirmDialog.spec.tsx).
-beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
-    this.setAttribute('open', '');
-  });
-  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-    this.removeAttribute('open');
-    this.dispatchEvent(new Event('close'));
-  });
-});
-
-function renderDialog(isOpen: boolean, onOpenChange = vi.fn()) {
-  return render(
-    <Dialog isOpen={isOpen} onOpenChange={onOpenChange} aria-label="Example dialog">
-      <Dialog.Header>Delete entry?</Dialog.Header>
-      <Dialog.Body>This action can't be undone.</Dialog.Body>
+function renderDialog(isOpen: boolean, props: Partial<Parameters<typeof Dialog>[0]> = {}) {
+  const onOpenChange = props.onOpenChange ?? vi.fn();
+  const utils = render(
+    <Dialog isOpen={isOpen} {...props} onOpenChange={onOpenChange}>
+      <Dialog.Header>
+        <Dialog.Title>Delete entry?</Dialog.Title>
+        <Dialog.Description>This action can't be undone.</Dialog.Description>
+      </Dialog.Header>
+      <Dialog.Body>The entry will be permanently removed.</Dialog.Body>
       <Dialog.Footer>
         <button type="button">Cancel</button>
         <button type="button">Delete</button>
       </Dialog.Footer>
     </Dialog>,
   );
+  return { ...utils, onOpenChange };
 }
 
 describe('Dialog', () => {
-  it('calls showModal() and renders its slots when opened', () => {
-    const { rerender } = renderDialog(false);
-    expect(HTMLDialogElement.prototype.showModal).not.toHaveBeenCalled();
+  it('renders nothing while closed', () => {
+    renderDialog(false);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Delete entry?')).not.toBeInTheDocument();
+  });
 
-    rerender(
-      <Dialog isOpen onOpenChange={vi.fn()} aria-label="Example dialog">
-        <Dialog.Header>Delete entry?</Dialog.Header>
-        <Dialog.Body>This action can't be undone.</Dialog.Body>
-      </Dialog>,
-    );
+  it('renders its slots in a portaled dialog when opened', () => {
+    renderDialog(true);
 
-    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalledTimes(1);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
     expect(screen.getByText('Delete entry?')).toBeInTheDocument();
     expect(screen.getByText("This action can't be undone.")).toBeInTheDocument();
+    expect(screen.getByText('The entry will be permanently removed.')).toBeInTheDocument();
+  });
+
+  it('names and describes itself from Dialog.Title / Dialog.Description', () => {
+    renderDialog(true);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleName('Delete entry?');
+    expect(dialog).toHaveAccessibleDescription("This action can't be undone.");
   });
 
   it('moves focus into the dialog on open', () => {
     renderDialog(true);
-    const dialog = document.querySelector('dialog')!;
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
   });
 
   it('calls onOpenChange(false) when the close button is clicked', async () => {
-    const onOpenChange = vi.fn();
     const user = userEvent.setup();
-    renderDialog(true, onOpenChange);
+    const { onOpenChange } = renderDialog(true);
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('calls onOpenChange(false) on the native close event (ESC)', () => {
-    const onOpenChange = vi.fn();
-    renderDialog(true, onOpenChange);
+  it('calls onOpenChange(false) on ESC', async () => {
+    const user = userEvent.setup();
+    const { onOpenChange } = renderDialog(true);
 
-    document.querySelector('dialog')!.dispatchEvent(new Event('close'));
+    await user.keyboard('{Escape}');
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('calls close() when isOpen goes back to false', () => {
+  it('lets onEscapeKeyDown suppress the ESC dismissal', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    renderDialog(true, {
+      onOpenChange,
+      onEscapeKeyDown: (event) => event.preventDefault(),
+    });
+
+    await user.keyboard('{Escape}');
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('does not dismiss when the backdrop is clicked', async () => {
+    const user = userEvent.setup();
+    const { onOpenChange } = renderDialog(true);
+
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]');
+    expect(overlay).not.toBeNull();
+    await user.click(overlay as Element);
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('unmounts the dialog when isOpen goes back to false', () => {
     const { rerender } = renderDialog(true);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
     rerender(
-      <Dialog isOpen={false} onOpenChange={vi.fn()} aria-label="Example dialog">
+      <Dialog isOpen={false} onOpenChange={vi.fn()}>
         <Dialog.Body>content</Dialog.Body>
       </Dialog>,
     );
-    expect(HTMLDialogElement.prototype.close).toHaveBeenCalledTimes(1);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

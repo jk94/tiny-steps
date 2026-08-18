@@ -6,9 +6,14 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { DiaperEventEdit } from './DiaperEventEdit';
 import * as diaperApi from '../api/diaper-api';
 import { queryClient } from '../lib/query-client';
+import { chooseSelectOption } from '../test/chooseSelectOption';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../api/diaper-api');
 vi.mock('../realtime/useHouseholdRoom');
+
+// The diaper-type field is a Radix combobox — see the helper's doc comment.
+stubPopupLayoutApis();
 
 const mockedDiaperApi = vi.mocked(diaperApi);
 
@@ -80,7 +85,8 @@ describe('DiaperEventEdit', () => {
 
     renderDiaperEventEdit();
 
-    expect(await screen.findByLabelText('Diaper type')).toHaveValue('PEE');
+    // The combobox trigger shows the selected option's label, not its value.
+    expect(await screen.findByLabelText('Diaper type')).toHaveTextContent('Pee');
     expect(screen.getByLabelText('Diaper type')).toBeEnabled();
   });
 
@@ -95,7 +101,7 @@ describe('DiaperEventEdit', () => {
 
     renderDiaperEventEdit();
     await screen.findByLabelText('Diaper type');
-    await user.selectOptions(screen.getByLabelText('Diaper type'), 'Both');
+    await chooseSelectOption(user, 'Diaper type', 'Both');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(mockedDiaperApi.updateDiaperEventOptimistic).toHaveBeenCalledWith(
@@ -171,6 +177,6 @@ describe('DiaperEventEdit', () => {
 
     renderDiaperEventEdit();
 
-    expect(await screen.findByLabelText('Diaper type')).toHaveValue('PEE');
+    expect(await screen.findByLabelText('Diaper type')).toHaveTextContent('Pee');
   });
 });

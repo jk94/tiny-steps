@@ -3,23 +3,27 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/cn';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 rounded-full font-medium whitespace-nowrap',
+  // Structure ported from shadcn/ui's Badge reference: a `w-fit`/`shrink-0`
+  // flex pill that clips overflow, sizes any inline SVG child, and keeps the
+  // glyph non-interactive. The pill radius (`rounded-full`, not shadcn's
+  // `rounded-md`) is this design system's own documented shape.
+  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border font-medium whitespace-nowrap transition-[color,box-shadow] [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {
-        default: 'bg-muted text-muted-foreground',
-        success: 'bg-success text-success-foreground',
-        warning: 'bg-warning text-warning-foreground',
-        destructive: 'bg-destructive text-destructive-foreground',
-        feeding: 'bg-feeding text-white',
-        'feeding-breast': 'bg-feeding-breast text-white',
-        'feeding-bottle': 'bg-feeding-bottle text-white',
-        'feeding-solid': 'bg-feeding-solid text-white',
-        sleep: 'bg-sleep text-white',
-        diaper: 'bg-diaper text-white',
-        'diaper-pee': 'bg-diaper-pee text-white',
-        'diaper-stool': 'bg-diaper-stool text-white',
-        'diaper-both': 'bg-diaper-both text-white',
+        default: 'border-transparent bg-secondary text-secondary-foreground',
+        success: 'border-transparent bg-success text-success-foreground',
+        warning: 'border-transparent bg-warning text-warning-foreground',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground',
+        feeding: 'border-transparent bg-feeding text-white',
+        'feeding-breast': 'border-transparent bg-feeding-breast text-white',
+        'feeding-bottle': 'border-transparent bg-feeding-bottle text-white',
+        'feeding-solid': 'border-transparent bg-feeding-solid text-white',
+        sleep: 'border-transparent bg-sleep text-white',
+        diaper: 'border-transparent bg-diaper text-white',
+        'diaper-pee': 'border-transparent bg-diaper-pee text-white',
+        'diaper-stool': 'border-transparent bg-diaper-stool text-white',
+        'diaper-both': 'border-transparent bg-diaper-both text-white',
       },
       size: {
         sm: 'px-2 py-0.5 text-xs',
@@ -40,12 +44,18 @@ export interface BadgeProps
 
 /**
  * Small, purely-presentational status/category label. Renders a non-interactive
- * `<span>` — it must never be a button/link (assert-tested). Provides semantic
- * variants (default/success/warning/destructive) and one variant per event type
- * so a future timeline/list migration can color-code entries from the design
- * tokens instead of dead, undefined CSS classes (e.g. the `offline-badge`
- * classes referenced but never defined in `OfflineStatusBadge.tsx`).
+ * `<span>` — it must never be a button/link (assert-tested), which is why it
+ * deliberately does NOT take shadcn's `asChild`/`Slot` escape hatch. Provides
+ * semantic variants (default/success/warning/destructive) and one variant per
+ * event type so timeline/list entries can be color-coded from the design
+ * tokens.
  */
 export function Badge({ className, variant, size, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant, size }), className)} {...props} />;
+  return (
+    <span
+      data-slot="badge"
+      className={cn(badgeVariants({ variant, size }), className)}
+      {...props}
+    />
+  );
 }
