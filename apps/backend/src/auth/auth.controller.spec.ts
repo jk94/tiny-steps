@@ -10,13 +10,16 @@ const buildAuthResult = (): AuthResult => ({
   user: {
     id: 'user-1',
     email: 'parent@example.com',
+    name: 'Bernd',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
   },
   tokens: { accessToken: 'access-token-value', refreshToken: 'refresh-token-value' },
 });
 
 describe('AuthController', () => {
-  let authService: jest.Mocked<Pick<AuthService, 'register' | 'login' | 'refresh' | 'logout'>>;
+  let authService: jest.Mocked<
+    Pick<AuthService, 'register' | 'login' | 'refresh' | 'logout' | 'updateName'>
+  >;
   let controller: AuthController;
   let res: jest.Mocked<Pick<Response, 'cookie' | 'clearCookie'>>;
 
@@ -26,6 +29,7 @@ describe('AuthController', () => {
       login: jest.fn(),
       refresh: jest.fn(),
       logout: jest.fn(),
+      updateName: jest.fn(),
     };
     controller = new AuthController(authService as unknown as AuthService, new AuthCookieService());
     res = {
@@ -40,13 +44,14 @@ describe('AuthController', () => {
       authService.register.mockResolvedValue(result);
 
       const response = await controller.register(
-        { email: 'parent@example.com', password: 'super-secret-1' },
+        { email: 'parent@example.com', password: 'super-secret-1', name: 'Bernd' },
         res as unknown as Response,
       );
 
       expect(authService.register).toHaveBeenCalledWith({
         email: 'parent@example.com',
         password: 'super-secret-1',
+        name: 'Bernd',
       });
       expect(response).toEqual({ user: result.user });
 
@@ -158,10 +163,29 @@ describe('AuthController', () => {
       const user: AuthenticatedUser = {
         id: 'user-1',
         email: 'parent@example.com',
+        name: 'Bernd',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       };
 
       expect(controller.me(user)).toBe(user);
+    });
+  });
+
+  describe('updateMe', () => {
+    it("updates the authenticated user's own name, ignoring any id in the body", async () => {
+      const currentUser: AuthenticatedUser = {
+        id: 'user-1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      const updatedUser: AuthenticatedUser = { ...currentUser, name: 'Renamed' };
+      authService.updateName.mockResolvedValue(updatedUser);
+
+      const response = await controller.updateMe(currentUser, { name: 'Renamed' });
+
+      expect(authService.updateName).toHaveBeenCalledWith('user-1', 'Renamed');
+      expect(response).toBe(updatedUser);
     });
   });
 });

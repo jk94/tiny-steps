@@ -33,6 +33,24 @@ function buildRedirectUri(providerId: string): string {
   return `${resolvePublicUrl()}/api/auth/oidc/${providerId}/callback`;
 }
 
+/** Mirrors `RegisterDto.name`'s `@MaxLength(120)` — the DB column is untyped TEXT. */
+const MAX_NAME_LENGTH = 120;
+
+/**
+ * Best-effort display name from the standard OIDC `name` claim. Deliberately
+ * ID-token-only: a missing claim just leaves the user nameless (the frontend
+ * then forces them through `MandatoryNameDialog`), which isn't worth an extra
+ * UserInfo round trip on every first login.
+ */
+function resolveName(idTokenClaims: client.IDToken): string | undefined {
+  const rawName = idTokenClaims.name;
+  if (typeof rawName !== 'string') {
+    return undefined;
+  }
+  const name = rawName.trim().slice(0, MAX_NAME_LENGTH);
+  return name.length > 0 ? name : undefined;
+}
+
 /**
  * Drives the OIDC Authorization Code Flow + PKCE via `openid-client`
  * directly (no Passport strategy — see ADR-0004) and implements the
@@ -187,7 +205,7 @@ export class OidcService {
       return existingUserByEmail;
     }
 
-    return this.createUserWithIdentity(email, providerId, subject);
+    return this.createUserWithIdentity(email, providerId, subject, resolveName(idTokenClaims));
   }
 
   /**
@@ -216,10 +234,13 @@ export class OidcService {
     email: string,
     providerId: string,
     subject: string,
+    name?: string,
   ): Promise<User> {
     let newUser: User;
     try {
-      newUser = await this.prisma.user.create({ data: { email, passwordHash: null } });
+      newUser = await this.prisma.user.create({
+        data: { email, name: name ?? null, passwordHash: null },
+      });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

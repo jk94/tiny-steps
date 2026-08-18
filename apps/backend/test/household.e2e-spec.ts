@@ -105,7 +105,7 @@ describe('Household & Invites (e2e)', () => {
     const email = testEmail(label);
     const response = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email, password: 'correct-pass1' })
+      .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
       .expect(201);
 
     const setCookie = response.headers['set-cookie'] as unknown as string[];

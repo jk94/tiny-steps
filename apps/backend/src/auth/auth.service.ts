@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JWT_SECRETS } from './jwt-secrets.token';
+import { toAuthenticatedUser } from './to-authenticated-user';
 import type { AuthenticatedUser } from './types/authenticated-request';
 
 export interface TokenPair {
@@ -61,7 +62,7 @@ export class AuthService {
     let user: User;
     try {
       user = await this.prisma.user.create({
-        data: { email: dto.email, passwordHash },
+        data: { email: dto.email, name: dto.name, passwordHash },
       });
     } catch (error) {
       if (
@@ -197,8 +198,14 @@ export class AuthService {
     ]);
 
     return {
-      user: { id: user.id, email: user.email, createdAt: user.createdAt },
+      user: toAuthenticatedUser(user),
       tokens: { accessToken, refreshToken },
     };
+  }
+
+  /** Updates the user's display name — the one field `PATCH /auth/me` exposes. */
+  async updateName(userId: string, name: string): Promise<AuthenticatedUser> {
+    const user = await this.prisma.user.update({ where: { id: userId }, data: { name } });
+    return toAuthenticatedUser(user);
   }
 }

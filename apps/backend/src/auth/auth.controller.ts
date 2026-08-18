@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   Res,
@@ -16,6 +17,7 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateAuthMeDto } from './dto/update-auth-me.dto';
 import { CsrfGuard } from './guards/csrf.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthEnabledGuard } from './guards/local-auth-enabled.guard';
@@ -99,5 +101,16 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;
+  }
+
+  // Same guard combo as `logout`: state-changing and cookie-authenticated,
+  // so it needs CSRF protection on top of the access-token check.
+  @UseGuards(JwtAuthGuard, CsrfGuard)
+  @Patch('me')
+  async updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateAuthMeDto,
+  ): Promise<AuthenticatedUser> {
+    return this.authService.updateName(user.id, dto.name);
   }
 }

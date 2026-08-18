@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { JwtSecrets } from '../config/jwt.config';
 import { PrismaService } from '../prisma/prisma.service';
 import { JWT_SECRETS } from './jwt-secrets.token';
+import { toAuthenticatedUser } from './to-authenticated-user';
 import type { AuthenticatedUser } from './types/authenticated-request';
 
 interface AccessTokenPayload {
@@ -64,6 +65,6 @@ export class AccessTokenVerifierService {
       throw new UnauthorizedException('User no longer exists');
     }
 
-    return { id: user.id, email: user.email, createdAt: user.createdAt };
+    return toAuthenticatedUser(user);
   }
 }

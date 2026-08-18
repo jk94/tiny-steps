@@ -86,11 +86,16 @@ describe('Auth (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'super-secret-1' })
+        .send({ email, password: 'super-secret-1', name: 'E2E Tester' })
         .expect(201);
 
       expect(response.body).toEqual({
-        user: { id: expect.any(String), email, createdAt: expect.any(String) },
+        user: {
+          id: expect.any(String),
+          email,
+          name: 'E2E Tester',
+          createdAt: expect.any(String),
+        },
       });
       expect(response.body.user).not.toHaveProperty('passwordHash');
 
@@ -116,12 +121,12 @@ describe('Auth (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'super-secret-1' })
+        .send({ email, password: 'super-secret-1', name: 'E2E Tester' })
         .expect(201);
 
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'another-pass1' })
+        .send({ email, password: 'another-pass1', name: 'E2E Tester' })
         .expect(409);
     });
 
@@ -129,7 +134,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('wrong-password');
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const response = await request(app.getHttpServer())
@@ -144,7 +149,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('login');
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const response = await request(app.getHttpServer())
@@ -167,7 +172,7 @@ describe('Auth (e2e)', () => {
 
       const registerResponse = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email: mixedCaseEmail, password: 'correct-pass1' })
+        .send({ email: mixedCaseEmail, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       expect(registerResponse.body.user.email).toBe(canonicalEmail);
@@ -183,7 +188,7 @@ describe('Auth (e2e)', () => {
       // hit the unique-email conflict, not create a second account.
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email: mixedCaseEmail, password: 'another-pass1' })
+        .send({ email: mixedCaseEmail, password: 'another-pass1', name: 'E2E Tester' })
         .expect(409);
     });
 
@@ -195,7 +200,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('me');
       const registerResponse = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const cookies = cookieHeaderFrom(
@@ -210,7 +215,93 @@ describe('Auth (e2e)', () => {
       expect(meResponse.body).toEqual({
         id: registerResponse.body.user.id,
         email,
+        name: 'E2E Tester',
         createdAt: registerResponse.body.user.createdAt,
+      });
+    });
+
+    it.each([
+      ['a missing name', { password: 'correct-pass1' }],
+      ['an empty name', { password: 'correct-pass1', name: '' }],
+      ['an over-long name', { password: 'correct-pass1', name: 'B'.repeat(121) }],
+    ])('rejects registering with %s', async (_label, body) => {
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ email: testEmail('bad-name'), ...body })
+        .expect(400);
+    });
+
+    describe('PATCH /api/auth/me', () => {
+      /** Registers a user and returns everything needed for a CSRF-protected call. */
+      const registerForPatch = async (label: string) => {
+        const registerResponse = await request(app.getHttpServer())
+          .post('/api/auth/register')
+          .send({ email: testEmail(label), password: 'correct-pass1', name: 'E2E Tester' })
+          .expect(201);
+
+        const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
+        const csrfCookieRaw = findSetCookie(setCookie, CSRF_COOKIE_NAME)!;
+        return {
+          userId: registerResponse.body.user.id as string,
+          cookies: cookieHeaderFrom(setCookie),
+          csrfToken: cookieValue(csrfCookieRaw)!,
+        };
+      };
+
+      it('updates the name and makes GET /me return it', async () => {
+        const { userId, cookies, csrfToken } = await registerForPatch('patch-me');
+
+        const patchResponse = await request(app.getHttpServer())
+          .patch('/api/auth/me')
+          .set('Cookie', cookies)
+          .set(CSRF_HEADER_NAME, csrfToken)
+          .send({ name: 'Renamed Parent' })
+          .expect(200);
+
+        expect(patchResponse.body).toEqual({
+          id: userId,
+          email: expect.any(String),
+          name: 'Renamed Parent',
+          createdAt: expect.any(String),
+        });
+
+        const meResponse = await request(app.getHttpServer())
+          .get('/api/auth/me')
+          .set('Cookie', cookies)
+          .expect(200);
+        expect(meResponse.body.name).toBe('Renamed Parent');
+      });
+
+      it('rejects an unauthenticated call with 401', async () => {
+        await request(app.getHttpServer())
+          .patch('/api/auth/me')
+          .send({ name: 'Nobody' })
+          .expect(401);
+      });
+
+      it('rejects a call without a matching X-CSRF-Token header with 403', async () => {
+        const { cookies } = await registerForPatch('patch-me-no-csrf');
+
+        await request(app.getHttpServer())
+          .patch('/api/auth/me')
+          .set('Cookie', cookies)
+          .send({ name: 'Renamed Parent' })
+          .expect(403);
+      });
+
+      it.each([
+        ['a missing name', {}],
+        ['an empty name', { name: '' }],
+        ['an over-long name', { name: 'B'.repeat(121) }],
+      ])('rejects %s with 400', async (_label, body) => {
+        const { cookies, csrfToken } = await registerForPatch('patch-me-invalid');
+
+        await request(app.getHttpServer())
+          .patch('/api/auth/me')
+          .set('Cookie', cookies)
+          .set(CSRF_HEADER_NAME, csrfToken)
+          .send(body)
+          .expect(400);
       });
     });
 
@@ -218,7 +309,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('refresh');
       const registerResponse = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
@@ -252,7 +343,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('refresh-no-csrf');
       const registerResponse = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
@@ -268,7 +359,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('logout');
       const registerResponse = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
@@ -300,7 +391,7 @@ describe('Auth (e2e)', () => {
       const email = testEmail('logout-no-csrf');
       const registerResponse = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'correct-pass1' })
+        .send({ email, password: 'correct-pass1', name: 'E2E Tester' })
         .expect(201);
 
       const setCookie = registerResponse.headers['set-cookie'] as unknown as string[];
@@ -346,7 +437,7 @@ describe('Auth (e2e)', () => {
     it('hides register behind a 404', async () => {
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email: testEmail('disabled'), password: 'super-secret-1' })
+        .send({ email: testEmail('disabled'), password: 'super-secret-1', name: 'E2E Tester' })
         .expect(404);
     });
 

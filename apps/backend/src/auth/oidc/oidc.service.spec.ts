@@ -24,6 +24,7 @@ const SUBJECT = 'oidc-subject-1';
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: 'user-1',
   email: 'parent@example.com',
+  name: null,
   passwordHash: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -103,7 +104,12 @@ describe('OidcService', () => {
         createdAt: new Date(),
       });
       const authResult: AuthResult = {
-        user: { id: createdUser.id, email: createdUser.email, createdAt: createdUser.createdAt },
+        user: {
+          id: createdUser.id,
+          email: createdUser.email,
+          name: createdUser.name,
+          createdAt: createdUser.createdAt,
+        },
         tokens: { accessToken: 'a', refreshToken: 'r' },
       };
       authService.issueSessionFor.mockResolvedValue(authResult);
@@ -115,7 +121,7 @@ describe('OidcService', () => {
       });
 
       expect(prisma.user.create).toHaveBeenCalledWith({
-        data: { email: 'new@example.com', passwordHash: null },
+        data: { email: 'new@example.com', name: null, passwordHash: null },
       });
       expect(prisma.oidcIdentity.create).toHaveBeenCalledWith({
         data: { userId: 'new-user', providerId: PROVIDER_ID, subject: SUBJECT },
@@ -142,7 +148,12 @@ describe('OidcService', () => {
         createdAt: new Date(),
       });
       authService.issueSessionFor.mockResolvedValue({
-        user: { id: createdUser.id, email: createdUser.email, createdAt: createdUser.createdAt },
+        user: {
+          id: createdUser.id,
+          email: createdUser.email,
+          name: createdUser.name,
+          createdAt: createdUser.createdAt,
+        },
         tokens: { accessToken: 'a', refreshToken: 'r' },
       });
 
@@ -154,9 +165,43 @@ describe('OidcService', () => {
 
       expect(mockedFetchUserInfo).not.toHaveBeenCalled();
       expect(prisma.user.create).toHaveBeenCalledWith({
-        data: { email: 'from-id-token@example.com', passwordHash: null },
+        data: { email: 'from-id-token@example.com', name: null, passwordHash: null },
       });
     });
+
+    it.each([
+      ['a plain name claim', 'Bernd Beispiel', 'Bernd Beispiel'],
+      ['a padded name claim', '  Bernd Beispiel  ', 'Bernd Beispiel'],
+      ['an over-long name claim', 'B'.repeat(200), 'B'.repeat(120)],
+      ['a blank name claim', '   ', null],
+      ['a non-string name claim', 42, null],
+    ])(
+      'stores the trimmed/truncated ID-Token name claim on a newly created user (%s)',
+      async (_label, nameClaim, expectedName) => {
+        registry.get.mockReturnValue(buildEntry());
+        mockedAuthorizationCodeGrant.mockResolvedValue(
+          buildTokenResponse(SUBJECT, { email: 'named@example.com', name: nameClaim }),
+        );
+        prisma.oidcIdentity.findUnique.mockResolvedValue(null);
+        prisma.user.findUnique.mockResolvedValue(null);
+        prisma.user.create.mockResolvedValue(buildUser({ id: 'new-user' }));
+        prisma.oidcIdentity.create.mockResolvedValue({});
+        authService.issueSessionFor.mockResolvedValue({
+          user: {},
+          tokens: { accessToken: 'a', refreshToken: 'r' },
+        });
+
+        await service.handleCallback(PROVIDER_ID, new URL('http://localhost/'), {
+          state: 's',
+          nonce: 'n',
+          codeVerifier: 'c',
+        });
+
+        expect(prisma.user.create).toHaveBeenCalledWith({
+          data: { email: 'named@example.com', name: expectedName, passwordHash: null },
+        });
+      },
+    );
 
     it('short-circuits on an existing OidcIdentity: resolves the linked User directly, no email lookup', async () => {
       registry.get.mockReturnValue(buildEntry());
@@ -171,7 +216,12 @@ describe('OidcService', () => {
       });
       prisma.user.findUnique.mockResolvedValue(linkedUser);
       authService.issueSessionFor.mockResolvedValue({
-        user: { id: linkedUser.id, email: linkedUser.email, createdAt: linkedUser.createdAt },
+        user: {
+          id: linkedUser.id,
+          email: linkedUser.email,
+          name: linkedUser.name,
+          createdAt: linkedUser.createdAt,
+        },
         tokens: { accessToken: 'a', refreshToken: 'r' },
       });
 
@@ -207,7 +257,12 @@ describe('OidcService', () => {
         createdAt: new Date(),
       });
       authService.issueSessionFor.mockResolvedValue({
-        user: { id: existingUser.id, email: existingUser.email, createdAt: existingUser.createdAt },
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          name: existingUser.name,
+          createdAt: existingUser.createdAt,
+        },
         tokens: { accessToken: 'a', refreshToken: 'r' },
       });
 

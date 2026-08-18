@@ -26,6 +26,11 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
+  // Display name shown in the UI. Nullable at the DB level so pre-existing
+  // rows and OIDC logins without a `name` claim stay valid; the app forces
+  // users through a blocking dialog to fill it in (see
+  // `apps/frontend/src/components/MandatoryNameDialog.tsx`).
+  name         String?
   // Nullable: OIDC-only users authenticate without a local password.
   passwordHash String?
   createdAt    DateTime @default(now())

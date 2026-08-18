@@ -7,6 +7,12 @@ import type { Request } from 'express';
 export interface AuthenticatedUser {
   id: string;
   email: string;
+  /**
+   * Display name. Nullable because the column is nullable — pre-existing rows
+   * and OIDC logins without a `name` claim have none until the user supplies
+   * one via `PATCH /auth/me`.
+   */
+  name: string | null;
   createdAt: Date;
 }
 

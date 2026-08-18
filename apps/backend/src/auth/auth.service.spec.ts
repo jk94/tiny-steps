@@ -10,6 +10,7 @@ const JWT_SECRETS = { accessSecret: 'access-secret', refreshSecret: 'refresh-sec
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: 'user-1',
   email: 'parent@example.com',
+  name: 'Bernd',
   passwordHash: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -18,7 +19,7 @@ const buildUser = (overrides: Partial<User> = {}): User => ({
 
 describe('AuthService', () => {
   let prisma: {
-    user: { create: jest.Mock; findUnique: jest.Mock };
+    user: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
     refreshToken: {
       create: jest.Mock;
       findUnique: jest.Mock;
@@ -30,7 +31,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     prisma = {
-      user: { create: jest.fn(), findUnique: jest.fn() },
+      user: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       refreshToken: {
         create: jest.fn(),
         findUnique: jest.fn(),
@@ -60,10 +61,11 @@ describe('AuthService', () => {
       const result = await service.register({
         email: 'parent@example.com',
         password: 'super-secret-1',
+        name: 'Bernd',
       });
 
       expect(prisma.user.create).toHaveBeenCalledWith({
-        data: { email: 'parent@example.com', passwordHash: expect.any(String) },
+        data: { email: 'parent@example.com', name: 'Bernd', passwordHash: expect.any(String) },
       });
       const createdPasswordHash = prisma.user.create.mock.calls[0][0].data.passwordHash;
       expect(await argon2.verify(createdPasswordHash, 'super-secret-1')).toBe(true);
@@ -71,6 +73,7 @@ describe('AuthService', () => {
       expect(result.user).toEqual({
         id: 'user-1',
         email: 'parent@example.com',
+        name: 'Bernd',
         createdAt: buildUser().createdAt,
       });
       expect(result.tokens.accessToken).toEqual(expect.any(String));
@@ -89,7 +92,11 @@ describe('AuthService', () => {
       );
 
       await expect(
-        service.register({ email: 'parent@example.com', password: 'super-secret-1' }),
+        service.register({
+          email: 'parent@example.com',
+          password: 'super-secret-1',
+          name: 'Bernd',
+        }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -98,7 +105,11 @@ describe('AuthService', () => {
       prisma.user.create.mockRejectedValue(unrelatedError);
 
       await expect(
-        service.register({ email: 'parent@example.com', password: 'super-secret-1' }),
+        service.register({
+          email: 'parent@example.com',
+          password: 'super-secret-1',
+          name: 'Bernd',
+        }),
       ).rejects.toBe(unrelatedError);
     });
   });
@@ -265,6 +276,33 @@ describe('AuthService', () => {
     it('does nothing (no throw) for an invalid/malformed token', async () => {
       await expect(service.logout('not-a-valid-jwt')).resolves.toBeUndefined();
       expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateName', () => {
+    it('persists the new name and returns the refreshed authenticated user', async () => {
+      prisma.user.update.mockResolvedValue(buildUser({ name: 'Renamed' }));
+
+      const result = await service.updateName('user-1', 'Renamed');
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { name: 'Renamed' },
+      });
+      expect(result).toEqual({
+        id: 'user-1',
+        email: 'parent@example.com',
+        name: 'Renamed',
+        createdAt: buildUser().createdAt,
+      });
+    });
+
+    it('never leaks the password hash of the updated user', async () => {
+      prisma.user.update.mockResolvedValue(buildUser({ name: 'Renamed', passwordHash: 'secret' }));
+
+      const result = await service.updateName('user-1', 'Renamed');
+
+      expect(result).not.toHaveProperty('passwordHash');
     });
   });
 });
