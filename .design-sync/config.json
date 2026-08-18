@@ -9,9 +9,7 @@
   "buildCmd": "cd apps/frontend && rm -rf types && npx tsc -p tsconfig.design-sync-types.json",
   "overrides": {
     "Select": { "cardMode": "column" },
-    "EmptyState": { "skip": ["components-emptystate--default"] }
-  },
-  "storyImports": {
-    "shim": ["src/components/ui/useToast.ts", "src/components/ui/ToastContext.ts"]
+    "EmptyState": { "skip": ["components-emptystate--default"] },
+    "Toaster": { "skip": ["components-toaster--playground"] }
   }
 }

@@ -2,7 +2,7 @@
 
 No root provider/wrapper component is required to render these components correctly styled — colors, spacing, radii, and shadows are plain CSS custom properties available globally at `:root` the moment `styles.css` loads (no context, no theme object). Dark mode is a pure CSS mechanism, not a component: it activates automatically via `prefers-color-scheme: dark`, or can be forced per-subtree with a `data-theme="dark"` (or `"light"`) attribute on any ancestor element — there is no `<ThemeProvider>` to import.
 
-The one component that IS a required wrapper is `ToastProvider` — wrap the app (or the subtree that shows toasts) in it once, then call the `useToast()` hook's `toast({ title, description, variant })` from anywhere inside to enqueue one. `Dialog` and other components take plain controlled props (`isOpen`/`onOpenChange`) and need no provider.
+`Toaster` is a mount-once host, not a data provider — render `<Toaster />` once near the app root, then call the `toast(message, { description })` / `toast.success(...)` / `toast.error(...)` / `toast.warning(...)` / `toast.info(...)` functions from anywhere to enqueue a toast; these are imported from the `sonner` package directly (`import { toast } from 'sonner'`), not exported from this design system's bundle — no context, hook, or provider wraps the call site. `Dialog` and other components take plain controlled props (`isOpen`/`onOpenChange`) and need no provider either.
 
 ## Styling idiom
 

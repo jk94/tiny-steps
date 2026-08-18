@@ -51,15 +51,18 @@ that doesn't share state/context with the one baked into `_ds_bundle.js`.
 lowercase hook (`useToast`) or an internal, type-only-exported module
 (`ToastContext`) never matches that rule and silently gets double-bundled.
 
-- **Toast**: `useToast.ts` (and transitively `ToastContext.ts`, which holds
-  the actual `createContext()` call — only its *type* is in the public
-  barrel) got bundled twice → two distinct Context objects → `useToast()`
-  inside the story's `Demo` component (wrapped in the bundle's real
-  `ToastProvider`) threw "must be used within a ToastProvider" even though
-  it visually WAS nested correctly. Fixed via
-  `cfg.storyImports.shim: ["src/components/ui/useToast.ts", "src/components/ui/ToastContext.ts"]`
-  — forces both to resolve through the shared-bundle shim instead of
-  bundling fresh.
+- **Toast** (obsolete since 2026-08-18 — kept for the general lesson below):
+  `useToast.ts` (and transitively `ToastContext.ts`, which holds the actual
+  `createContext()` call — only its *type* is in the public barrel) got
+  bundled twice → two distinct Context objects → `useToast()` inside the
+  story's `Demo` component (wrapped in the bundle's real `ToastProvider`)
+  threw "must be used within a ToastProvider" even though it visually WAS
+  nested correctly. Was fixed via `cfg.storyImports.shim:
+  ["src/components/ui/useToast.ts", "src/components/ui/ToastContext.ts"]`.
+  The hand-built `ToastProvider`/`useToast`/`ToastContext` trio (and this
+  shim entry) no longer exist — Sonner's `<Toaster />` replaced them (see
+  the `[GENERAL] sb-error on a … zero-size portal container` note below for
+  what replaced this as Toast's current gotcha).
 - **Watch for this again**: any FUTURE component whose story imports a
   lowercase/hook/internal-only module (not a barrel-exported PascalCase
   name) that itself touches component-shared state (context, module-level
@@ -156,7 +159,74 @@ literal values in the `@theme` block. See the commit fixing
 comments. Regenerated `tokens.generated.css`/`tokens.md`/
 `eventTypeTokens.generated.ts` are included in that commit.
 
+## [GENERAL] `sb-error` on a component whose root child is a zero-size portal container (2026-08-18)
+
+The Radix/Sonner migration (ADR-0013 addendum) replaced the hand-built
+`ToastProvider`/`useToast` pair with Sonner's `<Toaster />` — this dropped
+`useToast.ts`/`ToastContext.ts` from the repo entirely (both deleted), so
+the `cfg.storyImports.shim` entries for them were removed from
+`.design-sync/config.json` as dead config.
+
+The new `Toaster.stories.tsx`'s only story (`Playground`) captured as
+`sb-error: "no storybook root content"` against the freshly-rebuilt
+reference storybook. Root-caused via a direct Playwright probe (not a
+config/build problem): Sonner renders `<section aria-label="Notifications
+…">` as the **first** child of `#storybook-root`, and that section always
+measures 0×0 in the layout box — its actual toast list is `position: fixed`
+and escapes the section's own box entirely (portal-style, without an actual
+DOM portal). `compare.mjs`'s `SB_CONTENT` selector
+(`:is(#storybook-root, #root) > :not(style,script,link,meta,template)`)
+locks onto this first match and waits for it to become Playwright-"visible"
+(non-zero bounding box), which it never does — even confirmed with an
+auto-firing toast added experimentally to the story (reverted — it didn't
+help, see below) and 15×300ms polling proving a real `[data-sonner-toast]`
+node exists in the DOM for ~4s while the *section* itself stays 0×0 the
+whole time.
+
+This is the same root-cause CLASS as the already-documented `[PORTAL?]`
+overlay-bleed issue (§4a.5), just surfacing one stage earlier — during the
+**reference storybook capture**, not the product-card grid. `cardMode`
+doesn't apply here since it only affects the product card, not the sb-side
+capture check, and there's no `cfg` knob for the `SB_CONTENT` selector
+(compare.mjs is explicitly the never-forked oracle).
+
+**Tried and reverted**: added a `useEffect(() => toast(...), [])` to the
+story's `Demo` component so a toast fires on mount unconditionally. This DID
+render a real toast (confirmed via polling) but the *section* remained 0×0
+throughout regardless — the fix doesn't address the actual check, and it
+would have shipped an unsolicited toast firing every time a real developer
+opens this story in the team's own Storybook. Reverted; do not retry this
+angle without first understanding it doesn't touch what `waitForSelector`
+actually measures.
+
+**Resolution taken**: `cfg.overrides.Toaster.skip:
+["components-toaster--playground"]` — the story is skipped from
+compare/grading. `Toaster` ships via the floor/fallback card (see
+`Toaster.html`'s `dsFallback()`) pointing the design agent at
+`Toaster.d.ts`/`Toaster.prompt.md` instead of a live render. Real usage
+(the `toast()`/`toast.success()`/etc. functions from `sonner`, not a prop on
+`<Toaster>`) is documented in `.design-sync/conventions.md` instead, since
+there's no visual to show it.
+
+**Watch for this again**: any FUTURE component whose root render is an
+aria-live/notification/toast-style landmark with `position: fixed`
+descendants (not a true React portal — those already work fine, e.g.
+Dialog/Select render via `document.body` portals and aren't affected) will
+hit the same `sb-error` and need the same `skip` treatment.
+
 ## Accepted substitutes / known non-blocking warnings
+
+- **`border-primary` utility class**: named in `conventions.md`'s class
+  table, consistent with the sibling `bg-primary`/`text-primary`/
+  `text-primary-foreground` (all confirmed present in the compiled
+  `_ds_bundle.css`) and backed by the same real `--color-primary` token —
+  but no scanned component currently applies a bare `border-primary`, so
+  Tailwind v4's JIT never emits the standalone utility rule in this build
+  (only modifier variants like `border-primary:hover` appear, from other
+  components). Left in the conventions doc since the vocabulary is
+  legitimate and would compile the moment anything uses it; flagging here
+  per the "documented in source but absent from the build" case rather than
+  cutting a valid class name.
 
 - **`[FONT_MISSING]` "Avenir"**: `system-ui, Avenir, Helvetica, Arial, sans-serif`
   is the Vite React template's default OS-native font stack, not a
@@ -175,18 +245,38 @@ comments. Regenerated `tokens.generated.css`/`tokens.md`/
   actually fixes the i18n dual-instance issue (see above) — don't be
   surprised it's missing from the DS pane; it's deliberate, not a
   regression.
-- **The `useToast`/`ToastContext` shim list in `cfg.storyImports.shim` is
-  brittle to refactors** — if `ToastContext.ts`/`useToast.ts` get renamed or
-  moved, or a NEW hook/internal-module gets a similar cross-context need
-  (see the `[GENERAL]` note above), the shim list needs a matching update or
-  the same "must be used within a Provider" class of error returns.
-  Symptom-driven, not something the converter can detect proactively.
-  Fixed in `design-system/scripts/build-tokens.ts`, so this is not a
-  re-sync risk — the bug was in a source file, not this sync's config.
-- **Toast/Dialog aria-label i18n** (see above) is an open, unverified
-  question — not blocking, but flag it if anyone does an accessibility pass
-  on the design-sync previews specifically (again: NOT the real app, which
-  is unaffected).
+- **`Toaster`'s only story stays skipped indefinitely** — see the
+  `[GENERAL]` note above (zero-size portal-style container, not a config or
+  build problem). `Toaster` ships with zero visual example; the design agent
+  learns its usage entirely from `conventions.md` + `Toaster.prompt.md`. If
+  a future sync tries to fix this, know that firing a toast on mount does
+  NOT help (already tried, reverted) — the fix would need either a
+  `cfg`-level change to `compare.mjs`'s `SB_CONTENT` visibility check (it's
+  the never-forked oracle, so this needs an actual skill/converter change,
+  not a repo-side config knob) or accepting the skip permanently.
+- **`Toast/Dialog aria-label i18n`** open question from the old hand-built
+  Toast is now moot — Toast/`useToast`/`ToastContext` no longer exist
+  (replaced by `Toaster`/Sonner). Sonner's own dismiss button carries a
+  translated `aria-label` (`t('ui.toast.dismiss')`, wired in `Toaster.tsx`)
+  — same unverified-but-not-blocking status as before, just on the new
+  component.
+- **Button is capped at 6 stories by `compare.mjs`'s default** — it has 8
+  (`AsChildLink`, `Sizes` are the tail two). Always pass `--max-stories 8`
+  (or higher, if a future story is added) on the driver/compare invocation,
+  or `[STORY_CAP]` silently leaves those two ungraded this run — the next
+  sync's carry-forward wouldn't catch that they were never actually judged
+  from images.
+- **`Select`, `Dialog`, `EmptyState` overrides carry forward from before**
+  (`cardMode: "column"`, story `skip`s) — still valid, re-verified this
+  sync, no action needed.
+- **`Dialog`'s "Controlled" story only ever shows the closed trigger
+  button** — `isOpen` defaults `false` and there's no `play` function, so
+  the actual dialog content (title/body/footer, the interesting part,
+  especially post-`ConfirmDialog`-fold) is never captured. Both sides render
+  identically (closed button), so it grades `match`, but it's a real
+  documentation gap — the design agent never sees an open Dialog. Worth a
+  `play`-function or default-open story if someone revisits this DS's
+  Storybook for its own sake (not just for design-sync).
 - **No Storybook a11y-addon findings were reviewed as part of this sync** —
   `@storybook/addon-a11y` is configured but this sync's grading was purely
   visual (storybook-vs-preview pixel comparison), not an accessibility
