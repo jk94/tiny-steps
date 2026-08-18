@@ -13,26 +13,38 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // `apps/backend/src/auth/dto/register.dto.ts`/`login.dto.ts`).
 const MIN_PASSWORD_LENGTH = 8;
 
+// Mirrors the backend's `@MaxLength(120)` on the name field (see
+// `apps/backend/src/auth/dto/register.dto.ts`).
+const MAX_NAME_LENGTH = 120;
+
 type FieldErrorKeys = {
   email?: 'auth.validation.emailInvalid';
   password?: 'auth.validation.passwordTooShort';
+  name?: 'auth.validation.nameRequired' | 'auth.validation.nameTooLong';
 };
 
 export interface AuthFormProps {
   mode: 'login' | 'register';
-  onSubmit: (email: string, password: string) => Promise<void>;
+  /** `name` is only collected (and thus only passed) in register mode. */
+  onSubmit: (email: string, password: string, name?: string) => Promise<void>;
 }
 
 export function AuthForm({ mode, onSubmit }: AuthFormProps) {
   const { t } = useTranslation();
+  const isRegisterMode = mode === 'register';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [fieldErrorKeys, setFieldErrorKeys] = useState<FieldErrorKeys>({});
   const [formErrorKey, setFormErrorKey] = useState<AuthErrorKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    // Trimmed before both validating and submitting, so a whitespace-only
+    // name can't slip past the backend's `@IsNotEmpty()` (which doesn't trim).
+    const trimmedName = name.trim();
 
     const nextFieldErrorKeys: FieldErrorKeys = {};
     if (!EMAIL_PATTERN.test(email)) {
@@ -41,7 +53,12 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     if (password.length < MIN_PASSWORD_LENGTH) {
       nextFieldErrorKeys.password = 'auth.validation.passwordTooShort';
     }
-    if (nextFieldErrorKeys.email || nextFieldErrorKeys.password) {
+    if (isRegisterMode && trimmedName.length === 0) {
+      nextFieldErrorKeys.name = 'auth.validation.nameRequired';
+    } else if (isRegisterMode && trimmedName.length > MAX_NAME_LENGTH) {
+      nextFieldErrorKeys.name = 'auth.validation.nameTooLong';
+    }
+    if (nextFieldErrorKeys.email || nextFieldErrorKeys.password || nextFieldErrorKeys.name) {
       setFieldErrorKeys(nextFieldErrorKeys);
       // A fresh validation attempt supersedes any stale server-side error
       // from a prior submit (e.g. a 401 "invalid credentials" message).
@@ -53,7 +70,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     setFormErrorKey(null);
     setIsSubmitting(true);
     try {
-      await onSubmit(email, password);
+      await onSubmit(email, password, isRegisterMode ? trimmedName : undefined);
       // No `finally`-reset here — a successful submit navigates away, so
       // resetting `isSubmitting` right before unmount would be pure churn.
     } catch (err) {
@@ -62,14 +79,13 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     }
   };
 
-  const submitButtonTextKey =
-    mode === 'login'
-      ? isSubmitting
-        ? 'auth.login.submitButtonPending'
-        : 'auth.login.submitButton'
-      : isSubmitting
-        ? 'auth.register.submitButtonPending'
-        : 'auth.register.submitButton';
+  const submitButtonTextKey = !isRegisterMode
+    ? isSubmitting
+      ? 'auth.login.submitButtonPending'
+      : 'auth.login.submitButton'
+    : isSubmitting
+      ? 'auth.register.submitButtonPending'
+      : 'auth.register.submitButton';
 
   return (
     <form
@@ -77,6 +93,28 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
       noValidate
       onSubmit={(event) => void handleSubmit(event)}
     >
+      {isRegisterMode && (
+        <Input
+          id="name"
+          label={t('auth.fields.nameLabel')}
+          type="text"
+          required
+          autoComplete="name"
+          maxLength={MAX_NAME_LENGTH}
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            // Clear this field's error the moment the user starts correcting
+            // it, rather than leaving a stale message until the next submit.
+            if (fieldErrorKeys.name) {
+              setFieldErrorKeys((prev) => ({ ...prev, name: undefined }));
+            }
+          }}
+          error={fieldErrorKeys.name ? t(fieldErrorKeys.name) : undefined}
+          disabled={isSubmitting}
+        />
+      )}
+
       <Input
         id="email"
         label={t('auth.fields.emailLabel')}
@@ -102,7 +140,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
         type="password"
         required
         minLength={MIN_PASSWORD_LENGTH}
-        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+        autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
         value={password}
         onChange={(event) => {
           setPassword(event.target.value);
@@ -123,7 +161,7 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
       </Button>
 
       <p className="text-center text-sm">
-        {mode === 'register' ? (
+        {isRegisterMode ? (
           <Link to="/login" className="font-medium text-primary hover:underline">
             {t('auth.register.switchModeLink')}
           </Link>

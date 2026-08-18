@@ -16,7 +16,12 @@ vi.mock('../api/auth-api');
 
 const mockedAuthApi = vi.mocked(authApi);
 
-const testUser = { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' };
+const testUser = {
+  id: '1',
+  email: 'parent@example.com',
+  name: 'Bernd',
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
 
 function renderUseAuth() {
   function wrapper({ children }: { children: ReactNode }) {
@@ -119,10 +124,37 @@ describe('AuthProvider / useAuth', () => {
     const { result } = renderUseAuth();
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    await expect(result.current.register('parent@example.com', 'password123')).rejects.toThrow(
-      ApiError,
-    );
+    await expect(
+      result.current.register('parent@example.com', 'password123', 'Bernd'),
+    ).rejects.toThrow(ApiError);
     expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it('updateName() success writes the returned user into the cache without a second /me call', async () => {
+    const namelessUser = { ...testUser, name: null };
+    mockedAuthApi.fetchMe.mockResolvedValueOnce(namelessUser);
+    mockedAuthApi.updateMe.mockResolvedValueOnce(testUser);
+
+    const { result } = renderUseAuth();
+    await waitFor(() => expect(result.current.user).toEqual(namelessUser));
+
+    await result.current.updateName('Bernd');
+
+    await waitFor(() => expect(result.current.user).toEqual(testUser));
+    expect(mockedAuthApi.updateMe).toHaveBeenCalledWith('Bernd');
+    expect(mockedAuthApi.fetchMe).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateName() failure rejects and leaves the cached user untouched', async () => {
+    const namelessUser = { ...testUser, name: null };
+    mockedAuthApi.fetchMe.mockResolvedValue(namelessUser);
+    mockedAuthApi.updateMe.mockRejectedValueOnce(new ApiError(500, { message: 'Boom' }));
+
+    const { result } = renderUseAuth();
+    await waitFor(() => expect(result.current.user).toEqual(namelessUser));
+
+    await expect(result.current.updateName('Bernd')).rejects.toThrow(ApiError);
+    expect(result.current.user).toEqual(namelessUser);
   });
 
   it('logout() clears user state and wipes the query cache', async () => {

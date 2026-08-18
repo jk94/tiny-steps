@@ -1,25 +1,52 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { Layout } from './Layout';
 import * as useAuthModule from '../auth/useAuth';
-import * as householdApi from '../api/household-api';
 import { queryClient } from '../lib/query-client';
 import * as useRealtimeConnectionModule from '../realtime/useRealtimeConnection';
-import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../auth/useAuth');
-vi.mock('../api/household-api');
 vi.mock('../realtime/useRealtimeConnection');
 
-// Layout embeds HouseholdSwitcher, a Radix combobox — see the helper's doc comment.
-stubPopupLayoutApis();
-
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
-const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedUseRealtimeConnection = vi.mocked(useRealtimeConnectionModule.useRealtimeConnection);
+
+type AuthOverrides = Partial<ReturnType<typeof useAuthModule.useAuth>>;
+
+function mockAuthenticated(overrides: AuthOverrides = {}) {
+  mockedUseAuth.mockReturnValue({
+    user: {
+      id: '1',
+      email: 'parent@example.com',
+      name: 'Bernd',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
+    ...overrides,
+  });
+}
+
+function mockUnauthenticated() {
+  mockedUseAuth.mockReturnValue({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 function renderLayout() {
   return render(
@@ -31,10 +58,14 @@ function renderLayout() {
   );
 }
 
+/** The header's own logout button — the mobile sheet renders a second one. */
+function headerLogoutButton() {
+  return screen.queryByRole('button', { name: 'Log out' });
+}
+
 describe('Layout', () => {
   beforeEach(() => {
     queryClient.clear();
-    mockedHouseholdApi.listHouseholds.mockResolvedValue([]);
     mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
   });
 
@@ -43,69 +74,63 @@ describe('Layout', () => {
     queryClient.clear();
   });
 
-  it('renders no email/logout button when unauthenticated', () => {
-    mockedUseAuth.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-    });
+  it('renders no user/logout controls when unauthenticated', () => {
+    mockUnauthenticated();
 
     renderLayout();
 
-    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument();
+    expect(headerLogoutButton()).not.toBeInTheDocument();
+    expect(screen.queryByText('parent@example.com')).not.toBeInTheDocument();
   });
 
-  it('shows the user email and a logout button when authenticated', () => {
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+  it('shows the user name (not the email) and an icon-only logout button when authenticated', () => {
+    mockAuthenticated();
+
+    renderLayout();
+
+    expect(screen.getByText('Bernd')).toBeInTheDocument();
+    expect(screen.queryByText('parent@example.com')).not.toBeInTheDocument();
+    // Icon-only now: the accessible name comes from aria-label, not text.
+    expect(headerLogoutButton()).toBeInTheDocument();
+  });
+
+  it('falls back to the email when the user has no name yet', () => {
+    mockAuthenticated({
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
     });
 
     renderLayout();
 
-    expect(screen.getByText('parent@example.com')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    expect(screen.getAllByText('parent@example.com').length).toBeGreaterThan(0);
+  });
+
+  it('links the user name to the profile page', () => {
+    mockAuthenticated();
+
+    renderLayout();
+
+    expect(screen.getByRole('link', { name: /Bernd/ })).toHaveAttribute('href', '/profile');
   });
 
   it('calls logout() when the logout button is clicked', async () => {
     const logout = vi.fn().mockResolvedValue(undefined);
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout,
-    });
+    mockAuthenticated({ logout });
 
     const user = userEvent.setup();
     renderLayout();
 
-    await user.click(screen.getByRole('button', { name: 'Log out' }));
+    await user.click(headerLogoutButton()!);
 
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
   it('renders the language switcher buttons with the correct aria-labels', () => {
-    mockedUseAuth.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-    });
+    mockUnauthenticated();
 
     renderLayout();
 
@@ -114,21 +139,13 @@ describe('Layout', () => {
   });
 
   it('switches the rendered nav/logout text to German and back via the switcher buttons', async () => {
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-    });
+    mockAuthenticated();
 
     const user = userEvent.setup();
     renderLayout();
 
     expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    expect(headerLogoutButton()).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch to German' }));
 
@@ -139,113 +156,150 @@ describe('Layout', () => {
     // the English-switch button is now addressed by its German label.
     await user.click(screen.getByRole('button', { name: 'Zu Englisch wechseln' }));
 
-    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    expect(headerLogoutButton()).toBeInTheDocument();
   });
 
-  it('renders the households nav link', () => {
-    mockedUseAuth.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-    });
+  it('renders the global nav links', () => {
+    mockUnauthenticated();
 
     renderLayout();
 
     expect(screen.getByRole('link', { name: 'Households' })).toHaveAttribute('href', '/households');
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile');
   });
 
-  it('does not render the household switcher when unauthenticated', () => {
-    mockedUseAuth.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+  describe('mobile menu sheet', () => {
+    it('is closed until the hamburger is clicked', () => {
+      mockAuthenticated();
+
+      renderLayout();
+
+      expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'Main menu' })).not.toBeInTheDocument();
     });
 
-    renderLayout();
+    it('opens on the hamburger and holds the nav links, language switch, profile link and logout', async () => {
+      mockAuthenticated();
 
-    expect(mockedHouseholdApi.listHouseholds).not.toHaveBeenCalled();
-    expect(screen.queryByRole('combobox', { name: 'Switch household' })).not.toBeInTheDocument();
+      const user = userEvent.setup();
+      renderLayout();
+
+      await user.click(screen.getByRole('button', { name: 'Open menu' }));
+
+      const sheet = screen.getByRole('dialog', { name: 'Main menu' });
+      expect(within(sheet).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+      expect(within(sheet).getByRole('link', { name: 'Households' })).toBeInTheDocument();
+      expect(within(sheet).getByRole('link', { name: /Bernd/ })).toHaveAttribute(
+        'href',
+        '/profile',
+      );
+      expect(within(sheet).getByRole('button', { name: 'Switch to German' })).toBeInTheDocument();
+      expect(within(sheet).getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    });
+
+    it('closes again on its close button', async () => {
+      mockAuthenticated();
+
+      const user = userEvent.setup();
+      renderLayout();
+
+      await user.click(screen.getByRole('button', { name: 'Open menu' }));
+      const sheet = screen.getByRole('dialog', { name: 'Main menu' });
+
+      await user.click(within(sheet).getByRole('button', { name: 'Close' }));
+
+      expect(screen.queryByRole('dialog', { name: 'Main menu' })).not.toBeInTheDocument();
+    });
+
+    it('closes when a nav link inside it is followed', async () => {
+      mockAuthenticated();
+
+      const user = userEvent.setup();
+      renderLayout();
+
+      await user.click(screen.getByRole('button', { name: 'Open menu' }));
+      const sheet = screen.getByRole('dialog', { name: 'Main menu' });
+
+      await user.click(within(sheet).getByRole('link', { name: 'Households' }));
+
+      expect(screen.queryByRole('dialog', { name: 'Main menu' })).not.toBeInTheDocument();
+    });
   });
 
-  it("renders the household switcher with the user's households when authenticated", async () => {
-    mockedHouseholdApi.listHouseholds.mockResolvedValueOnce([
-      { id: 'h1', name: 'Team Müller', role: 'OWNER', createdAt: '2026-01-01T00:00:00.000Z' },
-    ]);
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+  describe('connection status', () => {
+    it('shows no connection dot when unauthenticated (no socket exists yet)', () => {
+      mockUnauthenticated();
+      mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
+
+      renderLayout();
+
+      expect(screen.queryByTestId('realtime-connection-status')).not.toBeInTheDocument();
     });
 
-    renderLayout();
+    it('labels the dot "Connected" when the socket is connected', () => {
+      mockAuthenticated();
+      mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
 
-    const user = userEvent.setup();
+      renderLayout();
 
-    // Options only exist while the combobox is open.
-    await user.click(await screen.findByRole('combobox', { name: 'Switch household' }));
-    expect(await screen.findByRole('option', { name: 'Team Müller' })).toBeInTheDocument();
+      const dot = screen.getByTestId('realtime-connection-status');
+      expect(dot).toHaveAttribute('aria-label', 'Connected');
+      expect(dot).toHaveAttribute('title', 'Connected');
+    });
+
+    it('labels the dot "Disconnected" when the socket is not (yet) connected', () => {
+      mockAuthenticated();
+      mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: false });
+
+      renderLayout();
+
+      const dot = screen.getByTestId('realtime-connection-status');
+      expect(dot).toHaveAttribute('aria-label', 'Disconnected');
+      expect(dot).toHaveAttribute('title', 'Disconnected');
+    });
+
+    // The dot must live outside the mobile sheet so it stays readable at a
+    // glance without opening the menu.
+    it('renders exactly one dot, regardless of viewport-specific header clusters', () => {
+      mockAuthenticated();
+      mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
+
+      renderLayout();
+
+      expect(screen.getAllByTestId('realtime-connection-status')).toHaveLength(1);
+    });
   });
 
-  it('shows no connection status when unauthenticated (no socket exists yet)', () => {
-    mockedUseAuth.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+  describe('mandatory name dialog', () => {
+    it('is not shown for a user who already has a name', () => {
+      mockAuthenticated();
+
+      renderLayout();
+
+      expect(screen.queryByText('What should we call you?')).not.toBeInTheDocument();
     });
-    mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
 
-    renderLayout();
+    it('blocks a user whose account has no name yet', () => {
+      mockAuthenticated({
+        user: {
+          id: '1',
+          email: 'parent@example.com',
+          name: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      });
 
-    expect(screen.queryByTestId('realtime-connection-status')).not.toBeInTheDocument();
-  });
+      renderLayout();
 
-  it('shows "Connected" when authenticated and the socket is connected', () => {
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+      expect(screen.getByRole('dialog', { name: 'What should we call you?' })).toBeInTheDocument();
     });
-    mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
 
-    renderLayout();
+    it('is not shown to an unauthenticated visitor', () => {
+      mockUnauthenticated();
 
-    expect(screen.getByTestId('realtime-connection-status')).toHaveTextContent('Connected');
-  });
+      renderLayout();
 
-  it('shows "Disconnected" when authenticated but the socket is not (yet) connected', () => {
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+      expect(screen.queryByText('What should we call you?')).not.toBeInTheDocument();
     });
-    mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: false });
-
-    renderLayout();
-
-    expect(screen.getByTestId('realtime-connection-status')).toHaveTextContent('Disconnected');
   });
 });

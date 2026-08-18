@@ -55,6 +55,7 @@ describe('App', () => {
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -65,12 +66,18 @@ describe('App', () => {
 
   it('shows the Dashboard placeholder at / when authenticated', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -81,12 +88,18 @@ describe('App', () => {
 
   it('redirects an authenticated user visiting /login to the Dashboard (GuestOnlyRoute)', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -97,12 +110,18 @@ describe('App', () => {
 
   it('redirects an authenticated user visiting /register to the Dashboard (GuestOnlyRoute)', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -113,12 +132,18 @@ describe('App', () => {
 
   it('renders the households list under ProtectedRoute for an authenticated user', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -135,6 +160,7 @@ describe('App', () => {
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -151,6 +177,7 @@ describe('App', () => {
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -161,12 +188,18 @@ describe('App', () => {
 
   it('renders the invite-accept page for an authenticated visitor without redirecting', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 

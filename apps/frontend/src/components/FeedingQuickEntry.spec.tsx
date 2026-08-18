@@ -20,12 +20,18 @@ const USER_ID = 'u1';
 
 function mockAuthUser() {
   mockedUseAuth.mockReturnValue({
-    user: { id: USER_ID, email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    user: {
+      id: USER_ID,
+      email: 'parent@example.com',
+      name: 'Bernd',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    },
     isAuthenticated: true,
     isLoading: false,
     error: null,
     login: vi.fn(),
     register: vi.fn(),
+    updateName: vi.fn(),
     logout: vi.fn(),
   });
 }

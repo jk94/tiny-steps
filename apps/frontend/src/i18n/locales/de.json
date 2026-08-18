@@ -17,9 +17,12 @@
   "nav": {
     "dashboardLink": "Dashboard",
     "householdsLink": "Haushalte",
+    "profileLink": "Profil",
     "homeLink": "Start",
     "settingsLink": "Einstellungen",
-    "childNavLabel": "Kind-Navigation"
+    "childNavLabel": "Kind-Navigation",
+    "openMenu": "Menü öffnen",
+    "mobileMenuLabel": "Hauptmenü"
   },
   "layout": {
     "logoutButton": "Abmelden",
@@ -51,11 +54,14 @@
     },
     "fields": {
       "emailLabel": "E-Mail-Adresse",
-      "passwordLabel": "Passwort"
+      "passwordLabel": "Passwort",
+      "nameLabel": "Name"
     },
     "validation": {
       "emailInvalid": "Bitte gib eine gültige E-Mail-Adresse ein.",
-      "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein."
+      "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+      "nameRequired": "Bitte gib deinen Namen ein.",
+      "nameTooLong": "Der Name darf höchstens 120 Zeichen lang sein."
     },
     "errors": {
       "invalidCredentials": "E-Mail-Adresse oder Passwort ist falsch.",
@@ -103,10 +109,6 @@
       "copyFailed": "Kopieren fehlgeschlagen. Bitte kopiere den Link manuell.",
       "expiresAtLabel": "Gültig bis",
       "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen."
-    },
-    "switcher": {
-      "label": "Haushalt wechseln",
-      "placeholder": "Haushalt wählen…"
     },
     "validation": {
       "nameRequired": "Bitte gib einen Namen für den Haushalt ein.",
@@ -445,6 +447,23 @@
     "downloadButton": "Herunterladen",
     "downloadButtonPending": "Wird vorbereitet…",
     "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut."
+  },
+  "profile": {
+    "title": "Profil",
+    "description": "Diesen Namen sehen die anderen Mitglieder deiner Haushalte.",
+    "nameLabel": "Name",
+    "saveButton": "Speichern",
+    "saveButtonPending": "Speichert…",
+    "saveSuccess": "Name gespeichert.",
+    "saveError": "Dein Name konnte nicht gespeichert werden. Bitte versuche es erneut."
+  },
+  "mandatoryNameDialog": {
+    "title": "Wie sollen wir dich nennen?",
+    "description": "Dein Konto hat noch keinen Namen. Bitte gib einen ein, um fortzufahren.",
+    "nameLabel": "Name",
+    "submitButton": "Weiter",
+    "submitButtonPending": "Speichert…",
+    "error": "Dein Name konnte nicht gespeichert werden. Bitte versuche es erneut."
   },
   "notifications": {
     "title": "Benachrichtigungseinstellungen",

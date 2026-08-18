@@ -15,7 +15,7 @@ vi.mock('../api/oidc-api');
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedOidcApi = vi.mocked(oidcApi);
 
-function mockAuth(register: (email: string, password: string) => Promise<void>) {
+function mockAuth(register: (email: string, password: string, name: string) => Promise<void>) {
   mockedUseAuth.mockReturnValue({
     user: null,
     isAuthenticated: false,
@@ -23,6 +23,7 @@ function mockAuth(register: (email: string, password: string) => Promise<void>) 
     error: null,
     login: vi.fn(),
     register,
+    updateName: vi.fn(),
     logout: vi.fn(),
   });
 }
@@ -42,6 +43,7 @@ function renderRegisterAt(entry: { pathname: string; state?: unknown }) {
 }
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText('Name'), 'Bernd');
   await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
   await user.type(screen.getByLabelText('Password'), 'validpassword');
   await user.click(screen.getByRole('button', { name: 'Register' }));
@@ -74,7 +76,7 @@ describe('Register', () => {
     await fillAndSubmit(user);
 
     expect(await screen.findByText('Dashboard stub')).toBeInTheDocument();
-    expect(register).toHaveBeenCalledWith('parent@example.com', 'validpassword');
+    expect(register).toHaveBeenCalledWith('parent@example.com', 'validpassword', 'Bernd');
   });
 
   it('navigates back to the originally requested page when from-state is set', async () => {

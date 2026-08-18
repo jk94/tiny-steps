@@ -29,6 +29,7 @@ function mockAuth(overrides: Partial<ReturnType<typeof useAuthModule.useAuth>>) 
     error: null,
     login: vi.fn(),
     register: vi.fn(),
+    updateName: vi.fn(),
     logout: vi.fn(),
     ...overrides,
   });
@@ -96,7 +97,12 @@ describe('InviteAccept', () => {
   it('shows an accept button for an authenticated visitor on a valid invite, invalidates the households query, and navigates on success', async () => {
     mockAuth({
       isAuthenticated: true,
-      user: { id: '1', email: 'a@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'a@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
     });
     mockedInviteApi.previewInvite.mockResolvedValueOnce({
       status: 'valid',

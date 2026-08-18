@@ -17,8 +17,14 @@ export interface AuthContextValue {
    */
   error: unknown;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * Sets the signed-in user's display name. Rejects on failure so callers can
+   * surface the error; on success the `/auth/me` cache entry is refreshed, so
+   * anything rendering off `user.name` updates without a refetch.
+   */
+  updateName: (name: string) => Promise<void>;
 }
 
 // Split into its own file (rather than living in AuthProvider.tsx) so that

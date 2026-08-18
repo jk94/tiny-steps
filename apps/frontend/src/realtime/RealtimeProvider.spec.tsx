@@ -59,6 +59,7 @@ function mockAuth(isAuthenticated: boolean) {
     error: undefined,
     login: vi.fn(),
     register: vi.fn(),
+    updateName: vi.fn(),
     logout: vi.fn(),
   } as AuthContextValue);
 }

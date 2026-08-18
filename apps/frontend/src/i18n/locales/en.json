@@ -17,9 +17,12 @@
   "nav": {
     "dashboardLink": "Dashboard",
     "householdsLink": "Households",
+    "profileLink": "Profile",
     "homeLink": "Home",
     "settingsLink": "Settings",
-    "childNavLabel": "Child navigation"
+    "childNavLabel": "Child navigation",
+    "openMenu": "Open menu",
+    "mobileMenuLabel": "Main menu"
   },
   "layout": {
     "logoutButton": "Log out",
@@ -51,11 +54,14 @@
     },
     "fields": {
       "emailLabel": "Email address",
-      "passwordLabel": "Password"
+      "passwordLabel": "Password",
+      "nameLabel": "Name"
     },
     "validation": {
       "emailInvalid": "Please enter a valid email address.",
-      "passwordTooShort": "Password must be at least 8 characters long."
+      "passwordTooShort": "Password must be at least 8 characters long.",
+      "nameRequired": "Please enter your name.",
+      "nameTooLong": "The name must be at most 120 characters long."
     },
     "errors": {
       "invalidCredentials": "Invalid email or password.",
@@ -103,10 +109,6 @@
       "copyFailed": "Copy failed. Please copy the link manually.",
       "expiresAtLabel": "Valid until",
       "ownerOnlyHint": "Only the household owner can generate invites."
-    },
-    "switcher": {
-      "label": "Switch household",
-      "placeholder": "Choose a household…"
     },
     "validation": {
       "nameRequired": "Please enter a name for the household.",
@@ -445,6 +447,23 @@
     "downloadButton": "Download",
     "downloadButtonPending": "Preparing…",
     "error": "The export couldn't be generated. Please try again."
+  },
+  "profile": {
+    "title": "Profile",
+    "description": "This name is what the other members of your households see.",
+    "nameLabel": "Name",
+    "saveButton": "Save",
+    "saveButtonPending": "Saving…",
+    "saveSuccess": "Name saved.",
+    "saveError": "Couldn't save your name. Please try again."
+  },
+  "mandatoryNameDialog": {
+    "title": "What should we call you?",
+    "description": "Your account doesn't have a name yet. Please enter one to continue.",
+    "nameLabel": "Name",
+    "submitButton": "Continue",
+    "submitButtonPending": "Saving…",
+    "error": "Couldn't save your name. Please try again."
   },
   "notifications": {
     "title": "Notification settings",

@@ -23,6 +23,7 @@ function mockAuth(login: (email: string, password: string) => Promise<void>) {
     error: null,
     login,
     register: vi.fn(),
+    updateName: vi.fn(),
     logout: vi.fn(),
   });
 }

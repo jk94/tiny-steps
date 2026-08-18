@@ -30,6 +30,7 @@ describe('GuestOnlyRoute', () => {
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -42,12 +43,18 @@ describe('GuestOnlyRoute', () => {
 
   it('redirects to / when already authenticated', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -65,6 +72,7 @@ describe('GuestOnlyRoute', () => {
       error: null,
       login: vi.fn(),
       register: vi.fn(),
+      updateName: vi.fn(),
       logout: vi.fn(),
     });
 

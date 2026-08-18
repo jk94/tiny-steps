@@ -13,6 +13,15 @@ function renderAuthForm(mode: 'login' | 'register', onSubmit: (...args: unknown[
   );
 }
 
+/** Fills every field the given mode requires, so a submit reaches `onSubmit`. */
+async function fillValidForm(user: ReturnType<typeof userEvent.setup>, mode: 'login' | 'register') {
+  if (mode === 'register') {
+    await user.type(screen.getByLabelText('Name'), 'Bernd');
+  }
+  await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
+  await user.type(screen.getByLabelText('Password'), 'validpassword');
+}
+
 describe.each([['login'], ['register']] as const)('AuthForm (mode: %s)', (mode) => {
   it('renders labeled email/password fields', () => {
     renderAuthForm(mode, vi.fn());
@@ -66,18 +75,23 @@ describe.each([['login'], ['register']] as const)('AuthForm (mode: %s)', (mode) 
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('calls onSubmit with the exact entered email/password on valid input', async () => {
+  it('calls onSubmit with the exact entered credentials on valid input', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderAuthForm(mode, onSubmit);
 
-    await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
-    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await fillValidForm(user, mode);
     await user.click(
       screen.getByRole('button', { name: mode === 'login' ? 'Log in' : 'Register' }),
     );
 
-    expect(onSubmit).toHaveBeenCalledWith('parent@example.com', 'validpassword');
+    // Login collects no name, so it must pass `undefined` rather than an
+    // empty string the backend would then reject.
+    expect(onSubmit).toHaveBeenCalledWith(
+      'parent@example.com',
+      'validpassword',
+      mode === 'register' ? 'Bernd' : undefined,
+    );
   });
 
   it('shows the invalid-credentials error on a 401 rejection and re-enables the submit button', async () => {
@@ -85,8 +99,7 @@ describe.each([['login'], ['register']] as const)('AuthForm (mode: %s)', (mode) 
     const user = userEvent.setup();
     renderAuthForm(mode, onSubmit);
 
-    await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
-    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await fillValidForm(user, mode);
     await user.click(
       screen.getByRole('button', { name: mode === 'login' ? 'Log in' : 'Register' }),
     );
@@ -104,13 +117,50 @@ describe('AuthForm (mode: register, 409 handling)', () => {
     const user = userEvent.setup();
     renderAuthForm('register', onSubmit);
 
-    await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
-    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await fillValidForm(user, 'register');
     await user.click(screen.getByRole('button', { name: 'Register' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This email address is already registered.',
     );
+  });
+});
+
+describe('AuthForm (name field)', () => {
+  it('collects a name in register mode only', () => {
+    const { unmount } = renderAuthForm('register', vi.fn());
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+    unmount();
+
+    renderAuthForm('login', vi.fn());
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+  });
+
+  it('blocks submission and shows a validation error for a whitespace-only name', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    renderAuthForm('register', onSubmit);
+
+    await user.type(screen.getByLabelText('Name'), '   ');
+    await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
+    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+
+    expect(screen.getByText('Please enter your name.')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('trims the submitted name', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderAuthForm('register', onSubmit);
+
+    await user.type(screen.getByLabelText('Name'), '  Bernd  ');
+    await user.type(screen.getByLabelText('Email address'), 'parent@example.com');
+    await user.type(screen.getByLabelText('Password'), 'validpassword');
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+
+    expect(onSubmit).toHaveBeenCalledWith('parent@example.com', 'validpassword', 'Bernd');
   });
 });
 

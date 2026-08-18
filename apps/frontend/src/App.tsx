@@ -5,6 +5,7 @@ import { GuestOnlyRoute } from './auth/GuestOnlyRoute';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { Profile } from './pages/Profile';
 import { HouseholdList } from './pages/HouseholdList';
 import { HouseholdCreate } from './pages/HouseholdCreate';
 import { HouseholdDetail } from './pages/HouseholdDetail';
@@ -30,6 +31,8 @@ function App() {
       <Route element={<Layout />}>
         <Route element={<ProtectedRoute />}>
           <Route index element={<Dashboard />} />
+          {/* Global, not household-scoped — like the household list. */}
+          <Route path="profile" element={<Profile />} />
           <Route path="households" element={<HouseholdList />} />
           <Route path="households/new" element={<HouseholdCreate />} />
           <Route path="households/:householdId" element={<HouseholdDetail />} />

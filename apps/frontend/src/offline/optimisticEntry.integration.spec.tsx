@@ -27,12 +27,18 @@ const FAILED_BADGE_LABEL = "Saving failed — this entry hasn't reached the serv
 
 function mockAuthUser() {
   mockedUseAuth.mockReturnValue({
-    user: { id: 'u1', email: 'parent@example.com', createdAt: '2026-01-01T00:00:00.000Z' },
+    user: {
+      id: 'u1',
+      email: 'parent@example.com',
+      name: 'Bernd',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    },
     isAuthenticated: true,
     isLoading: false,
     error: null,
     login: vi.fn(),
     register: vi.fn(),
+    updateName: vi.fn(),
     logout: vi.fn(),
   });
 }

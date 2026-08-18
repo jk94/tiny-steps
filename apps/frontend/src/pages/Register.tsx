@@ -12,10 +12,12 @@ export function Register() {
   const location = useLocation();
   const from = (location.state as { from?: Location } | null)?.from;
 
-  const handleSubmit = async (email: string, password: string) => {
+  const handleSubmit = async (email: string, password: string, name?: string) => {
     // Registration auto-logs-in (backend sets the same auth cookies as
-    // login), so the redirect behaviour mirrors Login exactly.
-    await register(email, password);
+    // login), so the redirect behaviour mirrors Login exactly. `name` is
+    // always present here — `AuthForm` collects and validates it in register
+    // mode — the `?? ''` just satisfies the shared, mode-agnostic signature.
+    await register(email, password, name ?? '');
     navigate(from ?? '/', { replace: true });
   };
 

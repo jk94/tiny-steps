@@ -6,6 +6,7 @@ import {
   login as loginRequest,
   logout as logoutRequest,
   register as registerRequest,
+  updateMe,
 } from '../api/auth-api';
 import type { AuthUser } from '../api/auth-api';
 import { queryClient } from '../lib/query-client';
@@ -47,10 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      registerRequest(email, password),
+    mutationFn: ({ email, password, name }: { email: string; password: string; name: string }) =>
+      registerRequest(email, password, name),
     onSuccess: (result) => {
       queryClient.setQueryData(AUTH_ME_QUERY_KEY, result.user);
+    },
+  });
+
+  const updateNameMutation = useMutation({
+    // Wrapped rather than passed by reference so React Query's second
+    // (mutation-context) argument never reaches `updateMe`.
+    mutationFn: (name: string) => updateMe(name),
+    onSuccess: (updatedUser) => {
+      // Seeds the cache directly so consumers of `user.name` (the header, and
+      // MandatoryNameDialog's own mount condition) react immediately.
+      queryClient.setQueryData(AUTH_ME_QUERY_KEY, updatedUser);
     },
   });
 
@@ -72,8 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (email: string, password: string) => {
-      await registerMutation.mutateAsync({ email, password });
+    async (email: string, password: string, name: string) => {
+      await registerMutation.mutateAsync({ email, password, name });
     },
     [registerMutation],
   );
@@ -81,6 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await logoutMutation.mutateAsync();
   }, [logoutMutation]);
+
+  const updateName = useCallback(
+    async (name: string) => {
+      await updateNameMutation.mutateAsync(name);
+    },
+    [updateNameMutation],
+  );
 
   const user = meQuery.isLoading ? undefined : (meQuery.data ?? null);
   const isAuthenticated = !!meQuery.data;
@@ -90,8 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const error = meQuery.error;
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated, isLoading, error, login, register, logout }),
-    [user, isAuthenticated, isLoading, error, login, register, logout],
+    () => ({ user, isAuthenticated, isLoading, error, login, register, logout, updateName }),
+    [user, isAuthenticated, isLoading, error, login, register, logout, updateName],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
