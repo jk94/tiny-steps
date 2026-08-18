@@ -173,12 +173,12 @@ export function Layout() {
               key={to}
               to={to}
               className={cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold text-muted-foreground',
+                'flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-2 text-center text-[10px] font-semibold text-balance text-muted-foreground break-words',
                 isActive && 'text-primary',
               )}
             >
               <Icon aria-hidden="true" className="h-5 w-5" />
-              {label}
+              <span className="w-full">{label}</span>
             </Link>
           ))}
         </nav>
