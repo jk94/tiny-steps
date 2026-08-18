@@ -144,12 +144,12 @@ describe('Layout', () => {
     const user = userEvent.setup();
     renderLayout();
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Households' })).toBeInTheDocument();
     expect(headerLogoutButton()).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch to German' }));
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Haushalte' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Abmelden' })).toBeInTheDocument();
 
     // The switcher buttons' own aria-labels are themselves translated, so
@@ -187,7 +187,6 @@ describe('Layout', () => {
       await user.click(screen.getByRole('button', { name: 'Open menu' }));
 
       const sheet = screen.getByRole('dialog', { name: 'Main menu' });
-      expect(within(sheet).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
       expect(within(sheet).getByRole('link', { name: 'Households' })).toBeInTheDocument();
       expect(within(sheet).getByRole('link', { name: /Bernd/ })).toHaveAttribute(
         'href',

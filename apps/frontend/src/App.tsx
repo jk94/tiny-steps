@@ -2,7 +2,6 @@ import { Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { GuestOnlyRoute } from './auth/GuestOnlyRoute';
-import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
@@ -30,7 +29,10 @@ function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route element={<ProtectedRoute />}>
-          <Route index element={<Dashboard />} />
+          {/* There's no global "currently selected household/child" concept
+              (multi-household, multi-child by design), so the household list
+              doubles as the landing screen instead of a global dashboard. */}
+          <Route index element={<HouseholdList />} />
           {/* Global, not household-scoped — like the household list. */}
           <Route path="profile" element={<Profile />} />
           <Route path="households" element={<HouseholdList />} />
@@ -76,7 +78,10 @@ function App() {
             path="households/:householdId/children/:childId/settings"
             element={<ChildSettings />}
           />
-          <Route path="households/:householdId/children/:childId/settings/export" element={<Export />} />
+          <Route
+            path="households/:householdId/children/:childId/settings/export"
+            element={<Export />}
+          />
         </Route>
         <Route element={<GuestOnlyRoute />}>
           <Route path="login" element={<Login />} />

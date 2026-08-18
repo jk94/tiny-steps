@@ -26,7 +26,6 @@ interface GlobalNavItem {
 function useGlobalNavItems(): GlobalNavItem[] {
   const { t } = useTranslation();
   return [
-    { to: '/', label: t('nav.dashboardLink') },
     { to: '/households', label: t('nav.householdsLink') },
     { to: '/profile', label: t('nav.profileLink') },
   ];
@@ -82,7 +81,7 @@ function LanguageButtons({
  * up. That secondary layer only appears once `householdId`/`childId` are
  * both present in the URL; there's no global "current household/child"
  * concept, so household-only or household-less routes (household list,
- * dashboard, login, …) fall back to just the top bar.
+ * login, …) fall back to just the top bar.
  *
  * Below `lg:` the top bar collapses to brand + connection dot + a hamburger
  * that opens everything else in a right-hand `Sheet`. The dot-only connection

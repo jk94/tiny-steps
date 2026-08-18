@@ -15,7 +15,6 @@
     }
   },
   "nav": {
-    "dashboardLink": "Dashboard",
     "householdsLink": "Haushalte",
     "profileLink": "Profil",
     "settingsLink": "Einstellungen",
@@ -29,10 +28,6 @@
       "connected": "Verbunden",
       "disconnected": "Getrennt"
     }
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "description": "Hier entsteht die Übersicht für das Baby-Tracking."
   },
   "language": {
     "switchToGerman": "Auf Deutsch umschalten",

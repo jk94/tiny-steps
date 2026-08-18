@@ -64,7 +64,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument();
   });
 
-  it('shows the Dashboard placeholder at / when authenticated', () => {
+  it('shows the household list at / when authenticated', () => {
     mockedUseAuth.mockReturnValue({
       user: {
         id: '1',
@@ -83,10 +83,10 @@ describe('App', () => {
 
     renderAppAt('/');
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Households' })).toBeInTheDocument();
   });
 
-  it('redirects an authenticated user visiting /login to the Dashboard (GuestOnlyRoute)', () => {
+  it('redirects an authenticated user visiting /login to the household list (GuestOnlyRoute)', () => {
     mockedUseAuth.mockReturnValue({
       user: {
         id: '1',
@@ -105,10 +105,10 @@ describe('App', () => {
 
     renderAppAt('/login');
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Households' })).toBeInTheDocument();
   });
 
-  it('redirects an authenticated user visiting /register to the Dashboard (GuestOnlyRoute)', () => {
+  it('redirects an authenticated user visiting /register to the household list (GuestOnlyRoute)', () => {
     mockedUseAuth.mockReturnValue({
       user: {
         id: '1',
@@ -127,7 +127,7 @@ describe('App', () => {
 
     renderAppAt('/register');
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Households' })).toBeInTheDocument();
   });
 
   it('renders the households list under ProtectedRoute for an authenticated user', () => {
