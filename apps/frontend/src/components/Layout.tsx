@@ -35,26 +35,38 @@ function useGlobalNavItems(): GlobalNavItem[] {
 /**
  * The DE/EN pair, rendered in both the desktop header and the mobile sheet.
  * The flags are decorative — each button's translated `aria-label` carries the
- * accessible name, since a flag is a country, not a language.
+ * accessible name, since a flag is a country, not a language. The button
+ * matching `currentLanguage` is highlighted (`secondary` variant +
+ * `aria-pressed`) so the active language is visible at a glance.
  */
-function LanguageButtons({ onChangeLanguage }: { onChangeLanguage: (language: string) => void }) {
+function LanguageButtons({
+  currentLanguage,
+  onChangeLanguage,
+}: {
+  currentLanguage: string;
+  onChangeLanguage: (language: string) => void;
+}) {
   const { t } = useTranslation();
+  const isGerman = currentLanguage.startsWith('de');
+  const isEnglish = currentLanguage.startsWith('en');
   return (
     <>
       <Button
         type="button"
-        variant="ghost"
+        variant={isGerman ? 'secondary' : 'ghost'}
         size="sm"
         aria-label={t('language.switchToGerman')}
+        aria-pressed={isGerman}
         onClick={() => onChangeLanguage('de')}
       >
         <DeFlagIcon />
       </Button>
       <Button
         type="button"
-        variant="ghost"
+        variant={isEnglish ? 'secondary' : 'ghost'}
         size="sm"
         aria-label={t('language.switchToEnglish')}
+        aria-pressed={isEnglish}
         onClick={() => onChangeLanguage('en')}
       >
         <GbFlagIcon />
@@ -73,9 +85,10 @@ function LanguageButtons({ onChangeLanguage }: { onChangeLanguage: (language: st
  * dashboard, login, …) fall back to just the top bar.
  *
  * Below `lg:` the top bar collapses to brand + connection dot + a hamburger
- * that opens everything else in a right-hand `Sheet`. The connection dot stays
- * outside the sheet on purpose — it's the one thing worth seeing at a glance
- * without opening a menu.
+ * that opens everything else in a right-hand `Sheet`. The dot-only connection
+ * indicator stays in the top bar on purpose — it's the one thing worth seeing
+ * at a glance without opening a menu — and the sheet repeats it in expanded
+ * form (dot + visible label) for anyone who does open it.
  */
 export function Layout() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
@@ -84,6 +97,9 @@ export function Layout() {
   const location = useLocation();
   const { householdId, childId } = useParams<{ householdId?: string; childId?: string }>();
   const globalNavItems = useGlobalNavItems();
+  // The mobile sheet shows the signed-in user's name (linking to /profile) at
+  // the top instead, so the redundant "Profil" text link is dropped there.
+  const sheetNavItems = globalNavItems.filter((item) => item.to !== '/profile');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const hasChildContext = Boolean(householdId && childId);
@@ -183,11 +199,16 @@ export function Layout() {
 
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-1 lg:flex">
-              <LanguageButtons onChangeLanguage={(lng) => void i18n.changeLanguage(lng)} />
+              <LanguageButtons
+                currentLanguage={i18n.language}
+                onChangeLanguage={(lng) => void i18n.changeLanguage(lng)}
+              />
             </div>
 
-            {/* Rendered exactly once, outside both the desktop cluster and the
-                mobile sheet, so it stays visible at every viewport width. */}
+            {/* Dot-only, outside both the desktop cluster and the mobile
+                sheet, so it stays visible at a glance at every viewport
+                width without opening the menu. The sheet repeats it below
+                the language buttons, expanded with a visible label. */}
             {showSessionControls && <ConnectionStatusDot isConnected={isConnected} />}
 
             {showSessionControls && (
@@ -229,8 +250,19 @@ export function Layout() {
             aria-label={t('nav.mobileMenuLabel')}
           >
             <div className="flex flex-col gap-4">
-              <nav className="flex flex-col gap-1">
-                {globalNavItems.map(({ to, label }) => (
+              {showSessionControls && (
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                >
+                  <Avatar name={displayName} size="sm" />
+                  <span>{displayName}</span>
+                </Link>
+              )}
+
+              <nav className="flex flex-col gap-1 border-t border-border pt-4">
+                {sheetNavItems.map(({ to, label }) => (
                   <Link
                     key={to}
                     to={to}
@@ -243,19 +275,15 @@ export function Layout() {
               </nav>
 
               <div className="flex items-center gap-1 border-t border-border pt-4">
-                <LanguageButtons onChangeLanguage={(lng) => void i18n.changeLanguage(lng)} />
+                <LanguageButtons
+                  currentLanguage={i18n.language}
+                  onChangeLanguage={(lng) => void i18n.changeLanguage(lng)}
+                />
               </div>
 
               {showSessionControls && (
                 <div className="flex flex-col gap-2 border-t border-border pt-4">
-                  <Link
-                    to="/profile"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
-                  >
-                    <Avatar name={displayName} size="sm" />
-                    <span>{displayName}</span>
-                  </Link>
+                  <ConnectionStatusDot isConnected={isConnected} showLabel />
                   <Button
                     type="button"
                     variant="ghost"

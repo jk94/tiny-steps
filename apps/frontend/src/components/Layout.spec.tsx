@@ -303,7 +303,9 @@ describe('Layout', () => {
     });
 
     // The dot must live outside the mobile sheet so it stays readable at a
-    // glance without opening the menu.
+    // glance without opening the menu. The sheet's own copy only mounts once
+    // opened (Radix defers mounting `Dialog.Content` until then), so this
+    // still holds with the sheet closed.
     it('renders exactly one dot, regardless of viewport-specific header clusters', () => {
       mockAuthenticated();
       mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
@@ -311,6 +313,21 @@ describe('Layout', () => {
       renderLayout();
 
       expect(screen.getAllByTestId('realtime-connection-status')).toHaveLength(1);
+    });
+
+    it('repeats the connection status inside the mobile sheet, with a visible label', async () => {
+      mockAuthenticated();
+      mockedUseRealtimeConnection.mockReturnValue({ socket: {} as never, isConnected: true });
+
+      const user = userEvent.setup();
+      renderLayout();
+
+      await user.click(screen.getByRole('button', { name: 'Open menu' }));
+      const sheet = screen.getByRole('dialog', { name: 'Main menu' });
+
+      const dots = screen.getAllByTestId('realtime-connection-status');
+      expect(dots).toHaveLength(2);
+      expect(within(sheet).getByText('Connected')).toBeVisible();
     });
   });
 
