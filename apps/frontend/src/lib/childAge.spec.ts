@@ -24,6 +24,17 @@ describe('ageInMonths', () => {
     expect(ageInMonths('2025-11-25', localDate(2026, 3, 24))).toBe(3);
   });
 
+  it("treats a shorter month's last day as the birth day-of-month it does not have", () => {
+    // April has no 31st, so the 30th completes the month for a 31st-born child.
+    expect(ageInMonths('2026-03-31', localDate(2026, 4, 29))).toBe(0);
+    expect(ageInMonths('2026-03-31', localDate(2026, 4, 30))).toBe(1);
+  });
+
+  it('lets a Feb-29 birthday complete a year on Feb 28 of a non-leap year', () => {
+    expect(ageInMonths('2024-02-29', localDate(2025, 2, 27))).toBe(11);
+    expect(ageInMonths('2024-02-29', localDate(2025, 2, 28))).toBe(12);
+  });
+
   it('keeps counting in total months past the first year', () => {
     expect(ageInMonths('2024-09-10', localDate(2026, 3, 14))).toBe(18);
   });

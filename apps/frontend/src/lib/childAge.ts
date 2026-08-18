@@ -28,6 +28,15 @@ function parseCalendarDate(birthDate: string): CalendarDate | null {
 }
 
 /**
+ * Last day of the given (zero-based) month — `day 0` of the following month
+ * is the previous month's final day. Local-time, like every other calculation
+ * in this file.
+ */
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+/**
  * Whole calendar months a child has completed, rounded down — a child born on
  * the 20th only becomes "3 months old" on the 20th of the third following
  * month, not earlier. Computed from calendar fields rather than
@@ -54,9 +63,15 @@ export function ageInMonths(birthDate: string, now: Date = new Date()): number {
 
   const elapsedMonths =
     (now.getFullYear() - birth.year) * MONTHS_PER_YEAR + (now.getMonth() - birth.month);
+  // A birth day-of-month that doesn't exist in the current month (the 31st in
+  // April, the 29th in a non-leap February) is treated as falling on that
+  // month's last day — otherwise it would never be "reached" and the age would
+  // stay a month behind for the whole month. Same convention as `date-fns`'
+  // `differenceInMonths`.
+  const effectiveBirthDay = Math.min(birth.day, daysInMonth(now.getFullYear(), now.getMonth()));
   // The birth day-of-month hasn't come around yet this month, so the most
   // recent month isn't complete — round down by dropping it.
-  const hasReachedBirthDayOfMonth = now.getDate() >= birth.day;
+  const hasReachedBirthDayOfMonth = now.getDate() >= effectiveBirthDay;
 
   return Math.max(0, hasReachedBirthDayOfMonth ? elapsedMonths : elapsedMonths - 1);
 }
