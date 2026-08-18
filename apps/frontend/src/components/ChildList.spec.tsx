@@ -48,7 +48,7 @@ describe('ChildList', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders a link per child, pointing at its detail page', async () => {
+  it('renders a link per child, pointing at its daily timeline', async () => {
     mockedChildApi.listChildren.mockResolvedValueOnce([
       {
         id: 'c1',
@@ -63,7 +63,7 @@ describe('ChildList', () => {
     renderChildList('OWNER');
 
     const link = await screen.findByRole('link', { name: 'Alex' });
-    expect(link).toHaveAttribute('href', '/households/h1/children/c1');
+    expect(link).toHaveAttribute('href', '/households/h1/children/c1/timeline');
   });
 
   it('renders a "Feeding" link per child, pointing at its feeding home', async () => {
@@ -120,7 +120,7 @@ describe('ChildList', () => {
     expect(link).toHaveAttribute('href', '/households/h1/children/c1/diaper');
   });
 
-  it('renders a "Daily timeline" link per child, pointing at its timeline page', async () => {
+  it('does not render Export or Settings links per child (those live on the settings page and per-child nav instead)', async () => {
     mockedChildApi.listChildren.mockResolvedValueOnce([
       {
         id: 'c1',
@@ -134,8 +134,9 @@ describe('ChildList', () => {
 
     renderChildList('OWNER');
 
-    const link = await screen.findByRole('link', { name: 'Daily timeline' });
-    expect(link).toHaveAttribute('href', '/households/h1/children/c1/timeline');
+    await screen.findByRole('link', { name: 'Diaper' });
+    expect(screen.queryByRole('link', { name: 'Export' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
   });
 
   it('shows the "add child" link for an OWNER', () => {

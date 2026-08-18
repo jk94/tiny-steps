@@ -10,7 +10,7 @@ import { HouseholdList } from './pages/HouseholdList';
 import { HouseholdCreate } from './pages/HouseholdCreate';
 import { HouseholdDetail } from './pages/HouseholdDetail';
 import { ChildCreate } from './pages/ChildCreate';
-import { ChildEdit } from './pages/ChildEdit';
+import { ChildSettings } from './pages/ChildSettings';
 import { FeedingHome } from './pages/FeedingHome';
 import { FeedingBackfillCreate } from './pages/FeedingBackfillCreate';
 import { FeedingEventEdit } from './pages/FeedingEventEdit';
@@ -22,7 +22,6 @@ import { DiaperBackfillCreate } from './pages/DiaperBackfillCreate';
 import { DiaperEventEdit } from './pages/DiaperEventEdit';
 import { DailyTimeline } from './pages/DailyTimeline';
 import { Export } from './pages/Export';
-import { NotificationSettings } from './pages/NotificationSettings';
 import { InviteAccept } from './pages/InviteAccept';
 
 function App() {
@@ -37,7 +36,6 @@ function App() {
           <Route path="households/new" element={<HouseholdCreate />} />
           <Route path="households/:householdId" element={<HouseholdDetail />} />
           <Route path="households/:householdId/children/new" element={<ChildCreate />} />
-          <Route path="households/:householdId/children/:childId" element={<ChildEdit />} />
           <Route
             path="households/:householdId/children/:childId/feeding"
             element={<FeedingHome />}
@@ -74,8 +72,8 @@ function App() {
           />
           <Route path="households/:householdId/children/:childId/export" element={<Export />} />
           <Route
-            path="households/:householdId/children/:childId/notifications"
-            element={<NotificationSettings />}
+            path="households/:householdId/children/:childId/settings"
+            element={<ChildSettings />}
           />
         </Route>
         <Route element={<GuestOnlyRoute />}>

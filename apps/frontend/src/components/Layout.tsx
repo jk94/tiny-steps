@@ -103,17 +103,18 @@ export function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const hasChildContext = Boolean(householdId && childId);
-  const homeTo = householdId ? `/households/${householdId}` : undefined;
   const showSessionControls = !isLoading && isAuthenticated && !!user;
   const displayName = user?.name ?? user?.email ?? '';
 
   const childNavItems: ChildNavItem[] = hasChildContext
     ? [
         {
-          to: homeTo!,
-          label: t('nav.homeLink'),
-          Icon: Home,
-          isActive: location.pathname === homeTo,
+          to: `/households/${householdId}/children/${childId}/timeline`,
+          label: t('child.list.timelineLink'),
+          Icon: ClipboardList,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/timeline`,
+          ),
         },
         {
           to: `/households/${householdId}/children/${childId}/feeding`,
@@ -140,19 +141,11 @@ export function Layout() {
           ),
         },
         {
-          to: `/households/${householdId}/children/${childId}/timeline`,
-          label: t('child.list.timelineLink'),
-          Icon: ClipboardList,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/timeline`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/notifications`,
+          to: `/households/${householdId}/children/${childId}/settings`,
           label: t('nav.settingsLink'),
           Icon: Settings,
           isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/notifications`,
+            `/households/${householdId}/children/${childId}/settings`,
           ),
         },
       ]
@@ -162,12 +155,12 @@ export function Layout() {
     <div className="flex min-h-screen flex-col bg-background text-foreground lg:flex-row">
       {hasChildContext && (
         <aside className="hidden lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-1 lg:border-r lg:border-border lg:bg-background lg:p-4">
-          <div className="mb-4 flex items-center gap-2 px-2">
+          <Link to="/" className="mb-4 flex items-center gap-2 px-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-              B
+              T
             </span>
-            <span className="text-sm font-bold text-foreground">Baby Tracker</span>
-          </div>
+            <span className="text-sm font-bold text-foreground">TinySteps</span>
+          </Link>
           <nav aria-label={t('nav.childNavLabel')} className="flex flex-col gap-1">
             {childNavItems.map(({ to, label, Icon, isActive }) => (
               <Link
@@ -195,7 +188,9 @@ export function Layout() {
               </Link>
             ))}
           </nav>
-          <span className="text-sm font-bold text-foreground lg:hidden">Baby Tracker</span>
+          <Link to="/" className="text-sm font-bold text-foreground lg:hidden">
+            TinySteps
+          </Link>
 
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-1 lg:flex">

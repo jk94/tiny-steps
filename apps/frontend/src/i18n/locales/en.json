@@ -18,7 +18,6 @@
     "dashboardLink": "Dashboard",
     "householdsLink": "Households",
     "profileLink": "Profile",
-    "homeLink": "Home",
     "settingsLink": "Settings",
     "childNavLabel": "Child navigation",
     "openMenu": "Open menu",
@@ -149,9 +148,7 @@
       "feedingLink": "Feeding",
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
-      "timelineLink": "Daily timeline",
-      "exportLink": "Export",
-      "notificationsLink": "Notifications"
+      "timelineLink": "Timeline"
     },
     "create": {
       "title": "Create child profile",
@@ -159,7 +156,6 @@
       "submitButtonPending": "Creating…"
     },
     "edit": {
-      "title": "Edit child profile",
       "submitButton": "Save",
       "submitButtonPending": "Saving…",
       "deleteButton": "Delete child profile",
@@ -466,9 +462,14 @@
     "error": "Couldn't save your name. Please try again.",
     "logoutButton": "Log out instead"
   },
-  "notifications": {
-    "title": "Notification settings",
+  "settings": {
+    "title": "Settings",
     "backLink": "Back to timeline",
+    "profileSectionTitle": "Child profile",
+    "exportButton": "Export data",
+    "notificationsSectionTitle": "Notifications"
+  },
+  "notifications": {
     "feedingReminderLabel": "Feeding reminder",
     "thresholdLabel": "Remind after (hours)",
     "thresholdInvalid": "Please enter a whole number of hours (at least 1).",

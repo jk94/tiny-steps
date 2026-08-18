@@ -33,7 +33,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'me.jkoschke.babytracker',
-  appName: 'Baby Tracker',
+  appName: 'TinySteps',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

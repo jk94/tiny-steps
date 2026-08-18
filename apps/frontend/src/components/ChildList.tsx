@@ -13,7 +13,6 @@ export interface ChildListProps {
 }
 
 const EVENT_TYPE_PILL = 'bg-feeding text-white';
-const NEUTRAL_PILL = 'bg-muted text-foreground';
 const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-90';
 
 /**
@@ -21,9 +20,11 @@ const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-9
  * creation is restricted server-side to OWNER — see `ChildController`),
  * completely hidden rather than disabled for a CO_PARENT. Each child row is
  * the entry point into that child's routes — there's no other UI to pick a
- * "current child", so all six links stay functional (not just Feeding/
- * Sleep/Diaper as in the mockup's abbreviated row), styled as small pills
- * using the same per-event-type colors as `Badge`.
+ * "current child". Clicking the row itself (photo + name) goes straight to
+ * the daily timeline; the pills below cover the remaining per-type quick
+ * actions (Export/Settings live on the settings page and per-child nav
+ * instead, not duplicated here), styled using the same per-event-type
+ * colors as `Badge`.
  */
 export function ChildList({ householdId, role }: ChildListProps) {
   const { t } = useTranslation();
@@ -57,7 +58,7 @@ export function ChildList({ householdId, role }: ChildListProps) {
               <Card>
                 <Card.Body className="flex flex-col gap-3">
                   <Link
-                    to={`/households/${householdId}/children/${child.id}`}
+                    to={`/households/${householdId}/children/${child.id}/timeline`}
                     className="flex items-center gap-3"
                   >
                     <ChildPhoto
@@ -88,24 +89,6 @@ export function ChildList({ householdId, role }: ChildListProps) {
                       className={cn(PILL_CLASS, 'bg-diaper text-white')}
                     >
                       {t('child.list.diaperLink')}
-                    </Link>
-                    <Link
-                      to={`/households/${householdId}/children/${child.id}/timeline`}
-                      className={cn(PILL_CLASS, NEUTRAL_PILL)}
-                    >
-                      {t('child.list.timelineLink')}
-                    </Link>
-                    <Link
-                      to={`/households/${householdId}/children/${child.id}/export`}
-                      className={cn(PILL_CLASS, NEUTRAL_PILL)}
-                    >
-                      {t('child.list.exportLink')}
-                    </Link>
-                    <Link
-                      to={`/households/${householdId}/children/${child.id}/notifications`}
-                      className={cn(PILL_CLASS, NEUTRAL_PILL)}
-                    >
-                      {t('child.list.notificationsLink')}
                     </Link>
                   </div>
                 </Card.Body>

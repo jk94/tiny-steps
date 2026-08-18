@@ -10,8 +10,8 @@ import type { ManifestOptions } from 'vite-plugin-pwa';
 // there is no design system yet (that's Phase 6). The same `theme_color`
 // value must also be used in index.html's `<meta name="theme-color">` tag.
 export const pwaManifest: Partial<ManifestOptions> = {
-  name: 'Baby Tracking App',
-  short_name: 'Baby Tracker',
+  name: 'TinySteps',
+  short_name: 'TinySteps',
   start_url: '/',
   scope: '/',
   display: 'standalone',

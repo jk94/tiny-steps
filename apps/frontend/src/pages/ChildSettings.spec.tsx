@@ -3,13 +3,16 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { ChildEdit } from './ChildEdit';
+import { ChildSettings } from './ChildSettings';
 import * as householdApi from '../api/household-api';
 import * as childApi from '../api/child-api';
+import * as notificationSettingsApi from '../api/notification-settings-api';
+import type { NotificationSettings } from '../api/notification-settings-api';
 import { getPhotoCacheBust } from '../child/childPhotoCacheBust';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/household-api');
+vi.mock('../api/notification-settings-api');
 vi.mock('../realtime/useHouseholdRoom');
 // Partial mock: `ChildForm` imports `buildChildFormData` from this same
 // module, so a full auto-mock would silently turn it into a `vi.fn()`
@@ -22,6 +25,7 @@ vi.mock('../api/child-api', async () => {
 
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedChildApi = vi.mocked(childApi);
+const mockedNotificationSettingsApi = vi.mocked(notificationSettingsApi);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -56,21 +60,35 @@ const child = {
   createdAt: '2020-01-01T00:00:00.000Z',
 };
 
-function renderChildEdit() {
+const notificationSettings: NotificationSettings = {
+  feedingReminderEnabled: true,
+  feedingReminderThresholdHours: 4,
+  dailySummaryEnabled: true,
+  dailySummaryHourLocal: 20,
+};
+
+function renderChildSettings() {
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/households/h1/children/c1']}>
+      <MemoryRouter initialEntries={['/households/h1/children/c1/settings']}>
         <Routes>
-          <Route path="/households/:householdId/children/:childId" element={<ChildEdit />} />
+          <Route
+            path="/households/:householdId/children/:childId/settings"
+            element={<ChildSettings />}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('ChildEdit', () => {
+describe('ChildSettings', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockedNotificationSettingsApi.fetchNotificationSettings.mockResolvedValue(notificationSettings);
+    mockedNotificationSettingsApi.updateNotificationSettings.mockImplementation((_h, _c, values) =>
+      Promise.resolve(values),
+    );
   });
 
   afterEach(() => {
@@ -82,17 +100,39 @@ describe('ChildEdit', () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
     mockedChildApi.fetchChild.mockResolvedValueOnce(child);
 
-    renderChildEdit();
+    renderChildSettings();
 
     expect(await screen.findByLabelText('Name')).toHaveValue('Alex');
     expect(screen.getByLabelText('Birth date')).toHaveValue('2020-01-01');
+  });
+
+  it('renders an Export link pointing at the child export page', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+    renderChildSettings();
+
+    const link = await screen.findByRole('link', { name: 'Export data' });
+    expect(link).toHaveAttribute('href', '/households/h1/children/c1/export');
+  });
+
+  it('seeds the notification settings form from the fetched settings', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+    renderChildSettings();
+
+    expect(await screen.findByRole('checkbox', { name: 'Feeding reminder' })).toBeChecked();
+    expect(screen.getByLabelText('Remind after (hours)')).toHaveValue(4);
+    expect(screen.getByRole('checkbox', { name: 'Daily summary' })).toBeChecked();
+    expect(screen.getByLabelText('Summary hour (0–23)')).toHaveValue(20);
   });
 
   it('shows the delete button for an OWNER', async () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
     mockedChildApi.fetchChild.mockResolvedValueOnce(child);
 
-    renderChildEdit();
+    renderChildSettings();
 
     expect(await screen.findByRole('button', { name: 'Delete child profile' })).toBeInTheDocument();
   });
@@ -101,7 +141,7 @@ describe('ChildEdit', () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'CO_PARENT' });
     mockedChildApi.fetchChild.mockResolvedValueOnce(child);
 
-    renderChildEdit();
+    renderChildSettings();
 
     await screen.findByLabelText('Name');
     expect(screen.queryByRole('button', { name: 'Delete child profile' })).not.toBeInTheDocument();
@@ -112,7 +152,7 @@ describe('ChildEdit', () => {
     mockedChildApi.fetchChild.mockResolvedValueOnce(child);
     const user = userEvent.setup();
 
-    renderChildEdit();
+    renderChildSettings();
     await user.click(await screen.findByRole('button', { name: 'Delete child profile' }));
 
     expect(screen.getByText('Delete child profile?')).toBeInTheDocument();
@@ -128,7 +168,7 @@ describe('ChildEdit', () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const user = userEvent.setup();
 
-    renderChildEdit();
+    renderChildSettings();
     await user.click(await screen.findByRole('button', { name: 'Delete child profile' }));
     await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
 
@@ -146,11 +186,13 @@ describe('ChildEdit', () => {
     const cacheBustBefore = getPhotoCacheBust('c1');
     const user = userEvent.setup();
 
-    renderChildEdit();
+    renderChildSettings();
     await screen.findByLabelText('Name');
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'Alexandra');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // Two "Save" buttons exist on this page (profile form + notification
+    // settings form) — the profile form's is first in the DOM.
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[0]);
 
     expect(mockedChildApi.updateChild).toHaveBeenCalledWith('h1', 'c1', expect.any(FormData));
     expect(getPhotoCacheBust('c1')).toBe(cacheBustBefore);
@@ -164,14 +206,73 @@ describe('ChildEdit', () => {
     const cacheBustBefore = getPhotoCacheBust('c1');
     const user = userEvent.setup();
 
-    renderChildEdit();
+    renderChildSettings();
     await screen.findByLabelText('Name');
     const photo = new File(['x'], 'photo.png', { type: 'image/png' });
     await user.upload(screen.getByLabelText('Photo (optional)'), photo);
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[0]);
 
     expect(getPhotoCacheBust('c1')).toBeGreaterThanOrEqual(cacheBustBefore);
     const formData = mockedChildApi.updateChild.mock.calls[0][2] as FormData;
     expect(formData.get('photo')).toBe(photo);
+  });
+
+  it('saves edited notification settings via updateNotificationSettings', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    const user = userEvent.setup();
+
+    renderChildSettings();
+
+    const threshold = await screen.findByLabelText('Remind after (hours)');
+    await user.clear(threshold);
+    await user.type(threshold, '6');
+    await user.click(screen.getByRole('checkbox', { name: 'Daily summary' }));
+    // Two "Save" buttons exist on this page (profile form + notification
+    // settings form) — the notification form's is second in the DOM.
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+
+    expect(mockedNotificationSettingsApi.updateNotificationSettings).toHaveBeenCalledWith(
+      'h1',
+      'c1',
+      {
+        feedingReminderEnabled: true,
+        feedingReminderThresholdHours: 6,
+        dailySummaryEnabled: false,
+        dailySummaryHourLocal: 20,
+      },
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Settings saved.');
+  });
+
+  it('rejects a non-positive threshold client-side without calling the API', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    const user = userEvent.setup();
+
+    renderChildSettings();
+
+    const threshold = await screen.findByLabelText('Remind after (hours)');
+    await user.clear(threshold);
+    await user.type(threshold, '0');
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+
+    expect(mockedNotificationSettingsApi.updateNotificationSettings).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Please enter a whole number of hours (at least 1).',
+    );
+  });
+
+  it('shows an error when notification settings fail to load', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    mockedNotificationSettingsApi.fetchNotificationSettings.mockReset();
+    mockedNotificationSettingsApi.fetchNotificationSettings.mockRejectedValue(new Error('boom'));
+
+    renderChildSettings();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Couldn't load your notification settings.",
+    );
   });
 });

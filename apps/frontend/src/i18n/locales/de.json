@@ -18,7 +18,6 @@
     "dashboardLink": "Dashboard",
     "householdsLink": "Haushalte",
     "profileLink": "Profil",
-    "homeLink": "Start",
     "settingsLink": "Einstellungen",
     "childNavLabel": "Kind-Navigation",
     "openMenu": "Menü öffnen",
@@ -149,9 +148,7 @@
       "feedingLink": "Füttern",
       "sleepLink": "Schlaf",
       "diaperLink": "Windel",
-      "timelineLink": "Tagesübersicht",
-      "exportLink": "Export",
-      "notificationsLink": "Benachrichtigungen"
+      "timelineLink": "Übersicht"
     },
     "create": {
       "title": "Kind-Profil anlegen",
@@ -159,7 +156,6 @@
       "submitButtonPending": "Wird angelegt…"
     },
     "edit": {
-      "title": "Kind-Profil bearbeiten",
       "submitButton": "Speichern",
       "submitButtonPending": "Wird gespeichert…",
       "deleteButton": "Kind-Profil löschen",
@@ -466,9 +462,14 @@
     "error": "Dein Name konnte nicht gespeichert werden. Bitte versuche es erneut.",
     "logoutButton": "Stattdessen abmelden"
   },
-  "notifications": {
-    "title": "Benachrichtigungseinstellungen",
+  "settings": {
+    "title": "Einstellungen",
     "backLink": "Zurück zur Tagesübersicht",
+    "profileSectionTitle": "Kind-Profil",
+    "exportButton": "Daten exportieren",
+    "notificationsSectionTitle": "Benachrichtigungen"
+  },
+  "notifications": {
     "feedingReminderLabel": "Fütterungserinnerung",
     "thresholdLabel": "Erinnern nach (Stunden)",
     "thresholdInvalid": "Bitte eine ganze Stundenzahl (mindestens 1) eingeben.",

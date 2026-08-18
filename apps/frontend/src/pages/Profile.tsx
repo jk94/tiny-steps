@@ -8,7 +8,7 @@ import { Card } from '../components/ui';
  * Lets the signed-in user change their display name — the counterpart to the
  * one-off `MandatoryNameDialog`, reachable any time from the header.
  *
- * Save feedback follows `NotificationSettings`' existing pattern (an inline
+ * Save feedback follows `ChildSettings`' existing pattern (an inline
  * `role="status"` line plus an inline error) rather than a toast, so the app's
  * two settings-style forms behave the same way.
  */

@@ -1,76 +1,199 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
+import { fetchHousehold } from '../api/household-api';
+import { deleteChild, fetchChild, updateChild } from '../api/child-api';
 import {
   fetchNotificationSettings,
   updateNotificationSettings,
 } from '../api/notification-settings-api';
 import type { NotificationSettings as NotificationSettingsValues } from '../api/notification-settings-api';
+import { ChildForm } from '../components/ChildForm';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Button, Card, Input } from '../components/ui';
+import { bumpPhotoCacheBust } from '../child/childPhotoCacheBust';
+import { mapChildError } from '../child/mapChildError';
+import { mapHouseholdError } from '../household/mapHouseholdError';
 import { queryClient } from '../lib/query-client';
+import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 const MIN_THRESHOLD_HOURS = 1;
 const MIN_HOUR = 0;
 const MAX_HOUR = 23;
 
-function settingsQueryKey(householdId: string | undefined, childId: string | undefined) {
+function notificationSettingsQueryKey(
+  householdId: string | undefined,
+  childId: string | undefined,
+) {
   return ['households', householdId, 'children', childId, 'notification-settings'];
 }
 
 /**
- * Per-child notification settings page — feeding-reminder toggle + threshold,
- * daily-summary toggle + hour. Follows `ChildEdit`'s load-gate pattern
- * (`useQuery` → LoadingIndicator/ErrorMessage → seeded form), with the actual
- * form extracted so its local state is seeded once from loaded data.
+ * Per-child settings page: child-profile editing (name/photo/birthdate,
+ * OWNER-only delete) plus notification preferences, merged into one page.
+ * Formerly two standalone routes/pages (`ChildEdit` + `NotificationSettings`)
+ * — `ChildList` now sends a click on the child item straight to the daily
+ * timeline instead of an edit screen, so edit access moved here instead.
  */
-export function NotificationSettings() {
+export function ChildSettings() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  useHouseholdRoom(householdId);
+  const navigate = useNavigate();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const settingsQuery = useQuery({
-    queryKey: settingsQueryKey(householdId, childId),
+  const householdQuery = useQuery({
+    queryKey: ['households', householdId],
+    queryFn: () => fetchHousehold(householdId!),
+    retry: false,
+    enabled: !!householdId,
+  });
+
+  const childQuery = useQuery({
+    queryKey: ['households', householdId, 'children', childId],
+    queryFn: () => fetchChild(householdId!, childId!),
+    retry: false,
+    enabled: !!householdId && !!childId,
+  });
+
+  const notificationSettingsQuery = useQuery({
+    queryKey: notificationSettingsQueryKey(householdId, childId),
     queryFn: () => fetchNotificationSettings(householdId!, childId!),
     retry: false,
     enabled: !!householdId && !!childId,
   });
 
-  const mutation = useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteChild(householdId!, childId!),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['households', householdId, 'children'] });
+      navigate(`/households/${householdId}`, { replace: true });
+    },
+  });
+
+  const notificationSettingsMutation = useMutation({
     mutationFn: (values: NotificationSettingsValues) =>
       updateNotificationSettings(householdId!, childId!, values),
     onSuccess: async (saved) => {
-      queryClient.setQueryData(settingsQueryKey(householdId, childId), saved);
+      queryClient.setQueryData(notificationSettingsQueryKey(householdId, childId), saved);
       await queryClient.invalidateQueries({
-        queryKey: settingsQueryKey(householdId, childId),
+        queryKey: notificationSettingsQueryKey(householdId, childId),
       });
     },
   });
 
+  if (householdQuery.isLoading || childQuery.isLoading || notificationSettingsQuery.isLoading) {
+    return <LoadingIndicator />;
+  }
+
+  if (householdQuery.error || !householdQuery.data) {
+    return <ErrorMessage message={t(mapHouseholdError(householdQuery.error))} />;
+  }
+
+  if (childQuery.error || !childQuery.data) {
+    return <ErrorMessage message={t(mapChildError(childQuery.error))} />;
+  }
+
+  if (notificationSettingsQuery.error || !notificationSettingsQuery.data) {
+    return <ErrorMessage message={t('notifications.loadError')} />;
+  }
+
+  const household = householdQuery.data;
+  const child = childQuery.data;
+
+  const handleProfileSubmit = async (formData: FormData) => {
+    await updateChild(household.id, child.id, formData);
+    // No photo-version field exists server-side, so a successful update
+    // that included a new photo bumps the client-side cache-bust counter
+    // (see `child/childPhotoCacheBust.ts`) so `<ChildPhoto>` re-fetches
+    // instead of serving the browser's cached image.
+    if (formData.has('photo')) {
+      bumpPhotoCacheBust(child.id);
+    }
+    await queryClient.invalidateQueries({ queryKey: ['households', household.id, 'children'] });
+    navigate(`/households/${household.id}`, { replace: true });
+  };
+
   return (
     <section className="mx-auto w-full max-w-sm">
       <Link
-        to={`/households/${householdId}/children/${childId}/timeline`}
+        to={`/households/${household.id}/children/${child.id}/timeline`}
         className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
       >
-        {t('notifications.backLink')}
+        {t('settings.backLink')}
       </Link>
-      <h1 className="mb-4 text-xl font-bold text-foreground">{t('notifications.title')}</h1>
+      <h1 className="mb-4 text-xl font-bold text-foreground">{t('settings.title')}</h1>
 
-      {settingsQuery.isLoading ? (
-        <LoadingIndicator />
-      ) : settingsQuery.error || !settingsQuery.data ? (
-        <ErrorMessage message={t('notifications.loadError')} />
-      ) : (
+      <div className="flex flex-col gap-3">
+        <Card>
+          <Card.Body className="flex flex-col gap-4">
+            <h2 className="text-sm font-bold text-foreground">
+              {t('settings.profileSectionTitle')}
+            </h2>
+            <ChildForm
+              mode="edit"
+              initialValues={{
+                name: child.name,
+                // `birthDate` arrives as a full ISO8601 datetime string; an
+                // `<input type="date">` value must be the date-only portion.
+                birthDate: child.birthDate.slice(0, 10),
+                childId: child.id,
+                householdId: household.id,
+                hasPhoto: child.hasPhoto,
+              }}
+              onSubmit={handleProfileSubmit}
+            />
+
+            {/* Child deletion is OWNER-only server-side (see `ChildController`) —
+                completely hidden for a CO_PARENT, not just disabled. */}
+            {household.role === 'OWNER' && (
+              <>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  {t('child.edit.deleteButton')}
+                </Button>
+                <ConfirmDialog
+                  isOpen={isDeleteDialogOpen}
+                  title={t('child.edit.deleteDialog.title')}
+                  description={t('child.edit.deleteDialog.description')}
+                  confirmLabel={t('child.edit.deleteDialog.confirmButton')}
+                  cancelLabel={t('child.edit.deleteDialog.cancelButton')}
+                  onConfirm={() => deleteMutation.mutate()}
+                  onCancel={() => setIsDeleteDialogOpen(false)}
+                  isConfirming={deleteMutation.isPending}
+                />
+                {deleteMutation.isError && (
+                  <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
+                )}
+              </>
+            )}
+          </Card.Body>
+        </Card>
+
+        <Button asChild variant="secondary" className="w-full">
+          <Link to={`/households/${household.id}/children/${child.id}/export`}>
+            {t('settings.exportButton')}
+          </Link>
+        </Button>
+
+        <h2 className="text-sm font-bold text-foreground">
+          {t('settings.notificationsSectionTitle')}
+        </h2>
         <NotificationSettingsForm
-          initialValues={settingsQuery.data}
-          onSubmit={(values) => mutation.mutate(values)}
-          isSaving={mutation.isPending}
-          isSaved={mutation.isSuccess}
-          isError={mutation.isError}
+          initialValues={notificationSettingsQuery.data}
+          onSubmit={(values) => notificationSettingsMutation.mutate(values)}
+          isSaving={notificationSettingsMutation.isPending}
+          isSaved={notificationSettingsMutation.isSuccess}
+          isError={notificationSettingsMutation.isError}
         />
-      )}
+      </div>
     </section>
   );
 }
