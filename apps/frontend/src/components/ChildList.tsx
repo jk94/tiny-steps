@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { listChildren } from '../api/child-api';
 import { ChildPhoto } from './ChildPhoto';
 import { LoadingIndicator } from './LoadingIndicator';
@@ -20,17 +20,19 @@ const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-9
  * creation is restricted server-side to OWNER — see `ChildController`),
  * completely hidden rather than disabled for a CO_PARENT. Each child row is
  * the entry point into that child's routes — there's no other UI to pick a
- * "current child". Clicking anywhere on the row opens that child's home
- * dashboard (`ChildHome`), which links onward to the daily timeline; the
- * photo/name link and the per-type pills below stop the click from bubbling
- * to the row handler so they take priority and keep navigating to their own
- * destination (Export/Settings live on the settings page and per-child nav
- * instead, not duplicated here), styled using the same per-event-type colors
- * as `Badge`.
+ * "current child". The whole row opens that child's home dashboard
+ * (`ChildHome`), which links onward to the daily timeline, via the
+ * "stretched link" pattern (the photo/name `Link` covers the full card through
+ * an absolutely-positioned `::after`) rather than a `Card`-level `onClick` —
+ * a `<div onClick>` is a mouse/touch-only target with no keyboard/screen-reader
+ * equivalent, whereas one real, fully-sized `<Link>` is reachable both ways.
+ * The per-type pills below sit above the stretched link (`relative z-10`) so
+ * they keep navigating to their own destination (Export/Settings live on the
+ * settings page and per-child nav instead, not duplicated here), styled using
+ * the same per-event-type colors as `Badge`.
  */
 export function ChildList({ householdId, role }: ChildListProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ['households', householdId, 'children'],
     queryFn: () => listChildren(householdId),
@@ -58,15 +60,11 @@ export function ChildList({ householdId, role }: ChildListProps) {
         <ul className="flex flex-col gap-2">
           {data.map((child) => (
             <li key={child.id}>
-              <Card
-                onClick={() => navigate(`/households/${householdId}/children/${child.id}`)}
-                className="cursor-pointer hover:bg-muted/50"
-              >
+              <Card className="relative hover:bg-muted/50">
                 <Card.Body className="flex flex-col gap-3">
                   <Link
                     to={`/households/${householdId}/children/${child.id}`}
-                    className="flex items-center gap-3"
-                    onClick={(event) => event.stopPropagation()}
+                    className="flex items-center gap-3 after:absolute after:inset-0 after:content-['']"
                   >
                     <ChildPhoto
                       childId={child.id}
@@ -78,10 +76,7 @@ export function ChildList({ householdId, role }: ChildListProps) {
                     />
                     <span className="font-semibold text-foreground">{child.name}</span>
                   </Link>
-                  <div
-                    className="flex flex-wrap gap-1.5"
-                    onClick={(event) => event.stopPropagation()}
-                  >
+                  <div className="relative z-10 flex flex-wrap gap-1.5">
                     <Link
                       to={`/households/${householdId}/children/${child.id}/feeding`}
                       className={cn(PILL_CLASS, EVENT_TYPE_PILL)}

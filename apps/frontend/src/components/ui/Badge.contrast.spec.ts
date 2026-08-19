@@ -37,9 +37,7 @@ const WCAG_AA_NORMAL_TEXT_MIN_RATIO = 4.5;
 
 function srgbChannelToLinear(channel: number): number {
   const normalized = channel / 255;
-  return normalized <= 0.03928
-    ? normalized / 12.92
-    : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
 }
 
 function relativeLuminance(hex: string): number {

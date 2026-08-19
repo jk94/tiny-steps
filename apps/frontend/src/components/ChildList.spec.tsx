@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { ChildList } from './ChildList';
 import * as childApi from '../api/child-api';
 import { queryClient } from '../lib/query-client';
@@ -153,5 +154,43 @@ describe('ChildList', () => {
     renderChildList('CO_PARENT');
 
     expect(screen.queryByRole('link', { name: 'Add child' })).not.toBeInTheDocument();
+  });
+
+  it('is keyboard-operable: tabbing to the child link and pressing Enter navigates to its home dashboard', async () => {
+    mockedChildApi.listChildren.mockResolvedValueOnce([
+      {
+        id: 'c1',
+        householdId: 'h1',
+        name: 'Alex',
+        birthDate: '2020-01-01',
+        hasPhoto: false,
+        createdAt: '2020-01-01T00:00:00.000Z',
+      },
+    ]);
+    const user = userEvent.setup();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/households/h1']}>
+          <Routes>
+            <Route
+              path="/households/:householdId"
+              element={<ChildList householdId="h1" role="OWNER" />}
+            />
+            <Route path="/households/:householdId/children/:childId" element={<p>Child home</p>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const link = await screen.findByRole('link', { name: 'Alex' });
+    await user.tab();
+    expect(link).not.toHaveFocus();
+    await user.tab();
+    expect(link).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+
+    expect(await screen.findByText('Child home')).toBeInTheDocument();
   });
 });
