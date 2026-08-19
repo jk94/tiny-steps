@@ -104,14 +104,14 @@ describe('DailyTimeline', () => {
     expect(screen.getByText('Loading…')).toBeInTheDocument();
   });
 
-  it('shows the child name in the heading and a link back to the household', async () => {
+  it('shows the child name in the heading and a link back to the child overview', async () => {
     renderDailyTimeline();
 
     expect(
       await screen.findByRole('heading', { name: 'Daily timeline — Alex' }),
     ).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: 'Back to household' });
-    expect(link).toHaveAttribute('href', `/households/${HOUSEHOLD_ID}`);
+    const link = screen.getByRole('link', { name: 'Back to overview' });
+    expect(link).toHaveAttribute('href', `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}`);
   });
 
   it('composes the stats summary and the event list, both populated', async () => {

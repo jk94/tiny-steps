@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { queryClient } from '../lib/query-client';
 import { clearActiveTimerCache } from './activeTimerCache';
 
