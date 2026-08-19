@@ -2,6 +2,13 @@
   "common": {
     "loading": "Loading…"
   },
+  "pwa": {
+    "update": {
+      "message": "A new version is available.",
+      "reloadButton": "Reload",
+      "dismissButton": "Dismiss"
+    }
+  },
   "offline": {
     "status": {
       "pending": "Saving…",
