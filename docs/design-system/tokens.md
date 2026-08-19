@@ -30,23 +30,32 @@ appear both here and in the Event-type table below.
 | `--color-accent` | `#f1f5f9` | `#1e293b` |
 | `--color-accent-foreground` | `#1f2933` | `#e2e8f0` |
 | `--color-success` | `#16a34a` | `#4ade80` |
-| `--color-success-foreground` | `#ffffff` | `#052e16` |
+| `--color-success-foreground` | `#052e16` | `#052e16` |
 | `--color-warning` | `#d97706` | `#fbbf24` |
-| `--color-warning-foreground` | `#ffffff` | `#451a03` |
+| `--color-warning-foreground` | `#451a03` | `#451a03` |
 | `--color-destructive` | `#dc2626` | `#f87171` |
 | `--color-destructive-foreground` | `#ffffff` | `#450a0a` |
 | `--color-border` | `#e2e8f0` | `#334155` |
 | `--color-input` | `#e2e8f0` | `#334155` |
 | `--color-ring` | `#4f46e5` | `#818cf8` |
 | `--color-feeding` | `#f59e0b` | `#fbbf24` |
+| `--color-feeding-foreground` | `#000000` | `#1f2933` |
 | `--color-feeding-breast` | `#ec4899` | `#f472b6` |
+| `--color-feeding-breast-foreground` | `#000000` | `#1f2933` |
 | `--color-feeding-bottle` | `#3b82f6` | `#60a5fa` |
+| `--color-feeding-bottle-foreground` | `#000000` | `#1f2933` |
 | `--color-feeding-solid` | `#f97316` | `#fb923c` |
+| `--color-feeding-solid-foreground` | `#000000` | `#1f2933` |
 | `--color-sleep` | `#8b5cf6` | `#a78bfa` |
+| `--color-sleep-foreground` | `#000000` | `#1f2933` |
 | `--color-diaper` | `#0d9488` | `#2dd4bf` |
+| `--color-diaper-foreground` | `#000000` | `#1f2933` |
 | `--color-diaper-pee` | `#eab308` | `#facc15` |
+| `--color-diaper-pee-foreground` | `#000000` | `#1f2933` |
 | `--color-diaper-stool` | `#a16207` | `#d0a15a` |
+| `--color-diaper-stool-foreground` | `#ffffff` | `#1f2933` |
 | `--color-diaper-both` | `#0d9488` | `#2dd4bf` |
+| `--color-diaper-both-foreground` | `#000000` | `#1f2933` |
 
 ## Typography
 

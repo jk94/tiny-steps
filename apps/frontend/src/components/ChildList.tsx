@@ -12,7 +12,7 @@ export interface ChildListProps {
   role: 'OWNER' | 'CO_PARENT';
 }
 
-const EVENT_TYPE_PILL = 'bg-feeding text-white';
+const EVENT_TYPE_PILL = 'bg-feeding text-feeding-foreground';
 const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-90';
 
 /**
@@ -90,13 +90,13 @@ export function ChildList({ householdId, role }: ChildListProps) {
                     </Link>
                     <Link
                       to={`/households/${householdId}/children/${child.id}/sleep`}
-                      className={cn(PILL_CLASS, 'bg-sleep text-white')}
+                      className={cn(PILL_CLASS, 'bg-sleep text-sleep-foreground')}
                     >
                       {t('child.list.sleepLink')}
                     </Link>
                     <Link
                       to={`/households/${householdId}/children/${child.id}/diaper`}
-                      className={cn(PILL_CLASS, 'bg-diaper text-white')}
+                      className={cn(PILL_CLASS, 'bg-diaper text-diaper-foreground')}
                     >
                       {t('child.list.diaperLink')}
                     </Link>

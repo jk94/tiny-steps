@@ -6,9 +6,9 @@ import { cn } from '../lib/cn';
 const ALL_EVENT_TYPES: EventType[] = ['FEEDING', 'SLEEP', 'DIAPER'];
 
 const PILL_VARIANT: Record<EventType, string> = {
-  FEEDING: 'bg-feeding text-white',
-  SLEEP: 'bg-sleep text-white',
-  DIAPER: 'bg-diaper text-white',
+  FEEDING: 'bg-feeding text-feeding-foreground',
+  SLEEP: 'bg-sleep text-sleep-foreground',
+  DIAPER: 'bg-diaper text-diaper-foreground',
 };
 
 /**

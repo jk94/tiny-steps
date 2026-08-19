@@ -24,23 +24,32 @@
   --rt-color-accent: #f1f5f9;
   --rt-color-accent-foreground: #1f2933;
   --rt-color-success: #16a34a;
-  --rt-color-success-foreground: #ffffff;
+  --rt-color-success-foreground: #052e16;
   --rt-color-warning: #d97706;
-  --rt-color-warning-foreground: #ffffff;
+  --rt-color-warning-foreground: #451a03;
   --rt-color-destructive: #dc2626;
   --rt-color-destructive-foreground: #ffffff;
   --rt-color-border: #e2e8f0;
   --rt-color-input: #e2e8f0;
   --rt-color-ring: #4f46e5;
   --rt-color-feeding: #f59e0b;
+  --rt-color-feeding-foreground: #000000;
   --rt-color-feeding-breast: #ec4899;
+  --rt-color-feeding-breast-foreground: #000000;
   --rt-color-feeding-bottle: #3b82f6;
+  --rt-color-feeding-bottle-foreground: #000000;
   --rt-color-feeding-solid: #f97316;
+  --rt-color-feeding-solid-foreground: #000000;
   --rt-color-sleep: #8b5cf6;
+  --rt-color-sleep-foreground: #000000;
   --rt-color-diaper: #0d9488;
+  --rt-color-diaper-foreground: #000000;
   --rt-color-diaper-pee: #eab308;
+  --rt-color-diaper-pee-foreground: #000000;
   --rt-color-diaper-stool: #a16207;
+  --rt-color-diaper-stool-foreground: #ffffff;
   --rt-color-diaper-both: #0d9488;
+  --rt-color-diaper-both-foreground: #000000;
 
   /* Breakpoints */
   --breakpoint-sm: 480px;
@@ -118,14 +127,23 @@
     --rt-color-input: #334155;
     --rt-color-ring: #818cf8;
     --rt-color-feeding: #fbbf24;
+    --rt-color-feeding-foreground: #1f2933;
     --rt-color-feeding-breast: #f472b6;
+    --rt-color-feeding-breast-foreground: #1f2933;
     --rt-color-feeding-bottle: #60a5fa;
+    --rt-color-feeding-bottle-foreground: #1f2933;
     --rt-color-feeding-solid: #fb923c;
+    --rt-color-feeding-solid-foreground: #1f2933;
     --rt-color-sleep: #a78bfa;
+    --rt-color-sleep-foreground: #1f2933;
     --rt-color-diaper: #2dd4bf;
+    --rt-color-diaper-foreground: #1f2933;
     --rt-color-diaper-pee: #facc15;
+    --rt-color-diaper-pee-foreground: #1f2933;
     --rt-color-diaper-stool: #d0a15a;
+    --rt-color-diaper-stool-foreground: #1f2933;
     --rt-color-diaper-both: #2dd4bf;
+    --rt-color-diaper-both-foreground: #1f2933;
   }
 }
 
@@ -155,14 +173,23 @@
   --rt-color-input: #334155;
   --rt-color-ring: #818cf8;
   --rt-color-feeding: #fbbf24;
+  --rt-color-feeding-foreground: #1f2933;
   --rt-color-feeding-breast: #f472b6;
+  --rt-color-feeding-breast-foreground: #1f2933;
   --rt-color-feeding-bottle: #60a5fa;
+  --rt-color-feeding-bottle-foreground: #1f2933;
   --rt-color-feeding-solid: #fb923c;
+  --rt-color-feeding-solid-foreground: #1f2933;
   --rt-color-sleep: #a78bfa;
+  --rt-color-sleep-foreground: #1f2933;
   --rt-color-diaper: #2dd4bf;
+  --rt-color-diaper-foreground: #1f2933;
   --rt-color-diaper-pee: #facc15;
+  --rt-color-diaper-pee-foreground: #1f2933;
   --rt-color-diaper-stool: #d0a15a;
+  --rt-color-diaper-stool-foreground: #1f2933;
   --rt-color-diaper-both: #2dd4bf;
+  --rt-color-diaper-both-foreground: #1f2933;
 }
 
 @theme inline {
@@ -191,14 +218,23 @@
   --color-input: var(--rt-color-input);
   --color-ring: var(--rt-color-ring);
   --color-feeding: var(--rt-color-feeding);
+  --color-feeding-foreground: var(--rt-color-feeding-foreground);
   --color-feeding-breast: var(--rt-color-feeding-breast);
+  --color-feeding-breast-foreground: var(--rt-color-feeding-breast-foreground);
   --color-feeding-bottle: var(--rt-color-feeding-bottle);
+  --color-feeding-bottle-foreground: var(--rt-color-feeding-bottle-foreground);
   --color-feeding-solid: var(--rt-color-feeding-solid);
+  --color-feeding-solid-foreground: var(--rt-color-feeding-solid-foreground);
   --color-sleep: var(--rt-color-sleep);
+  --color-sleep-foreground: var(--rt-color-sleep-foreground);
   --color-diaper: var(--rt-color-diaper);
+  --color-diaper-foreground: var(--rt-color-diaper-foreground);
   --color-diaper-pee: var(--rt-color-diaper-pee);
+  --color-diaper-pee-foreground: var(--rt-color-diaper-pee-foreground);
   --color-diaper-stool: var(--rt-color-diaper-stool);
+  --color-diaper-stool-foreground: var(--rt-color-diaper-stool-foreground);
   --color-diaper-both: var(--rt-color-diaper-both);
+  --color-diaper-both-foreground: var(--rt-color-diaper-both-foreground);
   /* Breakpoints (literal — media queries cannot read a CSS variable) */
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
