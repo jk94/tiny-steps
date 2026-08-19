@@ -104,6 +104,10 @@
       "expiresAtLabel": "Valid until",
       "ownerOnlyHint": "Only the household owner can generate invites."
     },
+    "members": {
+      "title": "Members",
+      "empty": "No members found."
+    },
     "validation": {
       "nameRequired": "Please enter a name for the household.",
       "nameTooLong": "The name must be at most 120 characters long."
