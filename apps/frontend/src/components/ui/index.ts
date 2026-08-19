@@ -4,6 +4,7 @@ export { Skeleton, type SkeletonProps } from './Skeleton';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { Button, type ButtonProps } from './Button';
 export { Input, type InputProps } from './Input';
+export { Textarea, type TextareaProps } from './Textarea';
 export { Select, type SelectProps, type SelectItemProps } from './Select';
 export { Card, type CardProps } from './Card';
 export { Tabs, type TabsProps, type TabProps, type TabPanelProps } from './Tabs';

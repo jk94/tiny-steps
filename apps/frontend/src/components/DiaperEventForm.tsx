@@ -1,9 +1,9 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreateDiaperEventInput, DiaperType } from '../api/diaper-api';
 import { mapDiaperError, type DiaperErrorKey } from '../diaper/mapDiaperError';
 import { ErrorMessage } from './ErrorMessage';
-import { Button, Input, Select } from './ui';
+import { Button, Input, Select, Textarea } from './ui';
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -69,8 +69,6 @@ export interface DiaperEventFormProps {
  */
 export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFormProps) {
   const { t } = useTranslation();
-  const noteId = useId();
-  const noteErrorId = `${noteId}-error`;
   const [diaperType, setDiaperType] = useState<DiaperType | ''>(initialValues?.diaperType ?? '');
   const [occurredAt, setOccurredAt] = useState(
     initialValues?.occurredAt ? isoToDatetimeLocalValue(initialValues.occurredAt) : '',
@@ -189,30 +187,18 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
         disabled={isSubmitting}
       />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={noteId} className="text-sm font-medium text-foreground">
-          {t('diaper.fields.noteLabel')}
-        </label>
-        <textarea
-          id={noteId}
-          maxLength={MAX_NOTE_LENGTH}
-          value={note}
-          onChange={(event) => {
-            setNote(event.target.value);
-            clearFieldError('note');
-          }}
-          aria-invalid={!!fieldErrorKeys.note}
-          aria-describedby={fieldErrorKeys.note ? noteErrorId : undefined}
-          disabled={isSubmitting}
-          rows={3}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        />
-        {fieldErrorKeys.note && (
-          <div id={noteErrorId}>
-            <ErrorMessage message={t(fieldErrorKeys.note)} />
-          </div>
-        )}
-      </div>
+      <Textarea
+        label={t('diaper.fields.noteLabel')}
+        maxLength={MAX_NOTE_LENGTH}
+        value={note}
+        onChange={(event) => {
+          setNote(event.target.value);
+          clearFieldError('note');
+        }}
+        error={fieldErrorKeys.note ? t(fieldErrorKeys.note) : undefined}
+        disabled={isSubmitting}
+        rows={3}
+      />
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
