@@ -92,6 +92,11 @@ describe('Child profiles (e2e)', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     await app.init();
+    // Binds a real ephemeral port instead of relying on supertest's implicit
+    // per-request listener — see docs/known-issues.md's flaky e2e-tests
+    // entry (mirrors realtime.e2e-spec.ts's rationale, which needs this for
+    // its socket.io-client connection).
+    await app.listen(0);
 
     prisma = app.get(PrismaService);
   });
