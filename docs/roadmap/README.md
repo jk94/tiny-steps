@@ -12,7 +12,7 @@ Diese Roadmap unterteilt das [PRD](../../Baby%20Tracking%20App%20PRD.md) in nach
 | [3](phase-3-sync-uebersicht.md) | Echtzeit-Sync & Übersicht | MVP | Abgeschlossen |
 | [4](phase-4-offline-pwa.md) | Offline-First & PWA | MVP | Fast abgeschlossen² |
 | [5](phase-5-export-wrapper-push.md) | Export, Nativer Wrapper & Push-Benachrichtigungen | MVP | Fast abgeschlossen³ |
-| [6](phase-6-design-system-ux.md) | Design-System & moderne User Experience | Post-MVP | In Arbeit⁴ |
+| [6](phase-6-design-system-ux.md) | Design-System & moderne User Experience | Post-MVP | Fast abgeschlossen⁴ |
 | [7](phase-7-v2-erweiterungen.md) | Version 2.0 – Erweiterungen | Post-MVP | Offen |
 
 ¹ Alle Aufgaben umgesetzt bis auf den manuellen UX-Review der 3-Sekunden/2-Taps-Vorgabe (siehe „UX-Validierung" in [Phase 2](phase-2-tracking-kernfunktionen.md)) — durch Tap-Zahl-Tests plausibilisiert, aber kein Ersatz für den echten manuellen Review.
@@ -21,7 +21,7 @@ Diese Roadmap unterteilt das [PRD](../../Baby%20Tracking%20App%20PRD.md) in nach
 
 ³ Alle Aufgaben (Export, Wrapper-Entscheidung/-Aufbau, Push-Backend/-Frontend) sind funktional umgesetzt; die verbleibenden Punkte sind ausschließlich manuelle Geräte-/Netzwerk-Verifikationen (Android-Build/-Install, Cookie-/Origin-Auth-Smoke-Test, Offline-Sync-Smoke-Test im Wrapper, reale Push-Zustellung), erfasst in [`docs/known-issues.md`](../known-issues.md).
 
-⁴ M1 (Fundament: Tokens, Komponenten-Bibliothek, Styleguide) ist abgeschlossen. M2 (App-Shell/Auth-/Verwaltungs-Screens) und M3 (Tracking-/Timeline-/Statistik-Screens) sind bis auf eine noch fehlende Mitgliederliste in der Haushalts-Verwaltung (M2) umgesetzt. M4 (bereichsübergreifende Politur, A11y-/Performance-Audit, Testnachzug) ist noch komplett offen — siehe [Phase 6](phase-6-design-system-ux.md).
+⁴ M1 (Fundament: Tokens, Komponenten-Bibliothek, Styleguide), M2 (App-Shell/Auth-/Verwaltungs-Screens) und M3 (Tracking-/Timeline-/Statistik-Screens) sind vollständig umgesetzt. M4 (bereichsübergreifende Politur, A11y-/Performance-Audit, Testnachzug) ist ebenfalls umgesetzt bis auf die reale Mobilgeräte-Messung von Layout-Shift/Ladezeiten (bewusst zurückgestellt, kein Lighthouse/Playwright-Tooling im Repo) — erfasst in [`docs/known-issues.md`](../known-issues.md), analog zu den bestehenden Echt-Geräte-Punkten aus Phase 4/5. Siehe [Phase 6](phase-6-design-system-ux.md).
 
 Phasen 0–5 bilden zusammen den MVP (Abschnitt 4.1 und 6 des PRD). Phase 6 (Design-System & UX) ist eine
 zusätzliche, nicht direkt aus dem PRD abgeleitete Phase, die die bislang funktional, aber visuell rein

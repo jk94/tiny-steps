@@ -147,14 +147,46 @@ beschreiben), damit M2/M3 nicht auf unterschiedlichen Zwischenständen aufbauen.
 
 ### M4 — Bereichsübergreifende Politur & Qualitätssicherung
 
-- [ ] Visuelle Konsistenzprüfung über alle Screens hinweg (M2- und M3-Ergebnisse zusammenführen,
-      Abweichungen von den M1-Tokens bereinigen)
-- [ ] Barrierefreiheits-Audit (Farbkontraste, Tastaturbedienbarkeit, Screenreader-Labels) für alle
-      überarbeiteten Screens
-- [ ] Performance-Check (Bundle-Size-Auswirkung des Styling-Ansatzes, Layout-Shift, Ladezeiten auf
-      mobilen Geräten)
-- [ ] Bestehende Komponenten-/E2E-Tests aus Phasen 1–3 gegen die neuen Screens nachziehen, sofern sie auf
-      inzwischen geänderte Selektoren/Texte referenzieren
+- [x] Visuelle Konsistenzprüfung über alle Screens hinweg (M2- und M3-Ergebnisse zusammenführen,
+      Abweichungen von den M1-Tokens bereinigen) — Audit fand konkrete Abweichungen, alle behoben:
+      `ConnectionStatusDot`/`ChildSettings`-Toggle nutzten hardcodierte Farben statt Tokens,
+      `Layout.tsx` ein willkürliches `text-[10px]`, `InviteAccept`s `<h1>` einen abweichenden
+      Type-Scale-Schritt, `ChildList`/`MemberList` eine abweichende Section-`<h2>`-Konvention, die drei
+      Home-Seiten einen dreifach kopierten `lg:w-[340px]`-Wert (jetzt ein `--spacing-home-sidebar`-Token),
+      und `FeedingQuickEntry` einen rohen `<button>` statt `Button`. Größter Einzelfund: die fertige
+      `Skeleton`-Komponente aus M1 hatte app-weit keinen einzigen Verwender — jeder Ladezustand
+      rendert stattdessen `LoadingIndicator`s einzeiligen Text anstelle des späteren Inhalts (siehe
+      Performance-Punkt unten). Ein fehlendes `Textarea`-Primitive (zwei Formulare rollten dasselbe
+      Label/Error-Pattern per Hand nach) wurde ergänzt. Nicht behoben, bewusst zurückgestellt: das
+      hand-gezeichnete Event-Typ-Icon-Set (`components/ui/icons/event-types/`) bleibt in `Layout.tsx`s
+      Navigation ungenutzt (dort weiterhin generische `lucide-react`-Icons) — reine visuelle Politur ohne
+      A11y-Bezug, siehe `docs/known-issues.md`.
+- [x] Barrierefreiheits-Audit (Farbkontraste, Tastaturbedienbarkeit, Screenreader-Labels) für alle
+      überarbeiteten Screens — Screenreader-Labels/Formular-Label-Assoziation waren bereits durchgängig
+      korrekt (keine Funde). Zwei konkrete Funde behoben: (1) alle neun Event-Typ-`Badge`-Varianten sowie
+      `success`/`warning` verfehlten WCAG-AA-Kontrast (bis zu 1.53:1 im Dark Mode) durch hartkodiertes
+      `text-white` — behoben durch neue `*-foreground`-Tokens pro Event-Typ in
+      `design-system/tokens/color.json`, verifiziert durch einen neuen Kontrast-Regressionstest
+      (`Badge.contrast.spec.ts`); (2) `ChildList`s Zeilen hatten ein `onClick` auf dem nicht-interaktiven
+      `Card`-Div (nur per Maus/Touch erreichbar) statt auf einem echten, voll ausgedehnten Link — behoben
+      über das "Stretched-Link"-Muster, mit neuem Tastatur-Interaktionstest. Zurückgestellt: eine
+      vollständige Tab-Reihenfolge-Testabdeckung über alle Screens hinweg (siehe `docs/known-issues.md`).
+- [x] Performance-Check (Bundle-Size-Auswirkung des Styling-Ansatzes, Layout-Shift, Ladezeiten auf
+      mobilen Geräten) — Bundle-Size-Analyse war bereits vor diesem Durchgang erledigt (ein ~677 kB/199 kB-
+      gzip-Chunk, dokumentiert in `docs/known-issues.md`). Für Layout-Shift ergab der Audit einen konkreten,
+      code-evidenten Verursacher: die oben genannte fehlende `Skeleton`-Nutzung — jeder Seiten-/Listen-
+      Ladezustand ersetzte den ganzen Bereich durch einzeiligen Text ohne reservierten Platz, was bei jedem
+      Datenladen einen echten Layout-Shift garantiert. Behoben durch `Skeleton`-Blöcke passender Größe an
+      allen ~13 betroffenen Stellen. Bewusst NICHT umgesetzt (Entscheidung des Nutzers): automatisiertes
+      Lighthouse/Playwright-Tooling für echte mobile Ladezeiten-/CLS-Messung — dieser Teil bleibt ein
+      manueller Folgepunkt in `docs/known-issues.md`, analog zu den bestehenden Echt-Geräte-Punkten
+      (PWA-Installierbarkeit, Capacitor).
+- [x] Bestehende Komponenten-/E2E-Tests aus Phasen 1–3 gegen die neuen Screens nachziehen, sofern sie auf
+      inzwischen geänderte Selektoren/Texte referenzieren — im Rahmen dieses M4-Durchgangs selbst
+      angefallene Testanpassungen (u. a. die auf `LoadingIndicator`-Text `"Loading…"` wartenden Assertions
+      in neun Spec-Dateien, jetzt auf das `Skeleton`-`data-slot`-Attribut umgestellt) wurden direkt
+      mitgezogen; die volle Testsuite (`bun run --cwd apps/frontend test`) ist grün. Kein darüber
+      hinausgehender, separater Nachzieh-Bedarf aus früheren Phasen gefunden.
 
 ## Definition of Done
 
