@@ -452,31 +452,37 @@ describe('Child profiles (e2e)', () => {
   });
 
   describe('validation', () => {
-    it('rejects a missing name with 400', async () => {
+    it('rejects a missing name with 400 and a VALIDATION_ERROR code naming the field', async () => {
       const owner = await registerUser('validation-name-owner');
       const household = await createHousehold(owner, 'Validation Name Household');
 
-      await createChildRequest(owner, household.id, {
+      const response = await createChildRequest(owner, household.id, {
         birthDate: '2020-01-01T00:00:00.000Z',
       }).expect(400);
+
+      expect(response.body).toMatchObject({ code: 'VALIDATION_ERROR' });
+      expect(response.body.fields).toHaveProperty('name');
     });
 
-    it('rejects a future birthDate with 400', async () => {
+    it('rejects a future birthDate with 400 and a VALIDATION_ERROR code naming the field', async () => {
       const owner = await registerUser('validation-future-owner');
       const household = await createHousehold(owner, 'Validation Future Household');
       const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      await createChildRequest(owner, household.id, {
+      const response = await createChildRequest(owner, household.id, {
         name: 'Future Kid',
         birthDate: future,
       }).expect(400);
+
+      expect(response.body).toMatchObject({ code: 'VALIDATION_ERROR' });
+      expect(response.body.fields).toHaveProperty('birthDate');
     });
 
-    it('rejects a photo whose real content does not match its declared mime type with 400', async () => {
+    it('rejects a photo whose real content does not match its declared mime type with 400 and a PHOTO_INVALID_TYPE code', async () => {
       const owner = await registerUser('validation-mime-owner');
       const household = await createHousehold(owner, 'Validation Mime Household');
 
-      await createChildRequest(owner, household.id, {
+      const response = await createChildRequest(owner, household.id, {
         name: 'Fake Photo Kid',
         birthDate: '2020-01-01T00:00:00.000Z',
       })
@@ -485,19 +491,26 @@ describe('Child profiles (e2e)', () => {
           contentType: 'image/gif',
         })
         .expect(400);
+
+      expect(response.body).toMatchObject({ code: 'PHOTO_INVALID_TYPE' });
     });
 
-    it('rejects an oversized photo with 400', async () => {
+    it('rejects an oversized photo with 400 and a PHOTO_TOO_LARGE code', async () => {
       const owner = await registerUser('validation-size-owner');
       const household = await createHousehold(owner, 'Validation Size Household');
       const oversized = Buffer.alloc(3 * 1024 * 1024, 1);
 
-      await createChildRequest(owner, household.id, {
+      const response = await createChildRequest(owner, household.id, {
         name: 'Big Photo Kid',
         birthDate: '2020-01-01T00:00:00.000Z',
       })
         .attach('photo', oversized, { filename: 'big.png', contentType: 'image/png' })
         .expect(400);
+
+      // Multer's own `limits.fileSize` (set to the same MAX_PHOTO_BYTES)
+      // rejects the stream before ParseFilePipeBuilder's own maxSize
+      // validator ever runs — see MulterExceptionFilter.
+      expect(response.body).toMatchObject({ code: 'PHOTO_TOO_LARGE' });
     });
   });
 

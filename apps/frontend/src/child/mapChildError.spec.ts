@@ -12,10 +12,58 @@ describe('mapChildError', () => {
     expect(mapChildError(new ApiError(404, {}))).toBe('child.errors.notFound');
   });
 
-  it('maps a 400 to the generic invalid-input key', () => {
+  it('maps a 400 with no recognized code to the generic invalid-input key', () => {
     expect(
       mapChildError(new ApiError(400, { message: ['birthDate must not be in the future'] })),
     ).toBe('child.errors.invalidInput');
+  });
+
+  it('maps a VALIDATION_ERROR naming only "name" to the invalid-name key', () => {
+    expect(
+      mapChildError(
+        new ApiError(400, { code: 'VALIDATION_ERROR', fields: { name: ['name should not be empty'] } }),
+      ),
+    ).toBe('child.errors.invalidName');
+  });
+
+  it('maps a VALIDATION_ERROR naming only "birthDate" to the invalid-birth-date key', () => {
+    expect(
+      mapChildError(
+        new ApiError(400, {
+          code: 'VALIDATION_ERROR',
+          fields: { birthDate: ['birthDate must not be in the future'] },
+        }),
+      ),
+    ).toBe('child.errors.invalidBirthDate');
+  });
+
+  it('maps a VALIDATION_ERROR naming both fields to the generic invalid-input key', () => {
+    expect(
+      mapChildError(
+        new ApiError(400, {
+          code: 'VALIDATION_ERROR',
+          fields: { name: ['name should not be empty'], birthDate: ['birthDate must not be in the future'] },
+        }),
+      ),
+    ).toBe('child.errors.invalidInput');
+  });
+
+  it('maps a PHOTO_TOO_LARGE code to the photo-too-large key', () => {
+    expect(mapChildError(new ApiError(400, { code: 'PHOTO_TOO_LARGE' }))).toBe(
+      'child.errors.photoTooLarge',
+    );
+  });
+
+  it('maps a PHOTO_INVALID_TYPE code to the photo-invalid-type key', () => {
+    expect(mapChildError(new ApiError(400, { code: 'PHOTO_INVALID_TYPE' }))).toBe(
+      'child.errors.photoInvalidType',
+    );
+  });
+
+  it('maps a PHOTO_UPLOAD_ERROR code to the photo-upload-error key', () => {
+    expect(mapChildError(new ApiError(400, { code: 'PHOTO_UPLOAD_ERROR' }))).toBe(
+      'child.errors.photoUploadError',
+    );
   });
 
   it('maps a plain non-ApiError failure (e.g. network error) to the generic key', () => {

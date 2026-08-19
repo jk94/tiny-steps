@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -29,6 +30,7 @@ import { ChildService } from './child.service';
 import type { ChildSummary } from './child.service';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
+import { ChildValidationExceptionFilter } from './filters/child-validation.exception-filter';
 import { MulterExceptionFilter } from './filters/multer-exception.filter';
 
 const PHOTO_FIELD_NAME = 'photo';
@@ -36,6 +38,13 @@ const PHOTO_FIELD_NAME = 'photo';
 // ParseFilePipeBuilder's addFileTypeValidator expects a RegExp/string, not
 // an array of exact values.
 const PHOTO_MIME_TYPE_PATTERN = /^image\/(jpeg|png|webp)$/;
+
+// Internal-only marker strings threaded through each validator's
+// `errorMessage` so photoValidationPipe()'s shared `exceptionFactory` can
+// tell which validator failed and attach the right machine-readable `code`
+// — matching human-facing message text would be fragile, this isn't.
+const PHOTO_TYPE_MISMATCH_MARKER = 'photo-invalid-type';
+const PHOTO_TOO_LARGE_MARKER = 'photo-too-large';
 
 /**
  * `photo` arrives as a memory buffer (not written to disk by Multer
@@ -54,9 +63,23 @@ function photoFileInterceptor() {
 
 function photoValidationPipe() {
   return new ParseFilePipeBuilder()
-    .addFileTypeValidator({ fileType: PHOTO_MIME_TYPE_PATTERN })
-    .addMaxSizeValidator({ maxSize: MAX_PHOTO_BYTES })
-    .build({ fileIsRequired: false, errorHttpStatusCode: HttpStatus.BAD_REQUEST });
+    .addFileTypeValidator({
+      fileType: PHOTO_MIME_TYPE_PATTERN,
+      errorMessage: PHOTO_TYPE_MISMATCH_MARKER,
+    })
+    .addMaxSizeValidator({ maxSize: MAX_PHOTO_BYTES, errorMessage: PHOTO_TOO_LARGE_MARKER })
+    .build({
+      fileIsRequired: false,
+      errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+      exceptionFactory: (marker) => {
+        const code = marker === PHOTO_TYPE_MISMATCH_MARKER ? 'PHOTO_INVALID_TYPE' : 'PHOTO_TOO_LARGE';
+        const message =
+          code === 'PHOTO_INVALID_TYPE'
+            ? 'Please choose a JPEG, PNG, or WebP image.'
+            : 'The photo must be at most 2 MB.';
+        return new BadRequestException({ statusCode: 400, code, message });
+      },
+    });
 }
 
 @Controller('households/:householdId/children')
@@ -71,7 +94,7 @@ export class ChildController {
   @RequireRole(HouseholdRole.OWNER)
   @Post()
   @UseInterceptors(photoFileInterceptor())
-  @UseFilters(MulterExceptionFilter)
+  @UseFilters(MulterExceptionFilter, ChildValidationExceptionFilter)
   async create(
     @Param('householdId') householdId: string,
     @Body() dto: CreateChildDto,
@@ -116,7 +139,7 @@ export class ChildController {
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
   @Patch(':childId')
   @UseInterceptors(photoFileInterceptor())
-  @UseFilters(MulterExceptionFilter)
+  @UseFilters(MulterExceptionFilter, ChildValidationExceptionFilter)
   async update(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,

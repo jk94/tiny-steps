@@ -192,6 +192,11 @@
     "errors": {
       "notFound": "Dieses Kind-Profil wurde nicht gefunden.",
       "forbidden": "Nur die haushaltführende Person darf diese Aktion ausführen.",
+      "invalidName": "Bitte gib einen Namen ein.",
+      "invalidBirthDate": "Bitte gib ein gültiges Geburtsdatum ein, das nicht in der Zukunft liegt.",
+      "photoTooLarge": "Das Foto darf höchstens 2 MB groß sein.",
+      "photoInvalidType": "Bitte wähle ein JPEG-, PNG- oder WebP-Bild aus.",
+      "photoUploadError": "Das Foto konnte nicht hochgeladen werden. Bitte versuche es erneut.",
       "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe Name, Geburtsdatum und Foto.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
