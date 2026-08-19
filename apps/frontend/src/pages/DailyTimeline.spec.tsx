@@ -96,12 +96,12 @@ describe('DailyTimeline', () => {
     queryClient.clear();
   });
 
-  it('shows the loading indicator while the child query is in flight', () => {
+  it('shows the loading skeleton while the child query is in flight', () => {
     mockedChildApi.fetchChild.mockReturnValue(new Promise(() => {}));
 
     renderDailyTimeline();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('shows the child name in the heading and a link back to the child overview', async () => {

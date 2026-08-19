@@ -8,9 +8,8 @@ import { type EventStatsSummary, fetchEventStats } from '../api/event-api';
 import { mapChildError } from '../child/mapChildError';
 import { ChildPhoto } from '../components/ChildPhoto';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { LoadingIndicator } from '../components/LoadingIndicator';
 import { TimeSinceBadgeCard } from '../components/TimeSinceBadgeCard';
-import { Card } from '../components/ui';
+import { Card, Skeleton } from '../components/ui';
 import { ageInMonths } from '../lib/childAge';
 import { getLocalDayBoundaries } from '../lib/dayBoundaries';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
@@ -61,7 +60,18 @@ interface TimeSinceSectionProps {
  */
 function TimeSinceSection({ isLoading, lastEventAt }: TimeSinceSectionProps) {
   if (isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <div className="flex flex-col gap-2" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <Card key={i}>
+            <Card.Body className="flex items-center justify-between gap-3 p-3">
+              <Skeleton shape="text" className="w-24" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </Card.Body>
+          </Card>
+        ))}
+      </div>
+    );
   }
 
   if (!lastEventAt) {
@@ -129,7 +139,25 @@ export function ChildHome() {
   });
 
   if (childQuery.isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <section className="mx-auto flex w-full max-w-2xl flex-col gap-4" aria-hidden="true">
+        <Skeleton shape="text" className="h-7 w-48" />
+        <Card>
+          <Card.Body className="flex items-center gap-3">
+            <Skeleton shape="circle" className="h-14 w-14" />
+            <div className="flex flex-col gap-2">
+              <Skeleton shape="text" className="h-5 w-32" />
+              <Skeleton shape="text" className="h-4 w-24" />
+            </div>
+          </Card.Body>
+        </Card>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
+      </section>
+    );
   }
 
   if (childQuery.error || !childQuery.data) {

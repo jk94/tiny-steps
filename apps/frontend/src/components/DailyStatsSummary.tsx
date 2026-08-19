@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { fetchEventStats } from '../api/event-api';
-import { LoadingIndicator } from './LoadingIndicator';
 import { TimeSinceCard } from './TimeSinceCard';
-import { Card } from './ui';
+import { Card, Skeleton } from './ui';
 
 export interface DailyStatsSummaryProps {
   householdId: string;
@@ -36,7 +35,32 @@ export function DailyStatsSummary({
   });
 
   if (statsQuery.isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <section className="flex flex-col gap-3" aria-hidden="true">
+        <div className="flex gap-3">
+          <Card className="flex-1">
+            <Card.Body className="flex items-center justify-center p-3">
+              <Skeleton shape="text" className="w-2/3" />
+            </Card.Body>
+          </Card>
+          <Card className="flex-1">
+            <Card.Body className="flex items-center justify-center p-3">
+              <Skeleton shape="text" className="w-2/3" />
+            </Card.Body>
+          </Card>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[0, 1, 2].map((i) => (
+            <Card key={i} className="flex-1">
+              <Card.Body className="flex flex-col gap-1 p-3">
+                <Skeleton shape="text" className="h-3 w-16" />
+                <Skeleton shape="text" className="w-24" />
+              </Card.Body>
+            </Card>
+          ))}
+        </div>
+      </section>
+    );
   }
 
   if (!statsQuery.data) {

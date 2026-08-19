@@ -66,12 +66,12 @@ describe('ChildHome', () => {
     queryClient.clear();
   });
 
-  it('shows the loading indicator while the child query is in flight', () => {
+  it('shows the loading skeleton while the child query is in flight', () => {
     mockedChildApi.fetchChild.mockReturnValue(new Promise(() => {}));
 
     renderChildHome();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('shows an error message when the child cannot be fetched', async () => {
@@ -129,7 +129,7 @@ describe('ChildHome', () => {
     // The child card is driven by its own query and must not wait for stats.
     expect(await screen.findByRole('heading', { name: 'Alex' })).toBeInTheDocument();
     expect(screen.getByText('4 months old')).toBeInTheDocument();
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
     // "No entries yet" is a claim about the child's history — not something
     // pending stats are allowed to assert.
     expect(screen.queryByText('No entries yet')).not.toBeInTheDocument();
@@ -142,7 +142,9 @@ describe('ChildHome', () => {
 
     expect(await screen.findByRole('heading', { name: 'Alex' })).toBeInTheDocument();
     expect(screen.getByText('4 months old')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByText('Loading…')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument(),
+    );
     expect(screen.queryByText('No entries yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Last diaper change')).not.toBeInTheDocument();
   });

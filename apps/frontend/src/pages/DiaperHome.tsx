@@ -6,7 +6,7 @@ import { mapChildError } from '../child/mapChildError';
 import { DiaperEventList } from '../components/DiaperEventList';
 import { DiaperQuickEntry } from '../components/DiaperQuickEntry';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { LoadingIndicator } from '../components/LoadingIndicator';
+import { Skeleton } from '../components/ui';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /**
@@ -29,7 +29,26 @@ export function DiaperHome() {
   });
 
   if (childQuery.isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <section className="flex flex-col gap-4" aria-hidden="true">
+        <div className="flex flex-col gap-1">
+          <Skeleton shape="text" className="h-4 w-24" />
+          <Skeleton shape="text" className="h-7 w-48" />
+        </div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="flex flex-col gap-3 lg:w-home-sidebar lg:flex-none">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (childQuery.error || !childQuery.data) {

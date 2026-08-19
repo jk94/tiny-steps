@@ -27,12 +27,12 @@ describe('MemberList', () => {
     queryClient.clear();
   });
 
-  it('shows the loading indicator while the members query is in flight', () => {
+  it('shows the loading skeleton while the members query is in flight', () => {
     mockedHouseholdApi.listHouseholdMembers.mockReturnValue(new Promise(() => {}));
 
     renderMemberList();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('renders every member by email once loaded', async () => {

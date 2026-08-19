@@ -45,12 +45,12 @@ describe('DailyStatsSummary', () => {
     vi.useRealTimers();
   });
 
-  it('shows the loading indicator while the stats query is in flight', () => {
+  it('shows the loading skeleton while the stats query is in flight', () => {
     mockedEventApi.fetchEventStats.mockReturnValue(new Promise(() => {}));
 
     renderSummary();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('renders sleepHoursToday and feedingCountToday plus a TimeSinceCard per event type', async () => {

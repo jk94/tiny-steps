@@ -6,9 +6,8 @@ import { listFeedingEvents } from '../api/feeding-api';
 import type { FeedingEventSummary } from '../api/feeding-api';
 import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
-import { LoadingIndicator } from './LoadingIndicator';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
-import { Card } from './ui';
+import { Card, Skeleton } from './ui';
 
 export interface FeedingEventListProps {
   householdId: string;
@@ -62,7 +61,18 @@ export function FeedingEventList({ householdId, childId }: FeedingEventListProps
         {t('feeding.list.title')}
       </h2>
       {isLoading ? (
-        <LoadingIndicator />
+        <ul className="flex flex-col gap-2" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <li key={i}>
+              <Card>
+                <Card.Body className="flex items-center justify-between gap-3">
+                  <Skeleton shape="text" className="h-4 w-24" />
+                  <Skeleton shape="text" className="h-3 w-28" />
+                </Card.Body>
+              </Card>
+            </li>
+          ))}
+        </ul>
       ) : events.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('feeding.list.empty')}</p>
       ) : (

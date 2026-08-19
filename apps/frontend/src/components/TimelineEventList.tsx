@@ -7,9 +7,8 @@ import { listHouseholdMembers } from '../api/household-api';
 import type { HouseholdMemberSummary } from '../api/household-api';
 import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
-import { LoadingIndicator } from './LoadingIndicator';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
-import { Badge, Card, type BadgeVariant } from './ui';
+import { Badge, Card, Skeleton, type BadgeVariant } from './ui';
 
 export interface TimelineEventListProps {
   householdId: string;
@@ -114,7 +113,23 @@ export function TimelineEventList({
   const pendingQuery = usePendingLocalEvents(householdId, childId);
 
   if (eventsQuery.isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <ul className="flex flex-col gap-2" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <li key={i}>
+            <Card>
+              <Card.Body className="flex items-center gap-3">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <div className="flex flex-1 flex-col gap-1">
+                  <Skeleton shape="text" className="h-4 w-16" />
+                  <Skeleton shape="text" className="h-3 w-32" />
+                </div>
+              </Card.Body>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    );
   }
 
   const pendingForThisDay = (pendingQuery.data ?? [])

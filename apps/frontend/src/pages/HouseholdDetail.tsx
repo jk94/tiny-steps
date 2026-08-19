@@ -5,8 +5,8 @@ import { fetchHousehold } from '../api/household-api';
 import { ChildList } from '../components/ChildList';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { InviteGenerator } from '../components/InviteGenerator';
-import { LoadingIndicator } from '../components/LoadingIndicator';
 import { MemberList } from '../components/MemberList';
+import { Skeleton } from '../components/ui';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -22,7 +22,18 @@ export function HouseholdDetail() {
   });
 
   if (isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <section className="mx-auto flex w-full max-w-2xl flex-col gap-4" aria-hidden="true">
+        <Skeleton shape="text" className="h-4 w-24" />
+        <div className="flex flex-col gap-2">
+          <Skeleton shape="text" className="h-7 w-40" />
+          <Skeleton shape="text" className="h-4 w-56" />
+        </div>
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </section>
+    );
   }
 
   if (error || !data) {

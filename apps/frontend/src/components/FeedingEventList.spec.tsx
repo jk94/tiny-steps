@@ -33,12 +33,12 @@ describe('FeedingEventList', () => {
     queryClient.clear();
   });
 
-  it('shows the loading indicator while the query is in flight', () => {
+  it('shows the loading skeleton while the query is in flight', () => {
     mockedFeedingApi.listFeedingEvents.mockReturnValue(new Promise(() => {}));
 
     renderList();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no entries', async () => {

@@ -39,12 +39,12 @@ describe('HouseholdDetail', () => {
     queryClient.clear();
   });
 
-  it('shows the loading indicator while the household query is in flight', () => {
+  it('shows the loading skeleton while the household query is in flight', () => {
     mockedHouseholdApi.fetchHousehold.mockReturnValue(new Promise(() => {}));
 
     renderHouseholdDetail();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('renders name, role, and createdAt once loaded', async () => {

@@ -8,8 +8,8 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { FeedingEventList } from '../components/FeedingEventList';
 import { FeedingQuickEntry } from '../components/FeedingQuickEntry';
 import { FeedingTimer } from '../components/FeedingTimer';
-import { LoadingIndicator } from '../components/LoadingIndicator';
 import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
+import { Skeleton } from '../components/ui';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -43,7 +43,27 @@ export function FeedingHome() {
   const pendingQuery = usePendingLocalEvents(householdId!, childId!, 'FEEDING');
 
   if (childQuery.isLoading || activeTimerQuery.isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <section className="flex flex-col gap-4" aria-hidden="true">
+        <div className="flex flex-col gap-1">
+          <Skeleton shape="text" className="h-4 w-24" />
+          <Skeleton shape="text" className="h-7 w-48" />
+        </div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="grid grid-cols-2 gap-2 lg:w-home-sidebar lg:flex-none">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (childQuery.error || !childQuery.data) {

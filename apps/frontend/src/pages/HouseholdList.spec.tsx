@@ -42,12 +42,12 @@ describe('HouseholdList', () => {
     );
   });
 
-  it('shows the loading indicator while the households query is in flight', () => {
+  it('shows the loading skeleton while the households query is in flight', () => {
     mockedHouseholdApi.listHouseholds.mockReturnValue(new Promise(() => {}));
 
     renderHouseholdList();
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
   });
 
   it('shows the empty state when the user has no households', async () => {

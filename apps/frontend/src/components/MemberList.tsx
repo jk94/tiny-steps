@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { listHouseholdMembers } from '../api/household-api';
-import { LoadingIndicator } from './LoadingIndicator';
-import { Card, EmptyState } from './ui';
+import { Card, EmptyState, Skeleton } from './ui';
 
 export interface MemberListProps {
   householdId: string;
@@ -30,7 +29,12 @@ export function MemberList({ householdId }: MemberListProps) {
         {t('household.members.title')}
       </h2>
       {isLoading ? (
-        <LoadingIndicator />
+        <Card aria-hidden="true">
+          <Card.Body className="flex flex-col gap-2">
+            <Skeleton shape="text" className="w-40" />
+            <Skeleton shape="text" className="w-32" />
+          </Card.Body>
+        </Card>
       ) : !data || data.length === 0 ? (
         <EmptyState description={t('household.members.empty')} />
       ) : (

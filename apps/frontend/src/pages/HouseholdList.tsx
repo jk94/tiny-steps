@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listHouseholds } from '../api/household-api';
-import { LoadingIndicator } from '../components/LoadingIndicator';
-import { Badge, Card, EmptyState } from '../components/ui';
+import { Badge, Card, EmptyState, Skeleton } from '../components/ui';
 
 /**
  * `['households']` query key — also invalidated by `HouseholdCreate`,
@@ -33,7 +32,18 @@ export function HouseholdList() {
       </div>
 
       {isLoading ? (
-        <LoadingIndicator />
+        <ul className="flex flex-col gap-2" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <li key={i}>
+              <Card>
+                <Card.Body className="flex items-center justify-between gap-3 p-4">
+                  <Skeleton shape="text" className="h-5 w-32" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </Card.Body>
+              </Card>
+            </li>
+          ))}
+        </ul>
       ) : !data || data.length === 0 ? (
         <EmptyState title={t('household.list.title')} description={t('household.list.empty')} />
       ) : (

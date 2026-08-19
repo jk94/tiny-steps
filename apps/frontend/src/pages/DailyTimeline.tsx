@@ -7,9 +7,9 @@ import type { EventType } from '../api/event-api';
 import { mapChildError } from '../child/mapChildError';
 import { DailyStatsSummary } from '../components/DailyStatsSummary';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { LoadingIndicator } from '../components/LoadingIndicator';
 import { TimelineEventList } from '../components/TimelineEventList';
 import { TimelineFilter } from '../components/TimelineFilter';
+import { Skeleton } from '../components/ui';
 import { getLocalDayBoundaries } from '../lib/dayBoundaries';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -44,7 +44,23 @@ export function DailyTimeline() {
   });
 
   if (childQuery.isLoading) {
-    return <LoadingIndicator />;
+    return (
+      <section className="mx-auto flex w-full max-w-2xl flex-col gap-4" aria-hidden="true">
+        <div className="flex flex-col gap-1">
+          <Skeleton shape="text" className="h-4 w-24" />
+          <Skeleton shape="text" className="h-7 w-48" />
+        </div>
+        <div className="flex gap-3">
+          <Skeleton className="h-14 flex-1" />
+          <Skeleton className="h-14 flex-1" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      </section>
+    );
   }
 
   if (childQuery.error || !childQuery.data) {

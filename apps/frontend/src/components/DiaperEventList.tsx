@@ -6,9 +6,8 @@ import { listDiaperEvents } from '../api/diaper-api';
 import type { DiaperEventSummary } from '../api/diaper-api';
 import { mergeServerAndPendingEvents } from '../offline/mergeServerAndPendingEvents';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
-import { LoadingIndicator } from './LoadingIndicator';
 import { OfflineStatusBadge } from './OfflineStatusBadge';
-import { Card, EmptyState } from './ui';
+import { Card, EmptyState, Skeleton } from './ui';
 
 export interface DiaperEventListProps {
   householdId: string;
@@ -61,7 +60,18 @@ export function DiaperEventList({ householdId, childId }: DiaperEventListProps) 
         {t('diaper.list.title')}
       </h2>
       {isLoading ? (
-        <LoadingIndicator />
+        <ul className="flex flex-col gap-2" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <li key={i}>
+              <Card>
+                <Card.Body className="flex items-center justify-between gap-3">
+                  <Skeleton shape="text" className="h-4 w-24" />
+                  <Skeleton shape="text" className="h-3 w-28" />
+                </Card.Body>
+              </Card>
+            </li>
+          ))}
+        </ul>
       ) : events.length === 0 ? (
         <EmptyState description={t('diaper.list.empty')} />
       ) : (
