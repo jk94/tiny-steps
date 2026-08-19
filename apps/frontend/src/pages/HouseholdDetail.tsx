@@ -6,6 +6,7 @@ import { ChildList } from '../components/ChildList';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { InviteGenerator } from '../components/InviteGenerator';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { MemberList } from '../components/MemberList';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -53,6 +54,7 @@ export function HouseholdDetail() {
         </div>
       </div>
       <InviteGenerator householdId={data.id} role={data.role} />
+      <MemberList householdId={data.id} />
       <ChildList householdId={data.id} role={data.role} />
     </section>
   );

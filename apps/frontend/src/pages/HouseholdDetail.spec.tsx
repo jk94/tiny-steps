@@ -31,6 +31,7 @@ describe('HouseholdDetail', () => {
   beforeEach(() => {
     queryClient.clear();
     mockedChildApi.listChildren.mockResolvedValue([]);
+    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([]);
   });
 
   afterEach(() => {

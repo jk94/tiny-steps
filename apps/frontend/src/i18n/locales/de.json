@@ -104,6 +104,10 @@
       "expiresAtLabel": "Gültig bis",
       "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen."
     },
+    "members": {
+      "title": "Mitglieder",
+      "empty": "Keine Mitglieder gefunden."
+    },
     "validation": {
       "nameRequired": "Bitte gib einen Namen für den Haushalt ein.",
       "nameTooLong": "Der Name darf höchstens 120 Zeichen lang sein."
