@@ -77,7 +77,7 @@ export function FeedingHome() {
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex flex-col gap-3 lg:w-[340px] lg:flex-none">
+        <div className="flex flex-col gap-3 lg:w-home-sidebar lg:flex-none">
           {activeTimer && pendingStop ? (
             <section>
               <p className="text-sm text-muted-foreground">

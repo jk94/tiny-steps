@@ -26,7 +26,9 @@ export function MemberList({ householdId }: MemberListProps) {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-bold text-foreground">{t('household.members.title')}</h2>
+      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+        {t('household.members.title')}
+      </h2>
       {isLoading ? (
         <LoadingIndicator />
       ) : !data || data.length === 0 ? (

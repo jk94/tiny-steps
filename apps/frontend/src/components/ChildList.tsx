@@ -42,7 +42,9 @@ export function ChildList({ householdId, role }: ChildListProps) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-bold text-foreground">{t('child.list.title')}</h2>
+        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+          {t('child.list.title')}
+        </h2>
         {role === 'OWNER' && (
           <Link
             to={`/households/${householdId}/children/new`}

@@ -227,7 +227,7 @@ function ToggleField({
           className="peer sr-only"
         />
         <span className="pointer-events-none absolute inset-0 rounded-full bg-muted transition-colors peer-checked:bg-primary" />
-        <span className="pointer-events-none absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+        <span className="pointer-events-none absolute left-1 h-4 w-4 rounded-full bg-background transition-transform peer-checked:translate-x-5" />
       </span>
     </label>
   );

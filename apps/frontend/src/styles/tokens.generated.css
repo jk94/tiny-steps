@@ -69,6 +69,7 @@
   --spacing-10: 2.5rem;
   --spacing-12: 3rem;
   --spacing-16: 4rem;
+  --spacing-home-sidebar: 340px;
 
   /* Typography */
   --font-family-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -252,6 +253,7 @@
   --spacing-10: 2.5rem;
   --spacing-12: 3rem;
   --spacing-16: 4rem;
+  --spacing-home-sidebar: 340px;
   /* Typography */
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);

@@ -95,17 +95,18 @@ export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryPro
       {showBottlePresets && (
         <div className="flex flex-wrap gap-2">
           {BOTTLE_AMOUNT_PRESETS_ML.map((amountMl) => (
-            <button
+            <Button
               key={amountMl}
               type="button"
-              className="cursor-pointer"
+              variant="ghost"
+              className="h-auto p-0"
               disabled={mutation.isPending}
               onClick={() => create({ feedingType: 'BOTTLE', amountMl })}
             >
               <Badge variant="feeding-bottle" className="cursor-pointer px-3 py-1.5">
                 {t('feeding.quickEntry.bottleAmountButton', { amount: amountMl })}
               </Badge>
-            </button>
+            </Button>
           ))}
         </div>
       )}

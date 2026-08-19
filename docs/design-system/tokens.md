@@ -93,6 +93,7 @@ appear both here and in the Event-type table below.
 | `--spacing-10` | `2.5rem` |
 | `--spacing-12` | `3rem` |
 | `--spacing-16` | `4rem` |
+| `--spacing-home-sidebar` | `340px` |
 
 ## Radii
 

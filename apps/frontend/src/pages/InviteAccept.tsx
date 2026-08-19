@@ -58,7 +58,7 @@ export function InviteAccept() {
       <section className="mx-auto w-full max-w-sm py-8">
         <Card>
           <Card.Header>
-            <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('invite.preview.title')}</h1>
           </Card.Header>
           <Card.Body>
             <p className="text-sm text-muted-foreground">{t('invite.preview.loading')}</p>
@@ -73,7 +73,7 @@ export function InviteAccept() {
       <section className="mx-auto w-full max-w-sm py-8">
         <Card>
           <Card.Header>
-            <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('invite.preview.title')}</h1>
           </Card.Header>
           <Card.Body>
             <ErrorMessage message={t(mapInviteError(previewQuery.error))} />
@@ -90,7 +90,7 @@ export function InviteAccept() {
       <section className="mx-auto w-full max-w-sm py-8">
         <Card>
           <Card.Header>
-            <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('invite.preview.title')}</h1>
           </Card.Header>
           <Card.Body>
             <p className="text-sm text-muted-foreground">
@@ -106,7 +106,7 @@ export function InviteAccept() {
     <section className="mx-auto w-full max-w-sm py-8">
       <Card>
         <Card.Header>
-          <h1 className="text-lg font-bold text-foreground">{t('invite.preview.title')}</h1>
+          <h1 className="text-xl font-bold text-foreground">{t('invite.preview.title')}</h1>
         </Card.Header>
         <Card.Body className="flex flex-col gap-2">
           <p className="text-sm">

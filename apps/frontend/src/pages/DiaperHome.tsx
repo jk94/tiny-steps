@@ -53,7 +53,7 @@ export function DiaperHome() {
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex flex-col gap-3 lg:w-[340px] lg:flex-none">
+        <div className="flex flex-col gap-3 lg:w-home-sidebar lg:flex-none">
           <DiaperQuickEntry householdId={householdId!} childId={childId!} />
 
           <Link

@@ -45,7 +45,7 @@ export function ConnectionStatusDot({ isConnected, showLabel = false }: Connecti
         aria-hidden="true"
         className={cn(
           'inline-flex h-2 w-2 shrink-0 rounded-full',
-          isConnected ? 'bg-emerald-500' : 'bg-red-500',
+          isConnected ? 'bg-success' : 'bg-destructive',
         )}
       />
       <span className={showLabel ? 'text-sm text-foreground' : 'sr-only'}>{label}</span>
