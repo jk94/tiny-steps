@@ -29,22 +29,25 @@ import { MulterError } from 'multer';
 export class MulterExceptionFilter implements ExceptionFilter {
   catch(exception: MulterError | PayloadTooLargeException, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
-    const message =
+    const { code, message } =
       exception instanceof MulterError
-        ? this.messageFor(exception)
-        : 'Uploaded file exceeds the maximum allowed size';
-    const badRequest = new BadRequestException(message);
+        ? this.bodyFor(exception)
+        : { code: 'PHOTO_TOO_LARGE', message: 'Uploaded file exceeds the maximum allowed size' };
+    const badRequest = new BadRequestException({ statusCode: 400, code, message });
     response.status(badRequest.getStatus()).json(badRequest.getResponse());
   }
 
-  private messageFor(exception: MulterError): string {
+  private bodyFor(exception: MulterError): { code: string; message: string } {
     switch (exception.code) {
       case 'LIMIT_FILE_SIZE':
-        return 'Uploaded file exceeds the maximum allowed size';
+        return { code: 'PHOTO_TOO_LARGE', message: 'Uploaded file exceeds the maximum allowed size' };
       case 'LIMIT_UNEXPECTED_FILE':
-        return `Unexpected file field "${exception.field}"`;
+        return {
+          code: 'PHOTO_UPLOAD_ERROR',
+          message: `Unexpected file field "${exception.field}"`,
+        };
       default:
-        return exception.message;
+        return { code: 'PHOTO_UPLOAD_ERROR', message: exception.message };
     }
   }
 }

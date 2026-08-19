@@ -188,6 +188,11 @@
     "errors": {
       "notFound": "This child profile wasn't found.",
       "forbidden": "Only the household owner can perform this action.",
+      "invalidName": "Please enter a name.",
+      "invalidBirthDate": "Please enter a valid birth date that isn't in the future.",
+      "photoTooLarge": "The photo must be at most 2 MB.",
+      "photoInvalidType": "Please choose a JPEG, PNG, or WebP image.",
+      "photoUploadError": "The photo couldn't be uploaded. Please try again.",
       "invalidInput": "Couldn't save your changes. Please check the name, birth date, and photo.",
       "generic": "Something went wrong. Please try again later."
     }
