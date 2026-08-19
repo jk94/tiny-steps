@@ -94,6 +94,7 @@
         "react-router": "^8.3.0",
         "socket.io-client": "^4.8.3",
         "sonner": "^2.0.8",
+        "workbox-window": "^7.4.1",
       },
       "devDependencies": {
         "@capacitor/cli": "^8.5.0",

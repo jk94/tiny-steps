@@ -9,14 +9,9 @@ import { RealtimeProvider } from './realtime/RealtimeProvider.tsx';
 import { SyncQueueProvider } from './offline/SyncQueueProvider.tsx';
 import { ConflictNoticeBanner } from './components/ConflictNoticeBanner.tsx';
 import { Toaster } from './components/ui';
-import { registerServiceWorker } from './pwa/registerServiceWorker.ts';
+import { ServiceWorkerUpdateBanner } from './pwa/ServiceWorkerUpdateBanner.tsx';
 import './index.css';
 import App from './App.tsx';
-
-// Called once at module scope (not from a React useEffect) so it runs
-// exactly once per page load regardless of StrictMode's double-invocation
-// of effects — see the function's own doc comment.
-registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -34,6 +29,10 @@ createRoot(document.getElementById('root')!).render(
               {/* App-root, non-blocking Last-Write-Wins conflict notices
                   (see ConflictNoticeBanner / ADR-0011). */}
               <ConflictNoticeBanner />
+              {/* App-root, dismissible "new version available" prompt for
+                  the registerType: 'prompt' service worker flow (see
+                  ServiceWorkerUpdateBanner / ADR-0008). */}
+              <ServiceWorkerUpdateBanner />
               {/* App-root toast host. Sonner needs no context provider —
                   mounting it once here is what makes `toast()` callable from
                   anywhere (see components/ui/Toaster.tsx). */}
