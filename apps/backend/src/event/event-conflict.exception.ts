@@ -8,6 +8,9 @@ import type { SleepEventSummary } from '../sleep/sleep.service';
  * `ConflictException`s (timer-already-running / already-stopped). */
 export const EVENT_CONFLICT_CODE = 'EVENT_CONFLICT';
 
+/** Discriminator for `EventAlreadyStoppedException` — see its doc comment. */
+export const EVENT_ALREADY_STOPPED_CODE = 'EVENT_ALREADY_STOPPED';
+
 type EventSummary = FeedingEventSummary | SleepEventSummary | DiaperEventSummary;
 
 /**
@@ -24,6 +27,24 @@ type EventSummary = FeedingEventSummary | SleepEventSummary | DiaperEventSummary
 export class EventConflictException extends ConflictException {
   constructor(currentEvent: EventSummary) {
     super({ code: EVENT_CONFLICT_CODE, currentEvent });
+  }
+}
+
+/**
+ * Thrown by `stop()` when the timer has already been stopped (`endedAt` is
+ * already set on the row). Reachable via a duplicate stop request — a UI
+ * race that resends the same click, a resent offline-buffered stop, or a
+ * second device stopping the same timer first. Unlike `EventConflictException`,
+ * this isn't a case of two different writes competing: the desired end state
+ * (the timer being stopped) already holds, so it's a redundant request rather
+ * than a genuine conflict. Deliberately a 409 like the others here, but
+ * distinguishable via `code: EVENT_ALREADY_STOPPED` so the frontend can treat
+ * it as an idempotent no-op — see `isEventAlreadyStoppedError` and
+ * `updateEventOptimistically` (ADR-0011 addendum).
+ */
+export class EventAlreadyStoppedException extends ConflictException {
+  constructor(currentEvent: EventSummary) {
+    super({ code: EVENT_ALREADY_STOPPED_CODE, currentEvent });
   }
 }
 

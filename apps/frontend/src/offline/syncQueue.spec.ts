@@ -295,5 +295,91 @@ describe('drainPendingEventQueue', () => {
       expect(mockedDb.deletePendingEvent).not.toHaveBeenCalled();
       expect(mockedConflictNotices.recordConflictNotice).not.toHaveBeenCalled();
     });
+
+    it('invalidates the domain query before dropping the pending record on a successful stop resend (avoids the timer-flicker race)', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([
+        updateRecord({ localId: 'local-stop', operation: 'stop', updateInput: STOP_INPUT }),
+      ]);
+      mockedFeedingApi.stopFeedingTimer.mockResolvedValue(serverSummary);
+      const callOrder: string[] = [];
+      invalidateQueriesSpy.mockImplementation(() => {
+        callOrder.push('invalidateDomainQuery');
+        return Promise.resolve();
+      });
+      mockedDb.deletePendingEvent.mockImplementation(() => {
+        callOrder.push('deletePendingEvent');
+        return Promise.resolve();
+      });
+
+      await drainPendingEventQueue();
+
+      expect(callOrder).toEqual(['invalidateDomainQuery', 'deletePendingEvent']);
+    });
+
+    it('on a redundant EVENT_ALREADY_STOPPED resend, drops the record like a confirmed success without a retry or a conflict notice', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([
+        updateRecord({ localId: 'local-stop', operation: 'stop', updateInput: STOP_INPUT }),
+      ]);
+      mockedFeedingApi.stopFeedingTimer.mockRejectedValue(
+        new ApiError(409, { code: 'EVENT_ALREADY_STOPPED', currentEvent: serverSummary }),
+      );
+
+      await drainPendingEventQueue();
+
+      expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-stop');
+      expect(mockedDb.markPendingEventRetryScheduled).not.toHaveBeenCalled();
+      expect(mockedConflictNotices.recordConflictNotice).not.toHaveBeenCalled();
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'feeding-events'],
+      });
+    });
+
+    it('on a successful stop resend, authoritatively clears the active-timer cache (cancel + null) before dropping the pending record', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([
+        updateRecord({ localId: 'local-stop', operation: 'stop', updateInput: STOP_INPUT }),
+      ]);
+      mockedFeedingApi.stopFeedingTimer.mockResolvedValue(serverSummary);
+      const cancelQueriesSpy = vi
+        .spyOn(queryClient, 'cancelQueries')
+        .mockResolvedValue(undefined as never);
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+      const callOrder: string[] = [];
+      cancelQueriesSpy.mockImplementation(() => {
+        callOrder.push('cancelActiveTimer');
+        return Promise.resolve();
+      });
+      mockedDb.deletePendingEvent.mockImplementation(() => {
+        callOrder.push('deletePendingEvent');
+        return Promise.resolve();
+      });
+
+      await drainPendingEventQueue();
+
+      const activeTimerKey = [
+        'households',
+        HOUSEHOLD_ID,
+        'children',
+        CHILD_ID,
+        'feeding-events',
+        'active-timer',
+      ];
+      expect(cancelQueriesSpy).toHaveBeenCalledWith({ queryKey: activeTimerKey });
+      expect(setQueryDataSpy).toHaveBeenCalledWith(activeTimerKey, null);
+      expect(callOrder).toEqual(['cancelActiveTimer', 'deletePendingEvent']);
+    });
+
+    it('does not touch the active-timer cache when resending a buffered update (non-stop)', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([updateRecord()]);
+      mockedFeedingApi.updateFeedingEvent.mockResolvedValue(serverSummary);
+      const cancelQueriesSpy = vi
+        .spyOn(queryClient, 'cancelQueries')
+        .mockResolvedValue(undefined as never);
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+
+      await drainPendingEventQueue();
+
+      expect(cancelQueriesSpy).not.toHaveBeenCalled();
+      expect(setQueryDataSpy).not.toHaveBeenCalled();
+    });
   });
 });

@@ -95,29 +95,55 @@ beschreiben), damit M2/M3 nicht auf unterschiedlichen Zwischenständen aufbauen.
 
 ### M2 — App-Shell, Navigation & Auth-/Verwaltungs-Screens
 
-- [ ] App-Shell/Navigation neu gestalten (Header, Haushalts-Switcher, Verbindungsstatus-Indikator aus
-      Phase 3) auf Basis der M1-Komponenten
-- [ ] Login-/Registrierungs-Screens überarbeiten (inkl. OIDC-Provider-Auswahl-UI, sofern zu diesem
-      Zeitpunkt bereits vorhanden)
-- [ ] Haushalts-Verwaltung (Anlegen, Einladungslink, Mitgliederliste) visuell überarbeiten
-- [ ] Kind-Profil-Verwaltung (inkl. Foto-Upload) visuell überarbeiten
-- [ ] Responsive Feinschliff für Tablet-/Desktop-Breakpoints (MVP war bewusst mobile-first; hier gezielt
-      größere Viewports nachziehen, ohne die Mobile-Priorität zu verlieren)
-- [ ] Mikro-Interaktionen/Übergangsanimationen für Navigation und Dialoge (dezent, performant, unter
-      Berücksichtigung von `prefers-reduced-motion`)
+- [x] App-Shell/Navigation neu gestalten (Header, Haushaltsliste als Startseite, Verbindungsstatus-
+      Indikator aus Phase 3) auf Basis der M1-Komponenten — `Layout.tsx` nutzt `Avatar`/`Button`/`Sheet`,
+      Hamburger-Menü öffnet ein rechtsseitiges `Sheet` unterhalb `lg:`, `ConnectionStatusDot` bleibt
+      außerhalb des Menüs immer sichtbar. Der ursprünglich geplante globale „Haushalts-Switcher" wurde
+      bewusst nicht gebaut — stattdessen wurde der globale Dashboard-Ansatz entfernt zugunsten der
+      Haushaltsliste (`HouseholdList`) als Startseite (Commit „remove global dashboard, use household
+      list as landing page"); es gibt daher weiterhin kein globales „aktueller Haushalt"-Konzept
+- [x] Login-/Registrierungs-Screens überarbeiten (inkl. OIDC-Provider-Auswahl-UI, sofern zu diesem
+      Zeitpunkt bereits vorhanden) — `Login.tsx`/`Register.tsx` nutzen `Card`, `AuthForm` nutzt
+      `Button`/`Input`, `OidcProviderButtons` bleibt eingebunden
+- [x] Haushalts-Verwaltung (Anlegen, Einladungslink) visuell überarbeiten — `HouseholdCreate.tsx`,
+      `HouseholdDetail.tsx`, `InviteAccept.tsx`, `HouseholdList.tsx` nutzen `Badge`/`Card`/`EmptyState`
+- [ ] Mitgliederliste in der Haushalts-Verwaltung ergänzen und auf M1-Komponenten umsetzen — es gibt
+      bislang **keine** dedizierte Mitgliederliste-Ansicht in `HouseholdDetail`/`HouseholdList`; die
+      einzige vorhandene User-ID→E-Mail-Auflösung (`listHouseholdMembers`) dient nur intern der
+      Nutzeranzeige in der Tages-Timeline (siehe M3). Dies ist über eine reine Visual-Überarbeitung hinaus
+      ein fehlendes Feature und daher separat offen
+- [x] Kind-Profil-Verwaltung (inkl. Foto-Upload) visuell überarbeiten — `ChildCreate.tsx`,
+      `ChildSettings.tsx`, `ChildForm.tsx` (Foto-Dropzone/-Vorschau) nutzen `Button`/`Card`/`Input`
+- [x] Responsive Feinschliff für Tablet-/Desktop-Breakpoints (MVP war bewusst mobile-first; hier gezielt
+      größere Viewports nachziehen, ohne die Mobile-Priorität zu verlieren) — `lg:`-Breakpoints in
+      `Layout.tsx` (Sidebar/Bottom-Tab-Bar-Umschaltung) und den migrierten Home-/Verwaltungs-Screens
+- [x] Mikro-Interaktionen/Übergangsanimationen für Navigation und Dialoge (dezent, performant, unter
+      Berücksichtigung von `prefers-reduced-motion`) — `Sheet`/`Dialog` (Radix-basiert) mit
+      Slide-/Fade-Transitions, `styles/animations.css` deaktiviert Animationen unter
+      `prefers-reduced-motion: reduce`
 
 ### M3 — Tracking-, Timeline- & Statistik-Screens
 
-- [ ] Timer-UI für Stillen/Schlaf visuell überarbeiten (laufende Anzeige, Seitenwahl bei Stillen) unter
-      Beibehaltung der bestehenden Tap-Zahl-Erfolgskriterien aus Phase 2 (max. 2 Taps)
-- [ ] QuickEntry-Komponenten (Feeding, Diaper) visuell überarbeiten, ohne die 1-/2-Tap-Schnelleingabe zu
-      verändern
-- [ ] Tages-Timeline neu gestalten (klare chronologische Lesbarkeit, Event-Typ-Farbcodierung aus M1,
-      Anzeige des erfassenden Nutzers)
-- [ ] Statistik-/Übersichts-Widgets ("Letzte Fütterung vor X Stunden" etc.) als ansprechende Karten/Charts
-      gestalten
-- [ ] Optimistische UI-Zustände (Erfolgs-/Fehler-Feedback bei Erfassung, insbesondere im Hinblick auf das
-      in Phase 4 geplante Offline-first-Verhalten) konsistent mit den M1-Toast-/Badge-Komponenten umsetzen
+- [x] Timer-UI für Stillen/Schlaf visuell überarbeiten (laufende Anzeige, Seitenwahl bei Stillen) unter
+      Beibehaltung der bestehenden Tap-Zahl-Erfolgskriterien aus Phase 2 (max. 2 Taps) — `FeedingTimer.tsx`
+      /`SleepTimer.tsx` nutzen `Badge`/`Button`/`Card`, bestehende Tap-Zahl-Tests bleiben grün
+- [x] QuickEntry-Komponenten (Feeding, Diaper) visuell überarbeiten, ohne die 1-/2-Tap-Schnelleingabe zu
+      verändern — `FeedingQuickEntry.tsx`/`DiaperQuickEntry.tsx` nutzen `Badge`/`Button`, Tap-Zahl-Tests
+      unverändert grün
+- [x] Tages-Timeline neu gestalten (klare chronologische Lesbarkeit, Event-Typ-Farbcodierung aus M1,
+      Anzeige des erfassenden Nutzers) — `TimelineEventList.tsx` nutzt `Card`/`Badge` mit
+      event-typ-spezifischen Badge-Varianten (`badgeVariantFor`, passend zu den M1-Event-Typ-Tokens) und
+      löst den erfassenden Nutzer über `resolveUserLabel`/`listHouseholdMembers` auf
+- [x] Statistik-/Übersichts-Widgets ("Letzte Fütterung vor X Stunden" etc.) als ansprechende Karten/Charts
+      gestalten — `DailyStatsSummary.tsx`/`TimeSinceCard.tsx` als `Card`-basierte Widgets (Karten-Variante
+      der Vorgabe umgesetzt; keine zusätzlichen Charts, was die Vorgabe als Alternative bereits vorsah)
+- [x] Optimistische UI-Zustände (Erfolgs-/Fehler-Feedback bei Erfassung, insbesondere im Hinblick auf das
+      in Phase 4 geplante Offline-first-Verhalten) konsistent mit den M1-Badge-Komponenten umsetzen —
+      `OfflineStatusBadge` (M1 `Badge`, Varianten `warning`/`destructive`) markiert pending/failed-Zeilen
+      durchgängig in Timeline und Quick-Entry-Flows. Sonner-`Toast` aus M1 ist seit M1 global in
+      `main.tsx` gemountet, wird aber bislang für andere Zwecke vorgehalten und noch nicht aus den
+      optimistischen Create-/Timer-Flows heraus ausgelöst — Vorgabe daher bewusst auf die tatsächlich
+      genutzten Badge-Komponenten präzisiert
 
 ### M4 — Bereichsübergreifende Politur & Qualitätssicherung
 

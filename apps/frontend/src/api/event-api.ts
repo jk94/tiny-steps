@@ -9,6 +9,10 @@ export type EventType = 'FEEDING' | 'SLEEP' | 'DIAPER';
  * `EVENT_CONFLICT_CODE` in `apps/backend/src/event/event-conflict.exception.ts`. */
 const EVENT_CONFLICT_CODE = 'EVENT_CONFLICT';
 
+/** Response-body `code` the backend's `EventAlreadyStoppedException` sets —
+ * mirrors `EVENT_ALREADY_STOPPED_CODE` in the same backend file. */
+const EVENT_ALREADY_STOPPED_CODE = 'EVENT_ALREADY_STOPPED';
+
 /**
  * Whether an error is a Last-Write-Wins conflict (409 with a
  * `{ code: 'EVENT_CONFLICT' }` body) rather than a plain timer conflict or any
@@ -21,6 +25,24 @@ export function isEventConflictError(error: unknown): boolean {
     typeof error.body === 'object' &&
     error.body !== null &&
     (error.body as { code?: unknown }).code === EVENT_CONFLICT_CODE
+  );
+}
+
+/**
+ * Whether an error is a redundant timer-stop (409 with a
+ * `{ code: 'EVENT_ALREADY_STOPPED' }` body) — the timer was already stopped by
+ * a previous request (a UI race resending the same click, a resent
+ * offline-buffered stop, or another device/tab winning first). Distinct from
+ * `isEventConflictError`: the desired end state already holds, so the offline
+ * engine treats it as an idempotent no-op instead of a failure (see
+ * `updateEventOptimistically`/`syncQueue`, ADR-0011 addendum).
+ */
+export function isEventAlreadyStoppedError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    typeof error.body === 'object' &&
+    error.body !== null &&
+    (error.body as { code?: unknown }).code === EVENT_ALREADY_STOPPED_CODE
   );
 }
 

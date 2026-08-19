@@ -647,7 +647,7 @@ describe('FeedingService', () => {
       expect(result.durationSeconds).toBe(900);
     });
 
-    it('throws ConflictException (409) when the timer is already stopped', async () => {
+    it('throws EventAlreadyStoppedException (409, code EVENT_ALREADY_STOPPED) when the timer is already stopped', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.event.findUnique.mockResolvedValue(
         makeEvent({
@@ -663,9 +663,16 @@ describe('FeedingService', () => {
         }),
       );
 
-      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
-        ConflictException,
-      );
+      const error = await service
+        .stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)
+        .then(
+          () => undefined,
+          (thrown: unknown) => thrown,
+        );
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toMatchObject({
+        code: 'EVENT_ALREADY_STOPPED',
+      });
       expect(prisma.event.update).not.toHaveBeenCalled();
     });
 

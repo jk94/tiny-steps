@@ -6,6 +6,7 @@ import {
 } from '../api/diaper-api';
 import {
   EVENT_TYPE_QUERY_KEY_SEGMENT,
+  isEventAlreadyStoppedError,
   isEventConflictError,
   type EventType,
   type TimelineEventSummary,
@@ -26,6 +27,7 @@ import {
   type UpdateSleepEventInput,
 } from '../api/sleep-api';
 import { queryClient } from '../lib/query-client';
+import { clearActiveTimerCache } from './activeTimerCache';
 import { recordConflictNotice } from './conflictNotices';
 import {
   deletePendingEvent,
@@ -190,14 +192,37 @@ async function recordResendFailure(
 }
 
 /**
- * Confirmed resend: drop the buffered copy and refresh both the pending-events
- * query (removes the now-gone overlay/ghost row) and the authoritative
- * per-domain query. Shared by the create/update/stop success paths.
+ * Confirmed resend: refresh the authoritative per-domain query, then drop the
+ * buffered copy and refresh the pending-events query. Shared by the
+ * create/update/stop success paths.
+ *
+ * Order matters, same rationale as `updateEventOptimistically`'s
+ * `resolvePendingRecord`: the domain query (e.g. a running-timer query) is
+ * refetched *before* the pending overlay is removed, so there is never a
+ * render where the overlay is gone but the domain query still reports stale
+ * (e.g. "still running") data. This drain can run concurrently with the
+ * pending record's own original request (see the "in-flight overlap" note in
+ * this module's doc comment, and — critically — it can also fire from a
+ * completely incidental WebSocket reconnect that has nothing to do with the
+ * record being processed), so getting this order wrong here reintroduces the
+ * timer-flicker/stuck-timer bug even when the record's own
+ * `updateEventOptimistically` call already got the ordering right.
+ *
+ * For a `'stop'` record, the active-timer query is *additionally* cleared
+ * directly (cancel + `setQueryData(null)`) rather than left to the generic
+ * `invalidateDomainQuery` refetch above — a plain invalidate can still lose a
+ * race against an unrelated, already-in-flight fetch for that exact query
+ * (e.g. one kicked off moments earlier by `RealtimeProvider`'s broad
+ * `['households']` invalidation on the very same reconnect that triggered this
+ * drain). See `clearActiveTimerCache`'s doc comment for the full rationale.
  */
 async function confirmResend(record: PendingEventRecord): Promise<void> {
+  if (record.operation === 'stop') {
+    await clearActiveTimerCache(record.householdId, record.childId, record.eventType);
+  }
+  await invalidateDomainQuery(record);
   await deletePendingEvent(record.localId);
   await invalidatePendingEventsQuery(record.householdId, record.childId);
-  await invalidateDomainQuery(record);
 }
 
 /**
@@ -205,14 +230,19 @@ async function confirmResend(record: PendingEventRecord): Promise<void> {
  * the server had a newer write, so the buffered one is dropped (never retried),
  * a dismissible notice is recorded (JC-3), and both queries are refreshed so the
  * server's winning values are shown. Returns `undefined` (no retry scheduled).
+ * Same domain-query-before-pending-delete ordering as `confirmResend` — see its
+ * doc comment, including the active-timer handling for `'stop'` records.
  */
 async function resolveResendConflict(record: PendingEventRecord): Promise<undefined> {
+  if (record.operation === 'stop') {
+    await clearActiveTimerCache(record.householdId, record.childId, record.eventType);
+  }
+  await invalidateDomainQuery(record);
   await deletePendingEvent(record.localId);
   if (record.targetEventId !== undefined) {
     recordConflictNotice(record.eventType, record.targetEventId);
   }
   await invalidatePendingEventsQuery(record.householdId, record.childId);
-  await invalidateDomainQuery(record);
   return undefined;
 }
 
@@ -271,6 +301,16 @@ async function resendStop(record: PendingEventRecord): Promise<string | undefine
   } catch (error) {
     if (isEventConflictError(error)) {
       return resolveResendConflict(record);
+    }
+    if (isEventAlreadyStoppedError(error)) {
+      // Redundant resend: this drain caught up with a stop that already
+      // reached the server (via this client's own earlier attempt, or another
+      // client winning first) — see the `updateEventOptimistically` addendum.
+      // Drop it like a confirmed success instead of leaving it permanently
+      // `failed` (a 409 is non-retryable, so without this it would otherwise
+      // never be cleaned up — the permanent "not saved" ghost row this fixes).
+      await confirmResend(record);
+      return undefined;
     }
     return recordResendFailure(record, error);
   }

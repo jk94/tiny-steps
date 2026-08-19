@@ -51,6 +51,19 @@ function run(apiCall: () => Promise<FeedingEventSummary>) {
   });
 }
 
+function runStop(apiCall: () => Promise<FeedingEventSummary>) {
+  return updateEventOptimistically({
+    householdId: HOUSEHOLD_ID,
+    childId: CHILD_ID,
+    eventType: 'FEEDING',
+    targetEventId: TARGET_EVENT_ID,
+    operation: 'stop',
+    buildOptimisticSummary: () => summary,
+    apiCall,
+    updateInput: UPDATE_INPUT,
+  });
+}
+
 let invalidateQueriesSpy: MockInstance;
 
 describe('updateEventOptimistically', () => {
@@ -149,5 +162,92 @@ describe('updateEventOptimistically', () => {
     expect(mockedDb.putPendingEvent.mock.calls[0][0].localId).toBe('local-existing');
     // Exactly one record is written — no duplicate is queued.
     expect(mockedDb.putPendingEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('invalidates the domain query before dropping the pending overlay on success (avoids the timer-flicker race)', async () => {
+    const apiCall = vi.fn().mockResolvedValue(summary);
+    const callOrder: string[] = [];
+    invalidateQueriesSpy.mockImplementation(() => {
+      callOrder.push('invalidateDomainQuery');
+      return Promise.resolve();
+    });
+    mockedDb.deletePendingEvent.mockImplementation(() => {
+      callOrder.push('deletePendingEvent');
+      return Promise.resolve();
+    });
+
+    await run(apiCall);
+
+    expect(callOrder).toEqual(['invalidateDomainQuery', 'deletePendingEvent']);
+  });
+
+  it('on a stop success, authoritatively clears the active-timer cache (cancel + null) before dropping the pending overlay', async () => {
+    const apiCall = vi.fn().mockResolvedValue(summary);
+    const cancelQueriesSpy = vi
+      .spyOn(queryClient, 'cancelQueries')
+      .mockResolvedValue(undefined as never);
+    const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+    const callOrder: string[] = [];
+    cancelQueriesSpy.mockImplementation(() => {
+      callOrder.push('cancelActiveTimer');
+      return Promise.resolve();
+    });
+    mockedDb.deletePendingEvent.mockImplementation(() => {
+      callOrder.push('deletePendingEvent');
+      return Promise.resolve();
+    });
+
+    await runStop(apiCall);
+
+    const activeTimerKey = [
+      'households',
+      HOUSEHOLD_ID,
+      'children',
+      CHILD_ID,
+      'feeding-events',
+      'active-timer',
+    ];
+    expect(cancelQueriesSpy).toHaveBeenCalledWith({ queryKey: activeTimerKey });
+    expect(setQueryDataSpy).toHaveBeenCalledWith(activeTimerKey, null);
+    expect(callOrder).toEqual(['cancelActiveTimer', 'deletePendingEvent']);
+  });
+
+  it('does not touch the active-timer cache for a plain update operation', async () => {
+    const apiCall = vi.fn().mockResolvedValue(summary);
+    const cancelQueriesSpy = vi
+      .spyOn(queryClient, 'cancelQueries')
+      .mockResolvedValue(undefined as never);
+    const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+
+    await run(apiCall);
+
+    expect(cancelQueriesSpy).not.toHaveBeenCalled();
+    expect(setQueryDataSpy).not.toHaveBeenCalled();
+  });
+
+  it('on a redundant EVENT_ALREADY_STOPPED for a stop operation, drops the record, refetches the domain query, records no notice, and rethrows', async () => {
+    const alreadyStopped = new ApiError(409, { code: 'EVENT_ALREADY_STOPPED', currentEvent: summary });
+    const apiCall = vi.fn().mockRejectedValue(alreadyStopped);
+
+    await expect(runStop(apiCall)).rejects.toBe(alreadyStopped);
+
+    const localId = mockedDb.putPendingEvent.mock.calls[0][0].localId;
+    expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith(localId);
+    expect(mockedDb.markPendingEventFailed).not.toHaveBeenCalled();
+    expect(mockedConflictNotices.recordConflictNotice).not.toHaveBeenCalled();
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'feeding-events'],
+    });
+  });
+
+  it('does not treat an EVENT_ALREADY_STOPPED error as redundant for a plain update operation', async () => {
+    const alreadyStopped = new ApiError(409, { code: 'EVENT_ALREADY_STOPPED', currentEvent: summary });
+    const apiCall = vi.fn().mockRejectedValue(alreadyStopped);
+
+    await expect(run(apiCall)).rejects.toBe(alreadyStopped);
+
+    const localId = mockedDb.putPendingEvent.mock.calls[0][0].localId;
+    expect(mockedDb.markPendingEventFailed).toHaveBeenCalledWith(localId);
+    expect(mockedDb.deletePendingEvent).not.toHaveBeenCalled();
   });
 });

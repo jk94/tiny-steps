@@ -8,7 +8,10 @@ import {
 import { Child, Event, FeedingDetail, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
-import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
+import {
+  assertNoLaterServerWrite,
+  EventAlreadyStoppedException,
+} from '../event/event-conflict.exception';
 import { RealtimeService } from '../realtime/realtime.service';
 import { StopEventDto } from '../event/dto/stop-event.dto';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
@@ -332,7 +335,11 @@ export class FeedingService {
         throw new ConflictException('Only breastfeeding events have a timer to stop');
       }
       if (existing.endedAt !== null) {
-        throw new ConflictException('This feeding event has already been stopped');
+        // Distinguishable from the generic conflicts above via
+        // `code: EVENT_ALREADY_STOPPED` — the frontend treats a redundant stop
+        // (double-click, resent offline buffer, another device winning the
+        // race) as an idempotent no-op rather than a failure.
+        throw new EventAlreadyStoppedException(toFeedingEventSummary(existing));
       }
 
       // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().

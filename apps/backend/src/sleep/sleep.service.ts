@@ -8,7 +8,10 @@ import {
 import { Child, Event, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
-import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
+import {
+  assertNoLaterServerWrite,
+  EventAlreadyStoppedException,
+} from '../event/event-conflict.exception';
 import { StopEventDto } from '../event/dto/stop-event.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
@@ -245,7 +248,11 @@ export class SleepService {
       // No "wrong type" guard needed here, unlike FeedingService.stop — every
       // Sleep event is timer-capable, there's no non-timer sub-type to reject.
       if (existing.endedAt !== null) {
-        throw new ConflictException('This sleep event has already been stopped');
+        // Distinguishable from the generic conflict above via
+        // `code: EVENT_ALREADY_STOPPED` — the frontend treats a redundant stop
+        // (double-click, resent offline buffer, another device winning the
+        // race) as an idempotent no-op rather than a failure.
+        throw new EventAlreadyStoppedException(toSleepEventSummary(existing));
       }
 
       // Last-Write-Wins for a buffered offline stop — see ADR-0011 and update().
