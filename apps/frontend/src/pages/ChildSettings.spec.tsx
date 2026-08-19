@@ -113,7 +113,7 @@ describe('ChildSettings', () => {
     renderChildSettings();
 
     const link = await screen.findByRole('link', { name: 'Export data' });
-    expect(link).toHaveAttribute('href', '/households/h1/children/c1/export');
+    expect(link).toHaveAttribute('href', '/households/h1/children/c1/settings/export');
   });
 
   it('seeds the notification settings form from the fetched settings', async () => {
