@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main, dev]
+    tags: ['v*']
   pull_request:
     branches: [main, dev]
 
@@ -118,15 +119,10 @@ jobs:
         run: bun run --cwd apps/frontend build
 
   docker:
-    name: Docker build (& push on main)
+    name: Docker build (& push on tagged release)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Don't spend time building an image if lint/tests/build already failed.
     needs: [lint, backend, frontend]
-    # Job-level (not workflow-level) so the other jobs keep minimal default
-    # permissions. Needed for docker/login-action + docker/build-push-action
-    # to actually push to GHCR with GITHUB_TOKEN (defaults to read-only
-    # otherwise, which would 403 on push).
     permissions:
       contents: read
       packages: write
@@ -139,10 +135,9 @@ jobs:
           context: .
           push: false
 
-      # TODO: placeholder registry (GHCR) — adjust once final image
-      # hosting/registry is decided. Only runs on a push to main.
+      # Registry: GHCR (ghcr.io/jk94/tiny-steps). Push only on a `v*` tag
       - name: Log in to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -150,11 +145,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
