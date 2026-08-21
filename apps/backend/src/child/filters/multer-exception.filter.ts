@@ -40,7 +40,10 @@ export class MulterExceptionFilter implements ExceptionFilter {
   private bodyFor(exception: MulterError): { code: string; message: string } {
     switch (exception.code) {
       case 'LIMIT_FILE_SIZE':
-        return { code: 'PHOTO_TOO_LARGE', message: 'Uploaded file exceeds the maximum allowed size' };
+        return {
+          code: 'PHOTO_TOO_LARGE',
+          message: 'Uploaded file exceeds the maximum allowed size',
+        };
       case 'LIMIT_UNEXPECTED_FILE':
         return {
           code: 'PHOTO_UPLOAD_ERROR',

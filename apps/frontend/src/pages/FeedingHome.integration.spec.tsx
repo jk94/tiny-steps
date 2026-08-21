@@ -101,7 +101,11 @@ describe('FeedingHome stop-timer flow (integration)', () => {
 
   it('switches from the ticking timer to Quick entry once Stop resolves, without reverting to "still running" (the flicker/race regression)', async () => {
     let stopped = false;
-    const stoppedEvent = { ...runningTimer, endedAt: '2026-01-01T10:05:00.000Z', durationSeconds: 300 };
+    const stoppedEvent = {
+      ...runningTimer,
+      endedAt: '2026-01-01T10:05:00.000Z',
+      durationSeconds: 300,
+    };
 
     mockedFetch.mockImplementation(async (path: string, options?: { method?: string }) => {
       const method = options?.method?.toUpperCase() ?? 'GET';
@@ -115,7 +119,8 @@ describe('FeedingHome stop-timer flow (integration)', () => {
         return [];
       }
       if (
-        path === `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding-events/${EVENT_ID}/stop` &&
+        path ===
+          `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding-events/${EVENT_ID}/stop` &&
         method === 'POST'
       ) {
         stopped = true;
@@ -142,7 +147,8 @@ describe('FeedingHome stop-timer flow (integration)', () => {
     // Exactly one stop request was ever sent — no phantom second click/resend.
     const stopCalls = mockedFetch.mock.calls.filter(
       ([path, options]) =>
-        path === `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding-events/${EVENT_ID}/stop` &&
+        path ===
+          `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding-events/${EVENT_ID}/stop` &&
         (options as { method?: string } | undefined)?.method?.toUpperCase() === 'POST',
     );
     expect(stopCalls).toHaveLength(1);
@@ -160,7 +166,11 @@ describe('FeedingHome stop-timer flow (integration)', () => {
     // ticking timer.
     let stopped = false;
     let stopCallCount = 0;
-    const stoppedEvent = { ...runningTimer, endedAt: '2026-01-01T10:05:00.000Z', durationSeconds: 300 };
+    const stoppedEvent = {
+      ...runningTimer,
+      endedAt: '2026-01-01T10:05:00.000Z',
+      durationSeconds: 300,
+    };
     let resolveOwnStopRequest: (() => void) | undefined;
     let notifyOwnStopRequestStarted: (() => void) | undefined;
     const ownStopRequestStarted = new Promise<void>((resolve) => {
@@ -179,7 +189,8 @@ describe('FeedingHome stop-timer flow (integration)', () => {
         return [];
       }
       if (
-        path === `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding-events/${EVENT_ID}/stop` &&
+        path ===
+          `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding-events/${EVENT_ID}/stop` &&
         method === 'POST'
       ) {
         stopCallCount += 1;

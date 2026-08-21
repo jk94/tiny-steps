@@ -413,12 +413,10 @@ describe('SleepService', () => {
         }),
       );
 
-      const error = await service
-        .stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)
-        .then(
-          () => undefined,
-          (thrown: unknown) => thrown,
-        );
+      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID).then(
+        () => undefined,
+        (thrown: unknown) => thrown,
+      );
       expect(error).toBeInstanceOf(ConflictException);
       expect((error as ConflictException).getResponse()).toMatchObject({
         code: 'EVENT_ALREADY_STOPPED',

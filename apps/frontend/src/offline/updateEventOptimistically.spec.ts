@@ -226,7 +226,10 @@ describe('updateEventOptimistically', () => {
   });
 
   it('on a redundant EVENT_ALREADY_STOPPED for a stop operation, drops the record, refetches the domain query, records no notice, and rethrows', async () => {
-    const alreadyStopped = new ApiError(409, { code: 'EVENT_ALREADY_STOPPED', currentEvent: summary });
+    const alreadyStopped = new ApiError(409, {
+      code: 'EVENT_ALREADY_STOPPED',
+      currentEvent: summary,
+    });
     const apiCall = vi.fn().mockRejectedValue(alreadyStopped);
 
     await expect(runStop(apiCall)).rejects.toBe(alreadyStopped);
@@ -241,7 +244,10 @@ describe('updateEventOptimistically', () => {
   });
 
   it('does not treat an EVENT_ALREADY_STOPPED error as redundant for a plain update operation', async () => {
-    const alreadyStopped = new ApiError(409, { code: 'EVENT_ALREADY_STOPPED', currentEvent: summary });
+    const alreadyStopped = new ApiError(409, {
+      code: 'EVENT_ALREADY_STOPPED',
+      currentEvent: summary,
+    });
     const apiCall = vi.fn().mockRejectedValue(alreadyStopped);
 
     await expect(run(apiCall)).rejects.toBe(alreadyStopped);

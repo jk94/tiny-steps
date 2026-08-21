@@ -21,7 +21,10 @@ describe('mapChildError', () => {
   it('maps a VALIDATION_ERROR naming only "name" to the invalid-name key', () => {
     expect(
       mapChildError(
-        new ApiError(400, { code: 'VALIDATION_ERROR', fields: { name: ['name should not be empty'] } }),
+        new ApiError(400, {
+          code: 'VALIDATION_ERROR',
+          fields: { name: ['name should not be empty'] },
+        }),
       ),
     ).toBe('child.errors.invalidName');
   });
@@ -42,7 +45,10 @@ describe('mapChildError', () => {
       mapChildError(
         new ApiError(400, {
           code: 'VALIDATION_ERROR',
-          fields: { name: ['name should not be empty'], birthDate: ['birthDate must not be in the future'] },
+          fields: {
+            name: ['name should not be empty'],
+            birthDate: ['birthDate must not be in the future'],
+          },
         }),
       ),
     ).toBe('child.errors.invalidInput');

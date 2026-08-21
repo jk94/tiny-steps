@@ -72,7 +72,8 @@ function photoValidationPipe() {
       fileIsRequired: false,
       errorHttpStatusCode: HttpStatus.BAD_REQUEST,
       exceptionFactory: (marker) => {
-        const code = marker === PHOTO_TYPE_MISMATCH_MARKER ? 'PHOTO_INVALID_TYPE' : 'PHOTO_TOO_LARGE';
+        const code =
+          marker === PHOTO_TYPE_MISMATCH_MARKER ? 'PHOTO_INVALID_TYPE' : 'PHOTO_TOO_LARGE';
         const message =
           code === 'PHOTO_INVALID_TYPE'
             ? 'Please choose a JPEG, PNG, or WebP image.'
