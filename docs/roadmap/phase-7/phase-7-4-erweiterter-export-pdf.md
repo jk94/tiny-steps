@@ -153,10 +153,10 @@ der vorhandene JSON-Export wird um die neuen Datensätze als eigene Schlüssel e
 
 ## Offene Punkte
 
-- **SVG-Fähigkeiten von `@react-pdf/renderer` prüfen**, bevor der Diagrammblock festgelegt wird.
-  Reicht der unterstützte Umfang nicht, ist die Rückfallebene, das Diagramm serverseitig zu
-  rastern und als Bild einzubetten — schlechtere Druckqualität, dafür sicher. Das gehört als
-  Prototyp an den **Anfang** der Teilphase, nicht ans Ende.
+- **SVG-Fähigkeiten von `@react-pdf/renderer` prüfen** — die Rückfallebene ist entschieden: Reicht
+  der unterstützte Umfang nicht, wird das Diagramm serverseitig gerastert und als Bild eingebettet
+  (schlechtere Druckqualität, dafür sicher). Offen ist nur, welcher der beiden Wege es wird; der
+  Prototyp gehört an den **Anfang** der Teilphase, nicht ans Ende.
 - **Schriftarten:** react-pdf braucht eingebettete Schriftdateien. Ob die Schrift des Design-Systems
   dafür lizenzrechtlich und technisch geeignet ist, ist zu prüfen.
 - **Laufzeitgrenze:** Ob und ab welcher Zeitraumlänge die Erzeugung begrenzt oder in den
@@ -164,7 +164,7 @@ der vorhandene JSON-Export wird um die neuen Datensätze als eigene Schlüssel e
 
 ## Aufgaben
 
-- [ ] Prototyp: Diagramm-SVG durch `@react-pdf/renderer` (früh, entscheidet EXP-4)
+- [ ] Prototyp: Diagramm-SVG durch `@react-pdf/renderer` (früh, entscheidet EXP-4); bei zu geringem SVG-Umfang auf serverseitig gerastertes Bild ausweichen
 - [ ] ADR „PDF-Berichtserzeugung" schreiben
 - [ ] `ReportDocument`-Zwischendarstellung und `ReportDocumentBuilder` im `export`-Modul
 - [ ] Datenbeschaffung/Aggregation je Abschnitt (Wachstum, Meilensteine, Medizin, Tracking-Kennzahlen)

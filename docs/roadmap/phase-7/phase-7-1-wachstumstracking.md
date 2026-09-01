@@ -50,6 +50,9 @@ Messgrößen; Verlaufsdiagramm mit Referenzbändern; Übersichtskarte auf `Child
 | W-14 | Das Diagramm ist ohne Zeigegerät bedienbar: Es ist fokussierbar, mit Pfeiltasten wird von Messpunkt zu Messpunkt navigiert, und der jeweils aktive Wert wird über eine `aria-live`-Region als Text ausgegeben. |
 | W-15 | `ChildHome` erhält eine Karte „Wachstum" mit der jüngsten Messung (Wert, Perzentile, Alter zum Messzeitpunkt) und Link auf die Wachstumsseite. Ohne Messungen zeigt sie einen Empty State mit Erfassungs-Aufruf. |
 | W-16 | Ohne Netzverbindung schlägt das Speichern sichtbar fehl; es wird kein Erfolgszustand vorgetäuscht. |
+| W-17 | Die WHO unterscheidet bei der Körpermaß-Referenz zwischen liegend gemessener **Länge** (bis 24 Monate) und stehend gemessener **Größe** (ab 24 Monate). Die Anwendung wählt die passende Referenz automatisch aus dem Alter zum Messzeitpunkt (berechnet aus dem Geburtsdatum). |
+| W-18 | Die automatische Wahl aus W-17 kann pro Messung **manuell überschrieben** werden, weil die tatsächliche Messmethode vom Alter abweichen kann. Die Überschreibung wird an der Messung gespeichert; ohne Überschreibung gilt dauerhaft die automatische Wahl (der Wert wird also **nicht** beim Anlegen eingefroren). |
+| W-19 | Die verwendete Messmethode ist an der Messung und im Diagramm erkennbar, und die Umschaltung erklärt in einem kurzen Hinweis, warum sie existiert — sonst wirkt sie wie eine willkürliche Option. |
 
 ## Datenmodell
 
@@ -64,6 +67,11 @@ model GrowthMeasurement {
   weightGrams          Int?
   lengthMillimeters    Int?
   headCircumferenceMillimeters Int?
+  // Manuelle Überschreibung der Messmethode für das Körpermaß (W-18):
+  // 'LYING' | 'STANDING'. Null bedeutet "automatisch aus dem Alter
+  // ableiten" (W-17) — kein fehlender Wert, sondern der Normalfall.
+  // Als String gespeichert, kein Prisma-`enum` (SQLite-Connector, ADR-0002).
+  lengthMeasurementPosition String?
   note      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,6 +107,12 @@ Hinweise:
 - Verwendet werden die **WHO Child Growth Standards (0–5 Jahre)** in Form der LMS-Parameter
   (`L`, `M`, `S`) je Indikator, Geschlecht und Alter: *weight-for-age*, *length/height-for-age*,
   *head-circumference-for-age*.
+- *length/height-for-age* zerfällt in zwei Referenzsätze: **length-for-age** (liegend, 0–24 Monate)
+  und **height-for-age** (stehend, 24–60 Monate). Die Auswahl trifft die Berechnung selbst anhand
+  des Alters zum Messzeitpunkt (W-17), sofern die Messung keine manuelle Überschreibung trägt
+  (W-18). Die Auswahlregel gehört in dieselbe reine Funktion wie die z-Score-Berechnung und
+  bekommt eigene Testfälle um die 24-Monats-Grenze herum — inklusive des Falls „Überschreibung
+  widerspricht dem Alter", der ausdrücklich erlaubt ist.
 - Die Tabellen werden als statische Datendateien **im Repository mitgeliefert** und zur Laufzeit
   geladen — kein Netzwerkzugriff, passend zum Self-hosted-Prinzip.
 - z-Score aus LMS:
@@ -172,10 +186,8 @@ schreibenden Zugriffen):
   Folgeschritt.
 - **BMI-/Gewicht-für-Länge-Kurve:** WHO liefert auch diese Indikatoren. Zurückgestellt, bis die drei
   Basisgrößen stehen.
-- **Umgang mit „Länge" vs. „Größe":** WHO unterscheidet liegend gemessene Länge (< 2 Jahre) und
-  stehend gemessene Größe (≥ 2 Jahre) mit unterschiedlichen Referenzen. Vorschlag: eine gemeinsame
-  Eingabe, Referenzauswahl automatisch über das Alter, Hinweistext in der UI. Vor Umsetzung
-  bestätigen.
+- ~~**Umgang mit „Länge" vs. „Größe"**~~ — entschieden: automatische Referenzwahl über das Alter,
+  manuell pro Messung überschreibbar (W-17 bis W-19).
 
 ## Aufgaben
 
@@ -183,6 +195,7 @@ schreibenden Zugriffen):
 - [ ] Backend-Modul `growth` (Controller, Service, DTOs mit Validierung nach W-1 bis W-6)
 - [ ] WHO-Referenzdaten recherchieren, Lizenz klären, als statische Datendateien einpflegen, Herkunft dokumentieren
 - [ ] Perzentilen-/z-Score-Berechnung als reine Funktion inkl. Tests gegen veröffentlichte WHO-Beispielwerte
+- [ ] Automatische Länge-/Größe-Referenzwahl über das Alter samt manueller Überschreibung (W-17 bis W-19), inkl. Grenzfalltests um 24 Monate
 - [ ] Lesepfad für Perzentilbänder (`GET .../growth/reference`)
 - [ ] ADR: Chart-Bibliothek (visx) und Domänen-Modellierung neben `Event`
 - [ ] Chart-Komponente mit visx (Perzentilbänder, Messreihe, Tooltip, Long-Press-Cursor)
@@ -203,6 +216,8 @@ schreibenden Zugriffen):
   im Repo).
 - Fehlt die Geschlechtsangabe oder liegt das Alter außerhalb des Referenzbereichs, verhält sich die
   UI wie in W-10/W-11 beschrieben — ohne stillschweigende Annahmen.
+- Die Körpermaß-Referenz wird altersabhängig automatisch gewählt und lässt sich pro Messung
+  überschreiben; die 24-Monats-Grenze ist durch Tests abgesichert.
 - Das Diagramm ist per Maus, Touch **und** Tastatur bedienbar; Kontraste und Fokus-Sichtbarkeit
   entsprechen dem in Phase 6 M4 etablierten Standard.
 - Alle neuen Texte liegen in Deutsch und Englisch vor.

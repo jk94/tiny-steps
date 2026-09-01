@@ -43,17 +43,27 @@ Mitgliederliste, Rollenzuweisung bei Einladung und im Nachhinein, rollenabhängi
 | Daten lesen (Events, Timeline, Statistiken, Wachstum, Meilensteine, Medizin) | ✓ | ✓ | ✓ | ✓ |
 | Ereignisse erfassen (Fütterung, Schlaf, Windel) | ✓ | ✓ | ✓ | – |
 | Wachstum/Meilensteine/Medizin erfassen | ✓ | ✓ | ✓ | – |
-| Eigene Einträge bearbeiten | ✓ | ✓ | ✓¹ | – |
+| Eigene Einträge bearbeiten | ✓ | ✓ | ✓ | – |
 | Fremde Einträge bearbeiten | ✓ | ✓ | – | – |
 | Einträge löschen | ✓ | ✓ | – | – |
 | Kindprofile anlegen/ändern/löschen | ✓ | ✓ | – | – |
-| Export/Bericht erzeugen | ✓ | ✓ | – | – |
+| Export/Bericht erzeugen | ✓ | ✓ | ✓ | – |
 | Mitglieder einladen | ✓ | – | – | – |
 | Rollen ändern, Mitglieder entfernen | ✓ | – | – | – |
 | Haushalt umbenennen/löschen | ✓ | – | – | – |
 | Eigene Benachrichtigungseinstellungen | ✓ | ✓ | ✓ | ✓ |
 
-¹ Zu bestätigen — siehe „Zu treffende Entscheidungen", Punkt 1.
+Die Matrix ist vollständig entschieden; die drei zuvor offenen Punkte sind eingearbeitet: Ein
+**Betreuer darf eigene Einträge bearbeiten** (sonst wäre ein Tippfehler für ihn nicht korrigierbar)
+und **exportieren**, aber weiterhin nichts löschen und nichts verwalten. Ein **Co-Parent darf nicht
+einladen** — Mitgliederverwaltung bleibt allein beim Owner.
+
+Ein **Beobachter** hat keine Schreibrechte und keinen Export — er darf ausschließlich lesen und
+seine eigenen Benachrichtigungseinstellungen pflegen.
+
+Für den Einladungs-Endpunkt ist „nur Owner" bereits heute umgesetzt
+(`@RequireRole(HouseholdRole.OWNER)` in `household.controller.ts`) — hier ändert sich also nichts,
+die Regel wird lediglich in der Matrix festgeschrieben.
 
 ## Fachliche Anforderungen
 
@@ -118,15 +128,8 @@ Felder), aber die aufrufende Stelle in `DailyTimeline` ist mit zu prüfen.
 
 ## Zu treffende Entscheidungen
 
-1. **Darf ein Betreuer eigene Einträge bearbeiten?** Das PRD sagt nur „kein Löschen/Verwalten".
-   Vorschlag: **ja** — ohne Bearbeitung ist ein Tippfehler für den Betreuer nicht korrigierbar, und
-   ein Löschen ist es weiterhin nicht. Vor Umsetzung bestätigen; die Rechtematrix (Fußnote 1) hängt
-   daran.
-2. **Darf ein Betreuer exportieren?** In der Matrix aktuell nein (Export umfasst den gesamten
-   Datenbestand des Kindes). Zu bestätigen.
-3. **Darf ein Co-Parent einladen?** Aktuell nein (nur Owner). Das ist enger als das heutige
-   Verhalten möglicherweise erwarten lässt und ist vor der Umsetzung gegen den Bestand zu prüfen.
-4. **ADR-Addendum zu [ADR-0002](../../adr/0002-application-level-household-roles-and-invites.md)**
+1. **Betreuer-Rechte, Co-Parent-Einladung** — entschieden, siehe Rechtematrix oben.
+2. **ADR-Addendum zu [ADR-0002](../../adr/0002-application-level-household-roles-and-invites.md)**
    statt eines neuen ADR: Die Grundentscheidung (anwendungsseitige Rollen, String-Spalte) bleibt;
    ergänzt werden die zwei Rollen, die Rechtematrix und die Default-Deny-Regel aus ROL-2/ROL-3.
 
@@ -142,7 +145,7 @@ Felder), aber die aufrufende Stelle in `DailyTimeline` ist mit zu prüfen.
 ## Aufgaben
 
 - [ ] `HouseholdRole` um `CAREGIVER`/`OBSERVER` erweitern
-- [ ] Rechtematrix festlegen (offene Entscheidungen 1–3 klären) und als Konstante im Code abbilden
+- [ ] Rechtematrix (siehe oben) als Konstante im Code abbilden — genau eine Quelle für Backend-Prüfung und Frontend-Anzeige
 - [ ] Audit aller schreibenden Endpunkte inkl. der Module aus 7.1–7.3; Ergebnis als Tabelle im PR
 - [ ] `@RequireRole` an allen schreibenden Endpunkten setzen
 - [ ] Test, der unannotierte schreibende Handler erkennt (ROL-3)

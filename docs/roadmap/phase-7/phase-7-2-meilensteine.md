@@ -55,6 +55,43 @@ Meilenstein, Timeline-Ansicht, Übersichtskarte auf `ChildHome`, Rohdatenexport.
 | M-14 | Zu jedem Meilenstein wird der erfassende Nutzer gespeichert und angezeigt. |
 | M-15 | Ohne Netzverbindung schlägt das Speichern sichtbar fehl; es wird kein Erfolgszustand vorgetäuscht. Insbesondere darf ein fehlgeschlagener Foto-Upload nicht als erfolgreich angezeigt werden. |
 
+## Vorlagenkatalog
+
+20 Einträge über die ersten drei Lebensjahre, verteilt über die vier Kategorien. Der Schlüssel ist
+stabil und wandert in keine Übersetzung; die Altersspanne ist eine **typische Streuung zur
+Einordnung**, ausdrücklich kein Sollwert — die Oberfläche formuliert sie entsprechend („meist
+zwischen …") und kennzeichnet nichts als „überfällig".
+
+| Schlüssel | Bezeichnung (de) | Kategorie | Typisch (Monate) |
+|---|---|---|---|
+| `FIRST_SMILE` | Erstes Lächeln | Sozial | 1–3 |
+| `HOLDS_HEAD_UP` | Hält den Kopf selbst | Motorik | 2–4 |
+| `FIRST_LAUGH` | Erstes Lachen | Sozial | 3–5 |
+| `GRASPS_OBJECT` | Greift gezielt nach etwas | Motorik | 3–6 |
+| `ROLLS_OVER` | Dreht sich vom Rücken auf den Bauch | Motorik | 4–7 |
+| `FIRST_SOLID_FOOD` | Erste Beikost | Körperlich | 5–8 |
+| `BABBLES` | Erstes Brabbeln | Sprache | 5–9 |
+| `FIRST_TOOTH` | Erster Zahn | Körperlich | 4–10 |
+| `SITS_UNSUPPORTED` | Sitzt frei | Motorik | 6–9 |
+| `CRAWLS` | Krabbelt | Motorik | 7–11 |
+| `PULLS_TO_STAND` | Zieht sich zum Stehen hoch | Motorik | 8–12 |
+| `WAVES_BYE` | Winkt zum Abschied | Sozial | 9–13 |
+| `FIRST_WORD` | Erstes Wort | Sprache | 10–15 |
+| `FIRST_STEPS` | Erste Schritte | Motorik | 11–16 |
+| `DRINKS_FROM_CUP` | Trinkt aus dem Becher | Körperlich | 12–18 |
+| `CLIMBS_STAIRS` | Steigt Treppen | Motorik | 14–22 |
+| `RUNS` | Läuft/rennt sicher | Motorik | 18–24 |
+| `TWO_WORD_SENTENCE` | Erster Zwei-Wort-Satz | Sprache | 18–26 |
+| `SAYS_OWN_NAME` | Nennt den eigenen Namen | Sprache | 24–30 |
+| `POTTY_TRAINED_DAY` | Tagsüber trocken | Körperlich | 24–36 |
+
+Bewusst **nicht** im Katalog: „schläft durch". Der Schritt ist extrem streuend, hängt kaum vom Kind
+allein ab und taugt als Vorlage vor allem dazu, Eltern ein schlechtes Gefühl zu geben — wer ihn
+festhalten will, legt einen freien Eintrag an.
+
+Die englischen Bezeichnungen entstehen als Übersetzung derselben Schlüssel; die deutschen Texte
+oben sind der Entwurf für `de.json` und werden bei der Umsetzung final formuliert.
+
 ## Datenmodell
 
 ```prisma
@@ -164,17 +201,15 @@ Haushalt ist bewusst **nicht** Teil des Umfangs.
 
 ## Offene Punkte
 
-- **Konkreter Vorlageninhalt:** Welche Meilensteine der Katalog enthält, ist noch nicht festgelegt.
-  Vorschlag: 15–20 Einträge über die ersten drei Lebensjahre. Muss vor der Umsetzung inhaltlich
-  abgestimmt werden — auch, weil die Auswahl implizit eine Aussage über „normale" Entwicklung
-  trifft und deshalb bewusst zurückhaltend formuliert sein sollte.
+- ~~**Konkreter Vorlageninhalt**~~ — entschieden: 20 Einträge, siehe „Vorlagenkatalog" oben. Offen
+  bleibt nur die finale Textformulierung bei der Umsetzung.
 - **Fotos im PDF-Bericht:** Ob Meilenstein-Fotos in den Arztbericht aus 7.4 gehören, ist dort zu
   entscheiden — vermutlich nein (Arztrelevanz gering, Dateigröße hoch).
 
 ## Aufgaben
 
 - [ ] Datenmodell `Milestone`/`MilestonePhoto` inkl. Prisma-Migration
-- [ ] Vorlagenkatalog definieren (Schlüssel, Kategorie, typische Altersspanne) und inhaltlich abstimmen
+- [ ] Vorlagenkatalog (20 Einträge, siehe oben) als Code-Konstante anlegen und Texte final formulieren
 - [ ] Backend-Modul `milestone` (Controller, Service, DTOs, Validierung nach M-1 bis M-6)
 - [ ] Foto-Upload/-Auslieferung/-Löschung unter Wiederverwendung der Konstanten und Muster aus ADR-0003
 - [ ] Gemeinsame Foto-Konstanten aus `child-photo.constants.ts` extrahieren, statt sie zu duplizieren

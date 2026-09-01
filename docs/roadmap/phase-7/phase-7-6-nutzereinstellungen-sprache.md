@@ -51,6 +51,7 @@ Benachrichtigungseinstellungen.
 | SET-9 | Der Einstellungsbereich ist über die vorhandene Navigation erreichbar; es entsteht kein zweiter Weg zu denselben Einstellungen. |
 | SET-10 | Alle Texte des Einstellungsbereichs liegen in Deutsch und Englisch vor; Sprachnamen werden in der jeweiligen Sprache selbst angezeigt („Deutsch", „English"), nicht übersetzt. |
 | SET-11 | Speichern zeigt Erfolg und Fehlschlag sichtbar an, im Muster der bestehenden Formulare (`role="status"`-Zeile plus Inline-Fehler, wie in `Profile`/`ChildSettings`). |
+| SET-12 | Die Route heißt künftig `settings`; die bisherige Route `profile` bleibt als Weiterleitung dorthin bestehen, damit gespeicherte Links und Lesezeichen nicht ins Leere laufen. |
 
 ## Datenmodell
 
@@ -80,8 +81,11 @@ auseinanderlaufen können.
 
 ## Frontend
 
-- `pages/Profile.tsx` wird zum Einstellungsbereich mit `Card`-Abschnitten je Thema. Ob die Route
-  von `profile` auf `settings` umbenannt wird, siehe „Offene Punkte".
+- `pages/Profile.tsx` wird zum Einstellungsbereich mit `Card`-Abschnitten je Thema und dabei nach
+  `pages/Settings.tsx` umbenannt; die Route wird `settings`, `profile` leitet dorthin weiter
+  (SET-12). Mit umzuziehen sind die Navigationsverweise in `Layout.tsx` und der i18n-Schlüsselraum
+  `profile.*` — Letzteres ist eine reine Umbenennung, aber sie muss vollständig sein, sonst bleiben
+  tote Schlüssel zurück.
 - Sprachwahl über die `Select`-Primitive mit drei Optionen (Gerätesprache, Deutsch, English).
 - Nach erfolgreichem Speichern wird `i18next.changeLanguage()` aufgerufen; die
   `localStorage`-Zwischenspeicherung wird auf denselben Wert gesetzt, damit SET-5 auch beim
@@ -93,10 +97,7 @@ auseinanderlaufen können.
 
 ## Zu treffende Entscheidungen
 
-1. **Route umbenennen oder nicht.** `profile` beschreibt den erweiterten Inhalt nicht mehr gut,
-   eine Umbenennung auf `settings` bricht aber gespeicherte Links. Vorschlag: umbenennen und
-   `profile` als Weiterleitung behalten — die App ist jung und die alte Adresse kaum verbreitet.
-2. **Update von ADR-0005.** Der ADR beschreibt den Umschalter in der App-Shell ausdrücklich als
+1. **Update von ADR-0005.** Der ADR beschreibt den Umschalter in der App-Shell ausdrücklich als
    Provisorium. Dessen Ablösung gehört als kurzes Addendum dorthin, nicht in einen neuen ADR.
 
 ## Offene Punkte
@@ -121,7 +122,7 @@ auseinanderlaufen können.
 - [ ] Sprachauswahl mit Option „Sprache des Geräts" und sofortiger Wirkung
 - [ ] Auflösungsreihenfolge nach SET-5 umsetzen (Vorabwert aus `localStorage`, danach Kontoeinstellung)
 - [ ] Provisorischen Umschalter aus `Layout.tsx` entfernen; Flaggen-Icons je nach Weiterverwendung entfernen oder umziehen
-- [ ] Route-Umbenennung entscheiden und ggf. Weiterleitung einrichten
+- [ ] Route auf `settings` umbenennen, Weiterleitung von `profile` einrichten, Navigationsverweise und i18n-Schlüssel mitziehen
 - [ ] i18n-Texte (de/en) für den Einstellungsbereich
 - [ ] ADR-0005 um ein Addendum zur Ablösung des Provisoriums ergänzen
 - [ ] Offenen Punkt „Sprachumschaltung in den Nutzereinstellungen" in `phase-7-v2-erweiterungen.md` bzw. dieser Teilphase abhaken
@@ -135,7 +136,7 @@ auseinanderlaufen können.
   Verhalten.
 - Der provisorische Umschalter aus der App-Shell ist entfernt; es gibt genau einen Ort für die
   Sprachwahl.
-- Konto-, Sprach- und Benachrichtigungseinstellungen sind an einer Stelle erreichbar und
-  vollständig übersetzt.
+- Konto-, Sprach- und Benachrichtigungseinstellungen sind unter `settings` an einer Stelle
+  erreichbar und vollständig übersetzt; die alte Adresse `profile` leitet dorthin weiter.
 - ADR-0005 ist um die Ablösung des Provisoriums ergänzt.
 - Keine Regression in der bestehenden Testsuite.
