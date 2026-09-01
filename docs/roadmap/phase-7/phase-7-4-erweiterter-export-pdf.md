@@ -1,0 +1,197 @@
+# Teilphase 7.4: Erweiterter Export (PDF-Bericht)
+
+**Bezug im PRD:** Abschnitt 4.2 (Erweiterter Export – PDF-Bericht für Kinderarzt)
+**Übergeordnet:** [Phase 7 – Übersicht](README.md)
+
+## Ziel
+
+Eltern erzeugen für einen frei wählbaren Zeitraum einen lesbaren PDF-Bericht, den sie zum
+Kinderarzttermin mitnehmen können — mit Wachstumsverlauf, Meilensteinen, Medikamenten/Impfungen und
+einer Zusammenfassung des Alltags-Trackings.
+
+Der bestehende Export aus Phase 5 liefert Rohdaten (JSON/CSV) für Archiv- und Weiterverarbeitungs-
+zwecke. Der PDF-Bericht ist etwas anderes: ein **kuratiertes, für Menschen gestaltetes Dokument**.
+Beide Wege bleiben nebeneinander bestehen.
+
+## Voraussetzungen
+
+- [7.1](phase-7-1-wachstumstracking.md), [7.2](phase-7-2-meilensteine.md) und
+  [7.3](phase-7-3-medikamente-impfungen.md) sind abgeschlossen — sie liefern den Inhalt. Der
+  Renderer-Unterbau ließe sich vorziehen, der Bericht wäre dann aber weitgehend leer.
+- Bestehendes `export`-Modul (`apps/backend/src/export/`) aus Phase 5.
+- Design-Tokens aus Phase 6 und das Token-Build-Skript (`bun run design-tokens:build`).
+
+## Scope-Abgrenzung
+
+**Enthalten:** PDF-Berichtserzeugung mit Zeitraum- und Abschnittsauswahl, austauschbarer Renderer
+(eingebaut/extern), Erweiterung des Rohdaten-Exports um die neuen Domänen aus 7.1–7.3.
+
+**Nicht enthalten:**
+- Kein E-Mail-Versand des Berichts, keine Freigabe-Links.
+- Keine Vorlagenverwaltung/Anpassung des Berichtslayouts durch Betreiber oder Nutzer.
+- Keine digitale Signatur, kein PDF/A.
+- Keine Meilenstein-Fotos im Bericht (Arztrelevanz gering, Dateigröße hoch) — bewusst weggelassen.
+
+## Fachliche Anforderungen
+
+| ID | Anforderung |
+|---|---|
+| EXP-1 | Der Bericht wird pro Kind für einen frei wählbaren Zeitraum erzeugt; der Zeitraum ist Pflichtangabe mit sinnvoller Vorbelegung (z. B. die letzten drei Monate). |
+| EXP-2 | Die enthaltenen Abschnitte sind einzeln an-/abwählbar: Stammdaten, Wachstum, Meilensteine, Medikamente/Impfungen, Tracking-Zusammenfassung. |
+| EXP-3 | Der Bericht enthält im Kopf: Kindname, Geburtsdatum, Alter zum Berichtsdatum, Berichtszeitraum und Erstellungsdatum. |
+| EXP-4 | Der Wachstumsabschnitt enthält eine Messwerttabelle (Datum, Alter, Werte, Perzentile) und die Verlaufskurve mit WHO-Perzentilbändern. |
+| EXP-5 | Der Meilensteinabschnitt listet die im Zeitraum erreichten Meilensteine mit Datum und Alter. |
+| EXP-6 | Der Medizinabschnitt listet erfolgte Gaben/Impfungen im Zeitraum sowie alle noch anstehenden Termine — Letztere bewusst zeitraumunabhängig, weil sie beim Arztbesuch relevant sind. |
+| EXP-7 | Die Tracking-Zusammenfassung enthält aggregierte Kennzahlen aus Fütterung/Schlaf/Windel (z. B. Durchschnitte pro Tag im Zeitraum), **keine** Einzelereignisliste — die gehört in den CSV-Export, nicht in einen Arztbericht. |
+| EXP-8 | Der Bericht ist vollständig in der aktiven Oberflächensprache; die Sprache wird beim Erzeugen mitgegeben, nicht serverseitig geraten. |
+| EXP-9 | Der Bericht folgt sichtbar dem Design-System der Anwendung (Farben, Typografie, Abstände aus den Design-Tokens) und wirkt nicht wie ein fremdes Dokument. |
+| EXP-10 | Es gibt **zwei austauschbare Renderer**: einen eingebauten, ohne zusätzliche Systemabhängigkeit, und einen externen HTTP-Dienst. Der eingebaute ist der Standard. |
+| EXP-11 | Die Renderer-Wahl erfolgt über die Konfiguration nach dem etablierten Muster: Code-Default → YAML-Konfiguration → Umgebungsvariable. Ohne jede Konfiguration läuft der eingebaute Renderer. |
+| EXP-12 | Ist der externe Renderer konfiguriert, aber nicht erreichbar, schlägt die Berichtserzeugung mit einer verständlichen Fehlermeldung fehl. Es wird **nicht** stillschweigend auf den eingebauten zurückgefallen — sonst bekäme der Nutzer unbemerkt ein anders aussehendes Dokument. |
+| EXP-13 | Der bestehende Rohdaten-Export wird um die Daten aus 7.1–7.3 erweitert, ohne die bestehende event-förmige CSV-Spaltenliste zu verändern. |
+| EXP-14 | Die Berichtserzeugung ist wie die bestehenden Export-Endpunkte lesend abgesichert (Mitgliedschaft im Haushalt erforderlich). |
+| EXP-15 | Die Erzeugung eines Berichts über einen langen Zeitraum darf den Server nicht blockieren; Laufzeit und Speicherbedarf sind zu messen und die Zeitraumlänge nötigenfalls zu begrenzen. |
+
+## Architektur: austauschbarer Renderer
+
+Das Kernproblem: Der eingebaute Weg kann kein HTML, ein browserbasierter Dienst kein JSX — ohne
+Gegenmaßnahme würde das Berichtslayout zweimal gepflegt.
+
+Gegenmaßnahme ist eine **Zwischendarstellung**. Der Export-Service erzeugt genau einmal ein
+`ReportDocument`: eine serialisierbare Beschreibung des Berichts aus wenigen Blocktypen
+(Dokumentkopf, Abschnittsüberschrift, Kennzahlenblock, Tabelle, Diagramm-SVG, Fließtext). Jeder
+Renderer bildet nur diese Blocktypen ab. Damit existieren Datenauswahl, Zeitraumlogik,
+Aggregation, Perzentilenberechnung und Reihenfolge **einmal**; doppelt gepflegt wird nur die
+Darstellung einer kleinen, stabilen Blockmenge.
+
+```
+ExportService
+   └─> ReportDocumentBuilder ──> ReportDocument (Blockliste, renderer-neutral)
+                                      ├─> ReactPdfRenderer   (Standard, reines Node)
+                                      └─> RemoteHtmlRenderer (HTML → HTTP → PDF-Dienst)
+```
+
+- **`ReactPdfRenderer` (Standard):** `@react-pdf/renderer` — React-JSX auf einer eigenen
+  Layout-Engine, kein Browser, kein Systembinary, läuft im bestehenden Node-Container. Die
+  Design-Tokens werden als **zusätzliches Ausgabeziel des vorhandenen Token-Build-Skripts** in ein
+  react-pdf-`StyleSheet` erzeugt — dieselbe Quelle der Wahrheit wie CSS und Markdown-Styleguide,
+  kein handgepflegtes Farbduplikat.
+- **`RemoteHtmlRenderer` (optional):** rendert das `ReportDocument` zu HTML mit den bestehenden
+  CSS-Custom-Properties und schickt es an einen konfigurierten HTTP-Endpunkt, der PDF
+  zurückliefert. Als Gegenstelle ist **kein Eigenbau nötig** — [Gotenberg](https://gotenberg.dev)
+  ist ein fertiges OSS-Docker-Image für genau diesen Zweck und lässt sich als optionaler zweiter
+  Service in `docker-compose.yml` aufnehmen. Chromium bleibt damit außerhalb des Anwendungs-Images.
+
+### Konfiguration
+
+```yaml
+# Optional. Ohne diesen Abschnitt läuft der eingebaute Renderer.
+export:
+  pdf:
+    # builtin | remote
+    renderer: builtin
+    # Nur bei renderer: remote. Über PDF_RENDERER_URL überschreibbar.
+    remoteUrl: "http://gotenberg:3000/forms/chromium/convert/html"
+```
+
+Der Code-Default (`builtin`) steht im Code, nicht in der YAML-Datei; die Beispielkonfiguration zeigt
+den Abschnitt auskommentiert. Die Validierung erfolgt beim Start über das bestehende
+Konfigurationsschema und schlägt fehl, wenn `renderer: remote` ohne URL gesetzt ist (fail-fast wie
+im Bestand).
+
+### Datenschutz-Hinweis
+
+Der externe Renderer bekommt **Gesundheitsdaten eines Kindes** zu sehen. Solange er wie vorgesehen
+im selben Compose-Netzwerk läuft, verlässt nichts die Installation. Ein auf einen fremden Host
+gerichteter Endpunkt wäre jedoch eine echte Ausnahme vom Self-hosted-Prinzip — vergleichbar mit der
+FCM/APNs-Ausnahme in [ADR-0012](../../adr/0012-capacitor-native-wrapper.md) und ebenso ausdrücklich
+zu dokumentieren, sowohl im ADR als auch im Kommentar der Beispielkonfiguration.
+
+## Diagramm im Bericht
+
+Die Wachstumskurve entsteht in 7.1 mit visx, also als React-SVG. Für den Bericht wird sie
+serverseitig zu einem SVG-String gerendert und als Diagrammblock in das `ReportDocument`
+aufgenommen — dieselbe Komponente, keine zweite Chart-Implementierung. Zwei Punkte sind dabei
+früh zu prüfen (siehe „Offene Punkte"): der SVG-Umfang, den `@react-pdf/renderer` unterstützt, und
+die Frage, ob die Chart-Komponente ohne Browser-APIs (Messungen, Tooltips) rendert.
+
+## API
+
+| Methode | Pfad | Zweck |
+|---|---|---|
+| `GET` | `/households/:householdId/children/:childId/export/report.pdf` | Bericht erzeugen; Query: `from`, `to`, `sections`, `locale` |
+| `GET` | `/households/:householdId/children/:childId/export/growth.csv` | Wachstumsmessungen als CSV |
+| `GET` | `/households/:householdId/children/:childId/export/milestones.csv` | Meilensteine als CSV |
+| `GET` | `/households/:householdId/children/:childId/export/health.csv` | Medikamente/Impfungen als CSV |
+
+Die neuen CSV-Endpunkte nutzen die vorhandene `toCsv`-Funktion mit je eigener, explizit
+aufgeführter Spaltenliste — genau wie die bestehende `CSV_COLUMNS`-Konstante, damit auch ein leerer
+Export eine stabile Kopfzeile hat. Die bestehende `RawExportRow`-Spaltenliste bleibt unangetastet;
+der vorhandene JSON-Export wird um die neuen Datensätze als eigene Schlüssel erweitert.
+
+## Frontend
+
+- Die bestehende Export-Seite (`…/children/:childId/settings/export`, `pages/Export.tsx`) wird um
+  einen Abschnitt „Bericht" erweitert — keine neue Route, damit alle Ausgabewege an einer Stelle
+  liegen.
+- Zeitraumwahl mit Schnellauswahl (letzter Monat, letzte 3 Monate, letztes Jahr, frei) und
+  Abschnitts-Checkboxen.
+- Während der Erzeugung ein Ladezustand mit `Skeleton`/Button-Pending-State; bei Fehlschlag eine
+  verständliche Meldung, die zwischen „Dienst nicht erreichbar" und „keine Daten im Zeitraum"
+  unterscheidet.
+
+## Zu treffende Entscheidungen (ADR-Kandidaten)
+
+1. **ADR „PDF-Berichtserzeugung"** — dokumentiert: Ablehnung von Chromium im Anwendungsimage, Wahl
+   von `@react-pdf/renderer` als Standard, die `ReportDocument`-Zwischendarstellung als Mittel gegen
+   doppelte Layoutpflege, den optionalen externen Renderer samt Gotenberg-Hinweis und die
+   Datenschutz-Ausnahme.
+2. **Token-Build-Skript um ein react-pdf-Ausgabeziel erweitern** — durchläuft den
+   [Abgleichsprozess](../../design-system/reconciliation-process.md).
+3. **Getrennte CSV-Dateien statt erweiterter Spaltenliste** — kurz im PR begründen; die Alternative
+   (ein ZIP mit mehreren CSVs statt mehrerer Endpunkte) ist vor der Umsetzung zu entscheiden.
+
+## Offene Punkte
+
+- **SVG-Fähigkeiten von `@react-pdf/renderer` prüfen**, bevor der Diagrammblock festgelegt wird.
+  Reicht der unterstützte Umfang nicht, ist die Rückfallebene, das Diagramm serverseitig zu
+  rastern und als Bild einzubetten — schlechtere Druckqualität, dafür sicher. Das gehört als
+  Prototyp an den **Anfang** der Teilphase, nicht ans Ende.
+- **Schriftarten:** react-pdf braucht eingebettete Schriftdateien. Ob die Schrift des Design-Systems
+  dafür lizenzrechtlich und technisch geeignet ist, ist zu prüfen.
+- **Laufzeitgrenze:** Ob und ab welcher Zeitraumlänge die Erzeugung begrenzt oder in den
+  Hintergrund verlagert werden muss, entscheidet die Messung aus EXP-15.
+
+## Aufgaben
+
+- [ ] Prototyp: Diagramm-SVG durch `@react-pdf/renderer` (früh, entscheidet EXP-4)
+- [ ] ADR „PDF-Berichtserzeugung" schreiben
+- [ ] `ReportDocument`-Zwischendarstellung und `ReportDocumentBuilder` im `export`-Modul
+- [ ] Datenbeschaffung/Aggregation je Abschnitt (Wachstum, Meilensteine, Medizin, Tracking-Kennzahlen)
+- [ ] `ReactPdfRenderer` inkl. Schrift-Einbettung
+- [ ] Token-Build-Skript um react-pdf-`StyleSheet`-Ausgabe erweitern
+- [ ] `RemoteHtmlRenderer` inkl. HTML-Ausgabe des `ReportDocument`
+- [ ] Konfigurationsschema um `export.pdf` erweitern (fail-fast bei `remote` ohne URL) und `config.example.yml` kommentiert ergänzen
+- [ ] Optionalen Gotenberg-Service in `docker-compose.yml` dokumentieren (auskommentiert, nicht aktiv)
+- [ ] PDF-Endpunkt inkl. Zeitraum-/Abschnitts-/Sprachparametern
+- [ ] Neue CSV-Endpunkte für Wachstum, Meilensteine, Medizin; JSON-Export erweitern
+- [ ] Export-Seite im Frontend um den Berichtsabschnitt erweitern
+- [ ] i18n-Texte (de/en) für Oberfläche **und** Berichtsinhalte
+- [ ] Laufzeit-/Speichermessung für lange Zeiträume (EXP-15)
+- [ ] Tests: `ReportDocument`-Aufbau je Abschnittsauswahl, CSV-Serialisierung, Renderer-Auswahl aus der Konfiguration, Fehlerverhalten bei nicht erreichbarem externen Dienst
+
+## Definition of Done
+
+- Ein PDF-Bericht kann für einen wählbaren Zeitraum und wählbare Abschnitte erzeugt und
+  heruntergeladen werden; er enthält alle Daten aus 7.1–7.3 in lesbarer Form.
+- Der Bericht ist optisch erkennbar dasselbe Design-System wie die Anwendung und liegt in Deutsch
+  und Englisch vor.
+- Ohne zusätzliche Konfiguration funktioniert die Erzeugung mit dem eingebauten Renderer; kein
+  Chromium im Anwendungsimage.
+- Der externe Renderer ist per Konfiguration aktivierbar, fällt bei Nichterreichbarkeit sichtbar
+  aus und erzeugt inhaltlich denselben Bericht.
+- Wachstum, Meilensteine und Medizin sind zusätzlich über den Rohdaten-Export abrufbar; die
+  bestehende Event-CSV-Spaltenliste ist unverändert.
+- Die Datenschutz-Ausnahme beim externen Renderer ist im ADR und in der Beispielkonfiguration
+  dokumentiert.
+- Keine Regression in der bestehenden Testsuite.

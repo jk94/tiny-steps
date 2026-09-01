@@ -2,55 +2,55 @@
 
 **Bezug im PRD:** Abschnitt 4.2 (Version 2.0 nach MVP)
 
+> **Diese Phase ist in Teilphasen zerlegt.** Die ausformulierten Anforderungen, Datenmodelle,
+> API-/UI-Vorgaben und Aufgabenlisten stehen in [`docs/roadmap/phase-7/`](phase-7/README.md).
+> Dieses Dokument bleibt als Einstiegspunkt bestehen und enthält bewusst keine eigene
+> Aufgabenliste mehr — sonst gäbe es zwei Orte, an denen der Fortschritt gepflegt werden müsste.
+
 ## Ziel
 
-Funktionsumfang über den MVP hinaus erweitern: Wachstum, Meilensteine, Medikamente/Impfungen, erweiterter Export, erweiterte Rollen, Mehrsprachigkeit.
+Funktionsumfang über den MVP hinaus erweitern: Wachstum, Meilensteine, Medikamente/Impfungen,
+erweiterter Export, erweiterte Rollen, Mehrsprachigkeit.
 
 ## Voraussetzungen
 
-MVP (Phasen 0–5) ist produktiv im Einsatz und stabil. Phase 6 (Design-System & UX) ist abgeschlossen, da die hier neu hinzukommenden UIs (Wachstum, Meilensteine, Medikamente/Impfungen, Rollenzuweisung) auf dem dort etablierten Design-System aufbauen sollen.
+MVP (Phasen 0–5) ist produktiv im Einsatz und stabil. Phase 6 (Design-System & UX) ist
+abgeschlossen, da die hier neu hinzukommenden UIs (Wachstum, Meilensteine, Medikamente/Impfungen,
+Rollenzuweisung) auf dem dort etablierten Design-System aufbauen sollen.
 
-## Aufgaben
+## Teilphasen
 
-### Wachstumstracking
-- [ ] Datenmodell für Wachstumsmessungen (Gewicht, Größe, Kopfumfang, Zeitpunkt)
-- [ ] Erfassungs-UI für Wachstumsmessungen
-- [ ] Perzentilen-Kurven (Referenzdaten recherchieren/einbinden, z. B. WHO-Wachstumsstandards)
-- [ ] Visualisierung als Diagramm im zeitlichen Verlauf
+| # | Teilphase | Umfang |
+|---|---|---|
+| 7.1 | [Wachstumstracking](phase-7/phase-7-1-wachstumstracking.md) | Messwerte, WHO-Perzentilen, Verlaufsdiagramm |
+| 7.2 | [Meilensteine](phase-7/phase-7-2-meilensteine.md) | Vorlagen + freie Einträge, Fotogalerie, Timeline |
+| 7.3 | [Medikamente & Impfungen](phase-7/phase-7-3-medikamente-impfungen.md) | Erfassung, Fälligkeiten, Push-Erinnerungen |
+| 7.4 | [Erweiterter Export (PDF-Bericht)](phase-7/phase-7-4-erweiterter-export-pdf.md) | Arztbericht, austauschbarer Renderer |
+| 7.5 | [Erweiterte Rollen](phase-7/phase-7-5-erweiterte-rollen.md) | Betreuer/Beobachter, Mitglieder- & Rollenverwaltung |
+| 7.6 | [Nutzereinstellungen & Sprache](phase-7/phase-7-6-nutzereinstellungen-sprache.md) | Settings-Bereich, persistierte Sprachwahl |
 
-### Meilensteine
-- [ ] Datenmodell für Meilensteine (Typ, Datum, Notiz, optional Foto)
-- [ ] Vordefinierte Meilenstein-Vorlagen (erstes Lächeln, erste Schritte, erster Zahn, …) plus freie Einträge
-- [ ] Übersichts-/Timeline-Ansicht für Meilensteine
+Reihenfolge, Abhängigkeiten und die bereichsübergreifenden Festlegungen (eigene Tabellen statt neuer
+Event-Typen, kein Echtzeit-Sync/Offline für die neuen Domänen, Anzeige auf `ChildHome`, Rechte
+bleiben haushaltsweit) stehen in der [Phase-7-Übersicht](phase-7/README.md).
 
-### Medikamente/Impfungen
-- [ ] Datenmodell für Medikamentengaben und Impfungen
-- [ ] Erinnerungsfunktion (z. B. nächste Impfung fällig) über bestehende Push-Infrastruktur aus Phase 5
-- [ ] Erfassungs- und Übersichts-UI
+## Stand der Mehrsprachigkeit
 
-### Erweiterter Export
-- [ ] PDF-Bericht-Generierung (z. B. für Kinderarzt-Termine) mit Auswahl relevanter Daten/Zeitraum
+Zwei der ursprünglich hier geführten i18n-Aufgaben sind bereits erledigt und werden daher nicht in
+7.6 wiederholt:
 
-### Erweiterte Rollen
-- [ ] Rolle „Betreuer“: nur Erfassen von Ereignissen, kein Löschen/Verwalten
-- [ ] Rolle „Beobachter“: nur Lesezugriff
-- [ ] Guards/Rechteprüfung aus Phase 1 um die neuen Rollen erweitern
-- [ ] UI zur Rollenzuweisung bei Einladung/Verwaltung von Haushaltsmitgliedern
+- **i18n-Infrastruktur im Frontend** — bewusst aus Phase 6 in Phase 1 vorgezogen (vor der
+  Login-/Registrierungs-UI), da die UI-Oberfläche zu diesem Zeitpunkt noch klein war; Details und
+  Begründung siehe [ADR-0005](../adr/0005-i18n-infrastructure-brought-forward.md).
+- **Übersetzung der bestehenden UI-Texte (Deutsch/Englisch)** — die Übersetzung neuer Oberflächen
+  ist laufende Arbeit im jeweiligen Sub-Schritt und wird dort abgehakt, nicht hier.
 
-### Mehrsprachigkeit
-- [x] i18n-Infrastruktur im Frontend einrichten — bewusst aus Phase 6 in Phase 1 vorgezogen (vor der
-      Login-/Registrierungs-UI), da die UI-Oberfläche zu diesem Zeitpunkt noch klein war; Details und
-      Begründung siehe [ADR-0005](../adr/0005-i18n-infrastructure-brought-forward.md)
-- [x] Übersetzung der bestehenden UI-Texte (mindestens Deutsch/Englisch) — bezieht sich auf die zum
-      Zeitpunkt von ADR-0005 existierende UI-Oberfläche (Loading-Anzeige, App-Shell/Navigation,
-      Dashboard-Platzhalter); Übersetzung neuer UI-Oberflächen (Login/Registrierung, Haushalts- und
-      Kind-Profil-Verwaltung, …) ist laufende Arbeit im jeweiligen Sub-Schritt, nicht hier
-      abgeschlossen
-- [ ] Sprachumschaltung in den Nutzereinstellungen — ein einfacher, provisorischer Umschalter existiert
-      bereits in der App-Shell (siehe ADR-0005), bleibt aber offen, bis ein echter
-      Nutzereinstellungen-Bereich existiert
+Offen bleibt allein die **Sprachumschaltung in den Nutzereinstellungen**; sie ist der Kern von
+[Teilphase 7.6](phase-7/phase-7-6-nutzereinstellungen-sprache.md).
 
 ## Definition of Done
+
+Phase 7 gilt als abgeschlossen, wenn die Definition of Done **aller sechs Teilphasen** erfüllt ist.
+Übergreifend heißt das:
 
 - Wachstums- und Meilenstein-Daten können erfasst und ausgewertet werden
 - Erinnerungen für Medikamente/Impfungen funktionieren zuverlässig
