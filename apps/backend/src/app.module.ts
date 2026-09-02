@@ -13,6 +13,7 @@ import { ExportModule } from './export/export.module';
 import { FeedingModule } from './feeding/feeding.module';
 import { SleepModule } from './sleep/sleep.module';
 import { DiaperModule } from './diaper/diaper.module';
+import { GrowthModule } from './growth/growth.module';
 import { PushModule } from './push/push.module';
 import { NotificationModule } from './notification/notification.module';
 import { HealthController } from './health.controller';
@@ -47,6 +48,7 @@ import loadConfiguration from './config/configuration';
     FeedingModule,
     SleepModule,
     DiaperModule,
+    GrowthModule,
     PushModule,
     NotificationModule,
   ],

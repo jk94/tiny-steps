@@ -1,5 +1,6 @@
-import { IsISO8601, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
+import { ChildSex } from '../child-sex.enum';
 
 /**
  * Text fields of a `multipart/form-data` create-child request — the
@@ -15,4 +16,13 @@ export class CreateChildDto {
   @IsISO8601({ strict: true })
   @IsNotFutureDate()
   birthDate!: string;
+
+  // Optional; omitting it means "not specified", which is a valid, explicit
+  // choice in the UI rather than a gap. Only ever used to select the
+  // sex-specific WHO growth reference (W-10). `@IsIn` over the enum's values
+  // instead of `@IsEnum`, because this DTO is populated from
+  // `multipart/form-data` where every field arrives as a string.
+  @IsOptional()
+  @IsIn(Object.values(ChildSex))
+  sex?: string;
 }

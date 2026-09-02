@@ -5,7 +5,10 @@
  * (see `README.md` and `scripts/convert-who-tables.ts`).
  */
 export { HEAD_CIRCUMFERENCE_FOR_AGE } from './head-circumference-for-age.data';
-export { LENGTH_HEIGHT_FOR_AGE, LENGTH_TO_HEIGHT_BOUNDARY_DAYS } from './length-height-for-age.data';
+export {
+  LENGTH_HEIGHT_FOR_AGE,
+  LENGTH_TO_HEIGHT_BOUNDARY_DAYS,
+} from './length-height-for-age.data';
 export { WEIGHT_FOR_AGE } from './weight-for-age.data';
 export type {
   BodyMeasureTable,
