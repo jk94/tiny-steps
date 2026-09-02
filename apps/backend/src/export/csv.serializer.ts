@@ -8,6 +8,7 @@ import { RawExportRow } from './export.service';
  */
 const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'id',
+  'recordKind',
   'childId',
   'userId',
   'type',
@@ -19,6 +20,14 @@ const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'side',
   'amountMl',
   'diaperType',
+  // Growth-measurement columns, blank on event rows.
+  'weightGrams',
+  'lengthMillimeters',
+  'headCircumferenceMillimeters',
+  'lengthMeasurementPosition',
+  'weightPercentile',
+  'lengthPercentile',
+  'headCircumferencePercentile',
   'note',
   'createdAt',
   'updatedAt',
