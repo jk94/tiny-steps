@@ -166,3 +166,29 @@ setting — it must match what Prisma's `schema.prisma` was actually generated
 for. Switching the underlying database provider (e.g. SQLite → PostgreSQL) is
 a one-time, explicit change (`schema.prisma` edit + `prisma generate` + fresh
 `prisma migrate deploy`), not a runtime toggle.
+
+### Storage sizing & backups
+
+Two kinds of state have to survive a redeploy, and both live in the same
+persisted volume (see `UPLOADS_DIR`/`DATABASE_URL` in `docker-compose.yml`):
+
+- the **SQLite database** — small, and it grows roughly linearly with the
+  number of logged events;
+- the **uploaded photos** under `<UPLOADS_DIR>/` — child profile photos
+  (`children/`, one per child) and milestone photos (`milestones/`).
+
+Photos are the first place in this application where user data can grow
+without bound. The per-record limits keep the worst case predictable rather
+than unlimited: **10 photos per milestone, at most 2 MB each**, so one child
+with 20 recorded milestones can occupy up to ~400 MB, and a household with
+several children a multiple of that. There is deliberately no per-household
+quota — sizing the volume is the operator's call.
+
+Practical consequences:
+
+- size the volume for the photos, not for the database;
+- **include `<UPLOADS_DIR>/` in your backups**, not just the SQLite file. A
+  database backup on its own restores milestones whose photos are gone, which
+  the app then serves as 404s (it logs the mismatch, it does not crash);
+- back both up from the same point in time, so a restored database and its
+  photo files agree.
