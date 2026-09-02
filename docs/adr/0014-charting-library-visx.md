@@ -118,7 +118,7 @@ have cost equally.
 
 ## Related
 
-- [Phase 7 roadmap](../roadmap/phase-7-v2-erweiterungen.md) — sub-phase 7.1 and requirements
+- [Phase 7.1 roadmap](../roadmap/phase-7/phase-7-1-wachstumstracking.md) — requirements
   W-12/W-13/W-14.
 - [ADR-0013](0013-design-system-styling-approach.md) — the token/`cva` styling approach the chart's
   colors come from, and the precedent for measuring bundle impact before committing to a UI
