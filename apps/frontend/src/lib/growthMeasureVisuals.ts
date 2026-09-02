@@ -1,3 +1,4 @@
+import type { ParseKeys } from 'i18next';
 import { Ruler, Scan, Weight, type LucideIcon } from 'lucide-react';
 
 /** The three body measures a growth measurement can carry (W-2). */
@@ -7,10 +8,12 @@ export interface GrowthMeasureVisual {
   /** CSS custom-property name holding the measure's color. */
   colorVar: string;
   Icon: LucideIcon;
+  // Typed as `ParseKeys` rather than `string` so `t(visual.labelKey)` keeps the
+  // compile-time key checking the rest of the app gets (see i18n/i18next.d.ts).
   /** i18n key of the measure's label. */
-  labelKey: string;
+  labelKey: ParseKeys;
   /** i18n key of the unit the value is *displayed* in (not stored in). */
-  unitKey: string;
+  unitKey: ParseKeys;
 }
 
 /**

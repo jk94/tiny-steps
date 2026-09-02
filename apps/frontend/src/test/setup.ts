@@ -25,6 +25,20 @@ if (typeof window.matchMedia !== 'function') {
   });
 }
 
+// jsdom implements no `ResizeObserver` either, but any responsive chart
+// container constructs one on mount (visx's `useParentSize`). The stub never
+// fires a callback — jsdom has no layout, so there is no size to report; specs
+// that need a concrete chart width pass one in explicitly (see
+// `GrowthChart`'s `fixedWidth` prop). Global for the same reason as
+// `matchMedia` above: missing browser plumbing, not per-test behavior.
+if (typeof globalThis.ResizeObserver !== 'function') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
+
 // `globals: false` (see vitest.config.ts) means Testing Library's automatic
 // afterEach-cleanup detection doesn't kick in, since it relies on
 // `afterEach` being a true global — register it explicitly so components

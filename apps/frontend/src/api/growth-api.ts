@@ -13,9 +13,7 @@ import { apiFetch } from './http-client';
  */
 
 export type GrowthIndicator =
-  | 'WEIGHT_FOR_AGE'
-  | 'LENGTH_OR_HEIGHT_FOR_AGE'
-  | 'HEAD_CIRCUMFERENCE_FOR_AGE';
+  'WEIGHT_FOR_AGE' | 'LENGTH_OR_HEIGHT_FOR_AGE' | 'HEAD_CIRCUMFERENCE_FOR_AGE';
 
 /** Manual override of the WHO body-measure method; null means "derive from age". */
 export type LengthMeasurementPosition = 'LYING' | 'STANDING';
@@ -73,7 +71,7 @@ export interface CreateGrowthMeasurementInput {
  * ADR-0011's Last-Write-Wins never applies here.
  */
 export type UpdateGrowthMeasurementInput = Partial<
-  Omit<CreateGrowthMeasurementInput, 'note' | 'lengthMeasurementPosition'>
+  Pick<CreateGrowthMeasurementInput, 'measuredAt'>
 > & {
   weightGrams?: number | null;
   lengthMillimeters?: number | null;
@@ -128,7 +126,15 @@ export function growthReferenceQueryKey(
   childId: string,
   indicator: GrowthIndicator,
 ) {
-  return ['households', householdId, 'children', childId, 'growth', 'reference', indicator] as const;
+  return [
+    'households',
+    householdId,
+    'children',
+    childId,
+    'growth',
+    'reference',
+    indicator,
+  ] as const;
 }
 
 export function listGrowthMeasurements(
@@ -154,9 +160,7 @@ export function fetchGrowthMeasurement(
   childId: string,
   measurementId: string,
 ): Promise<GrowthMeasurementSummary> {
-  return apiFetch<GrowthMeasurementSummary>(
-    `${growthPath(householdId, childId)}/${measurementId}`,
-  );
+  return apiFetch<GrowthMeasurementSummary>(`${growthPath(householdId, childId)}/${measurementId}`);
 }
 
 export function createGrowthMeasurement(

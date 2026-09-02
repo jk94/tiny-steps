@@ -18,12 +18,15 @@ describe('growthMeasureVisuals', () => {
     expect(visual.unitKey).toMatch(/^growth\.units\./);
   });
 
-  it.each(GROWTH_MEASURES)('references a token that exists in the generated CSS (%s)', (measure) => {
-    // Guards against a typo silently producing a transparent chart line: the
-    // token names come from design-system/tokens/color.json via
-    // `bun run design-tokens:build`, and nothing else checks this file by name.
-    expect(generatedCss).toContain(`${growthMeasureVisuals[measure].colorVar}:`);
-  });
+  it.each(GROWTH_MEASURES)(
+    'references a token that exists in the generated CSS (%s)',
+    (measure) => {
+      // Guards against a typo silently producing a transparent chart line: the
+      // token names come from design-system/tokens/color.json via
+      // `bun run design-tokens:build`, and nothing else checks this file by name.
+      expect(generatedCss).toContain(`${growthMeasureVisuals[measure].colorVar}:`);
+    },
+  );
 
   it('exposes the reference-band color as a token too', () => {
     expect(generatedCss).toContain('--color-growth-band:');
