@@ -85,8 +85,8 @@ feature:
 | | raw | gzip |
 |---|---|---|
 | Initial bundle, before Phase 7.1 | 689.01 kB | 201.26 kB |
-| Initial bundle, after Phase 7.1 | 718.11 kB | 208.41 kB |
-| `GrowthChart-*.js` (async chunk) | 71.93 kB | **25.88 kB** |
+| Initial bundle, after Phase 7.1 | 718.44 kB | 208.56 kB |
+| `GrowthChart-*.js` (async chunk) | 72.19 kB | **25.94 kB** |
 
 **visx adds 0 kB to the initial bundle.** The entire library plus its d3 dependencies lands in the
 lazily-loaded `GrowthChart` chunk, verified by grepping the built `index-*.js` for visx/d3 markers
