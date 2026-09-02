@@ -1,21 +1,15 @@
 /**
- * Product-facing photo upload limits, enforced by `ParseFilePipeBuilder` on
- * `ChildController`'s create/update routes (see `MulterExceptionFilter` for
- * the lower-level Multer backstop). See ADR-0003 for the full rationale.
+ * Child-photo upload limits.
+ *
+ * The values themselves moved to `common/photo/photo.constants.ts` when
+ * milestone photos became a second consumer (roadmap Phase 7.2 / M-7) — the
+ * limits are one product decision, not a per-domain one. This module stays as
+ * the child domain's import surface so existing call sites keep reading
+ * naturally; there is deliberately no second copy of the values.
  */
-export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
-
-export const ALLOWED_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
-
-export type AllowedPhotoMimeType = (typeof ALLOWED_PHOTO_MIME_TYPES)[number];
-
-/**
- * Maps a *validated* MIME type to the file extension used when persisting a
- * photo to disk. Never derive the stored extension from the client-supplied
- * original filename — see `ChildPhotoStorageService.save()`.
- */
-export const PHOTO_MIME_TYPE_TO_EXTENSION: Record<AllowedPhotoMimeType, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-};
+export {
+  ALLOWED_PHOTO_MIME_TYPES,
+  MAX_PHOTO_BYTES,
+  PHOTO_MIME_TYPE_TO_EXTENSION,
+  type AllowedPhotoMimeType,
+} from '../common/photo/photo.constants';

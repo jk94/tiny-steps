@@ -2,9 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Child, DiaperDetail, Event, FeedingDetail, GrowthMeasurement } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { toChildSex } from '../child/child-sex.enum';
+import { ageInDaysAt } from '../common/age/age-in-days';
 import { MEASUREMENT_VALUE_FIELDS } from '../growth/growth-measurement.constants';
 import { toLengthMeasurementPosition } from '../growth/length-measurement-position.enum';
-import { ageInDaysAt } from '../growth/percentiles/age-in-days';
 import {
   computeGrowthPercentile,
   type GrowthIndicator,
