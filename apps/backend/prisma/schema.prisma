@@ -38,6 +38,7 @@ model User {
 
   memberships          Membership[]
   events               Event[]
+  growthMeasurements   GrowthMeasurement[]
   refreshTokens        RefreshToken[]
   createdInvites       Invite[]               @relation("InviteCreatedBy")
   acceptedInvites      Invite[]               @relation("InviteAcceptedBy")
@@ -130,11 +131,70 @@ model Child {
   // ADR-0003. Null when no photo has been uploaded.
   photoPath     String?
   photoMimeType String?
+  // Optional biological sex ('FEMALE' | 'MALE'; see
+  // `src/child/child-sex.enum.ts`). Null means "not specified", which is a
+  // first-class state, not missing data: without it the app shows growth
+  // values and trends but deliberately no WHO percentiles (W-10), rather than
+  // guessing a default. This is the ONLY thing the field drives — nothing
+  // else in the app branches on it. Plain `String`, not a Prisma `enum`, for
+  // the same reason as `Membership.role`/`Event.type` (SQLite connector); read
+  // exclusively through `toChildSex()`. See ADR-0002 and ADR-0006's
+  // GrowthMeasurement addendum.
+  sex           String?
   createdAt     DateTime @default(now())
 
   household            Household              @relation(fields: [householdId], references: [id])
   events               Event[]
+  growthMeasurements   GrowthMeasurement[]
   notificationSettings NotificationSettings[]
+}
+
+/// A body-measurement record (weight / length or height / head circumference)
+/// taken at an arbitrary point in time, typically after a pediatric check-up.
+///
+/// Deliberately a standalone table beside `Event` rather than a fourth event
+/// type: it has its own `measuredAt` semantics, no timer duality, several
+/// optional values per row, sex-specific derived percentiles, and it is not
+/// part of the mixed daily activity timeline — see ADR-0006's addendum.
+model GrowthMeasurement {
+  id                           String   @id @default(cuid())
+  childId                      String
+  // The household member who recorded the measurement, mirroring
+  // `Event.userId` (W-7).
+  userId                       String
+  measuredAt                   DateTime
+  // All three values are individually optional (W-2), but at least one must be
+  // present (W-1) — enforced at the application layer, since that is a
+  // cross-column rule SQLite cannot express as a column constraint.
+  // Stored as integers in fixed base units (W-3): grams and millimetres. No
+  // floats, so a value can never drift through rounding.
+  weightGrams                  Int?
+  lengthMillimeters            Int?
+  headCircumferenceMillimeters Int?
+  // Manual override of the body-measure method (W-18): 'LYING' | 'STANDING'.
+  // Null means "derive automatically from age at measurement time" (W-17) —
+  // the normal case, not a missing value. Plain `String`, not a Prisma `enum`
+  // (SQLite connector, ADR-0002); read via `toLengthMeasurementPosition()`.
+  lengthMeasurementPosition    String?
+  note                         String?
+  createdAt                    DateTime @default(now())
+  // Server-side write timestamp. Unlike `Event.updatedAt` this is NOT a
+  // Last-Write-Wins tiebreak: growth tracking is an online-only feature with
+  // no offline buffering (W-16), so ADR-0011 does not apply here. Kept for
+  // traceability and the raw-data export.
+  updatedAt                    DateTime @updatedAt
+
+  // Cascade: a measurement is meaningless without its child, and deleting a
+  // child profile must not be blocked by an FK constraint — same pattern as
+  // the Event detail tables.
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  // Deliberately no cascade: deleting a user must not silently erase the
+  // measurements they recorded for a shared child, mirroring `Event.user`.
+  user  User  @relation(fields: [userId], references: [id])
+
+  // The only access pattern: a child's measurements in chronological order,
+  // optionally windowed by `measuredAt`.
+  @@index([childId, measuredAt])
 }
 
 model Event {
