@@ -12,6 +12,7 @@ export type MilestoneErrorKey =
   | 'milestone.errors.invalidTitle'
   | 'milestone.errors.invalidAchievedAt'
   | 'milestone.errors.invalidInput'
+  | 'milestone.validation.achievedAtBeforeBirth'
   | 'milestone.errors.generic';
 
 interface MilestoneErrorBody {
@@ -78,6 +79,8 @@ export function mapMilestoneError(error: unknown): MilestoneErrorKey {
           return mapValidationFields(body.fields);
         case 'MILESTONE_TEMPLATE_FIELD_NOT_EDITABLE':
           return 'milestone.errors.templateFieldNotEditable';
+        case 'ACHIEVED_AT_BEFORE_BIRTH':
+          return 'milestone.validation.achievedAtBeforeBirth';
         case 'PHOTO_TOO_LARGE':
           return 'milestone.errors.photoTooLarge';
         case 'PHOTO_INVALID_TYPE':

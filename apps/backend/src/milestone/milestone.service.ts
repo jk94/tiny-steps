@@ -261,6 +261,13 @@ export class MilestoneService {
   ): Promise<MilestonePhotoRef> {
     const { milestone } = await this.findMilestoneOrThrow(householdId, childId, milestoneId);
 
+    // TOCTOU note: the count check, the `max(sortIndex) + 1` derivation and the
+    // insert are not wrapped in a transaction, and there is no unique index on
+    // `(milestoneId, sortIndex)`. Two uploads racing from different clients
+    // could therefore exceed `MAX_PHOTOS_PER_MILESTONE` by one or share a
+    // `sortIndex`. Accepted: this is a trusted family app and the frontend
+    // uploads a milestone's photos strictly sequentially, so the race needs two
+    // simultaneous editors of the same milestone to occur at all.
     if (milestone.photos.length >= MAX_PHOTOS_PER_MILESTONE) {
       throw new ConflictException({
         statusCode: 409,
@@ -401,7 +408,15 @@ function toCalendarDay(date: Date): string {
  */
 function assertNotBeforeBirth(achievedAt: Date, child: Child): void {
   if (toCalendarDay(achievedAt) < toCalendarDay(child.birthDate)) {
-    throw new BadRequestException('achievedAt must not be before the child birth date');
+    // Structured like every other milestone error so the frontend can map it
+    // to the specific "before the birth date" message rather than the generic
+    // 400 fallback. Reachable whenever the client's cached `birthDate` is stale
+    // (e.g. corrected on another device), so the form's own pre-check can miss.
+    throw new BadRequestException({
+      statusCode: 400,
+      code: 'ACHIEVED_AT_BEFORE_BIRTH',
+      message: 'achievedAt must not be before the child birth date',
+    });
   }
 }
 

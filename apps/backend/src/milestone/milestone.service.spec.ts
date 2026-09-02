@@ -213,12 +213,19 @@ describe('MilestoneService', () => {
     it('rejects a date before the child birth date (M-6)', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
 
-      await expect(
-        service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
+      const error = await service
+        .create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
           title: 'Erstes Lächeln',
           achievedAt: '2025-01-19',
-        }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+        })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      // Carries a machine-readable code so the frontend can show the specific
+      // "before the birth date" message rather than the generic 400 fallback.
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: 'ACHIEVED_AT_BEFORE_BIRTH',
+      });
       expect(prisma.milestone.create).not.toHaveBeenCalled();
     });
 

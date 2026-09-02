@@ -385,9 +385,11 @@ describe('Milestones (e2e)', () => {
     const owner = await registerUser('dates');
     const { householdId, childId } = await createHouseholdWithChild(owner);
 
-    await post(owner, householdId, childId)
+    const beforeBirth = await post(owner, householdId, childId)
       .send({ title: 'Zu früh', achievedAt: '2025-01-19' })
       .expect(400);
+    // The machine-readable code survives the validation exception filter.
+    expect(beforeBirth.body).toMatchObject({ code: 'ACHIEVED_AT_BEFORE_BIRTH' });
 
     const inTwoDays = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     await post(owner, householdId, childId)

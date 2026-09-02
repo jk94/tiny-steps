@@ -24,6 +24,7 @@ describe('mapMilestoneError', () => {
     ['PHOTO_INVALID_TYPE', 'milestone.errors.photoInvalidType'],
     ['PHOTO_UPLOAD_ERROR', 'milestone.errors.photoUploadError'],
     ['MILESTONE_TEMPLATE_FIELD_NOT_EDITABLE', 'milestone.errors.templateFieldNotEditable'],
+    ['ACHIEVED_AT_BEFORE_BIRTH', 'milestone.validation.achievedAtBeforeBirth'],
   ])('maps the 400 code %s to %s', (code, expected) => {
     expect(mapMilestoneError(apiError(400, { code }))).toBe(expected);
   });
