@@ -56,7 +56,11 @@ export const milestoneCategoryVisuals: Record<MilestoneCategory, MilestoneCatego
   },
 };
 
-/** Stable render order for the category filter/select and the catalog view. */
+/**
+ * Stable render order for anywhere the four categories are enumerated — the
+ * free-entry category `Select` and the catalog grouping. (There is deliberately
+ * no category filter on the timeline.)
+ */
 export const MILESTONE_CATEGORIES: MilestoneCategory[] = [
   'MOTOR',
   'LANGUAGE',

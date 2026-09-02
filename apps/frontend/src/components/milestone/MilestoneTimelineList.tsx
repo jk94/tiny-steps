@@ -57,7 +57,7 @@ export function MilestoneTimelineList({
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [galleryMilestoneId, setGalleryMilestoneId] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<{ milestoneId: string; index: number } | null>(null);
 
   const membersQuery = useQuery({
     queryKey: ['households', householdId, 'members'],
@@ -112,7 +112,7 @@ export function MilestoneTimelineList({
     );
   }
 
-  const galleryMilestone = milestones.find((entry) => entry.id === galleryMilestoneId);
+  const galleryMilestone = milestones.find((entry) => entry.id === gallery?.milestoneId);
 
   return (
     <section className="flex flex-col gap-3">
@@ -144,9 +144,16 @@ export function MilestoneTimelineList({
                         })}
                       </span>
                       {visual && (
-                        <Badge variant={visual.badgeVariant} size="sm" className="self-start">
-                          {t(visual.labelKey)}
-                        </Badge>
+                        <span className="flex items-center gap-1 self-start">
+                          <visual.Icon
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5"
+                            style={{ color: `var(${visual.colorVar})` }}
+                          />
+                          <Badge variant={visual.badgeVariant} size="sm">
+                            {t(visual.labelKey)}
+                          </Badge>
+                        </span>
                       )}
                     </div>
 
@@ -160,27 +167,38 @@ export function MilestoneTimelineList({
                     </div>
 
                     {visiblePhotos.length > 0 && (
-                      <button
-                        type="button"
-                        className="flex shrink-0 items-center gap-1 rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        aria-label={t('milestone.list.openGallery', { title: milestone.title })}
-                        onClick={() => setGalleryMilestoneId(milestone.id)}
-                      >
-                        {visiblePhotos.map((photo) => (
-                          <img
+                      <div className="flex shrink-0 items-center gap-1">
+                        {visiblePhotos.map((photo, photoIndex) => (
+                          <button
                             key={photo.id}
-                            src={milestonePhotoUrl(householdId, childId, milestone.id, photo.id)}
-                            alt=""
-                            aria-hidden="true"
-                            className="h-12 w-12 rounded object-cover"
-                          />
+                            type="button"
+                            className="rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            aria-label={t('milestone.list.openGallery', { title: milestone.title })}
+                            onClick={() =>
+                              setGallery({ milestoneId: milestone.id, index: photoIndex })
+                            }
+                          >
+                            <img
+                              src={milestonePhotoUrl(householdId, childId, milestone.id, photo.id)}
+                              alt=""
+                              aria-hidden="true"
+                              className="h-12 w-12 rounded object-cover"
+                            />
+                          </button>
                         ))}
                         {hiddenPhotoCount > 0 && (
-                          <span className="text-xs text-muted-foreground">
+                          <button
+                            type="button"
+                            className="rounded text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            aria-label={t('milestone.list.openGallery', { title: milestone.title })}
+                            onClick={() =>
+                              setGallery({ milestoneId: milestone.id, index: VISIBLE_THUMBNAILS })
+                            }
+                          >
                             {t('milestone.list.morePhotos', { count: hiddenPhotoCount })}
-                          </span>
+                          </button>
                         )}
-                      </button>
+                      </div>
                     )}
                   </div>
 
@@ -220,17 +238,18 @@ export function MilestoneTimelineList({
 
       {deleteMutation.isError && <ErrorMessage message={t('milestone.validation.deleteFailed')} />}
 
-      {galleryMilestone && (
+      {galleryMilestone && gallery && (
         <MilestonePhotoGallery
           householdId={householdId}
           childId={childId}
           milestoneId={galleryMilestone.id}
           milestoneTitle={galleryMilestone.title}
           photos={galleryMilestone.photos}
+          initialIndex={gallery.index}
           isOpen
           onOpenChange={(open) => {
             if (!open) {
-              setGalleryMilestoneId(null);
+              setGallery(null);
             }
           }}
         />

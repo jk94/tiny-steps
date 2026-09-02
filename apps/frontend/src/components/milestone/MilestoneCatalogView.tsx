@@ -92,9 +92,16 @@ export function MilestoneCatalogView({
                           </span>
                         </span>
 
-                        <Badge variant={visual.badgeVariant} size="sm">
-                          {t(visual.labelKey)}
-                        </Badge>
+                        <span className="flex shrink-0 items-center gap-1">
+                          <visual.Icon
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5"
+                            style={{ color: `var(${visual.colorVar})` }}
+                          />
+                          <Badge variant={visual.badgeVariant} size="sm">
+                            {t(visual.labelKey)}
+                          </Badge>
+                        </span>
 
                         {recorded && (
                           <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-success">
