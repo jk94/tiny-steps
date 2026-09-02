@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { MilestonePhotoStorageService } from './milestone-photo-storage.service';
 import { MilestoneCategory } from './milestone-category.enum';
 import { MilestoneTemplate } from './milestone-template.enum';
 import { MilestoneService } from './milestone.service';
@@ -54,6 +55,22 @@ function uniqueConstraintError(): Prisma.PrismaClientKnownRequestError {
   });
 }
 
+function makePhoto(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'photo-1',
+    milestoneId: MILESTONE_ID,
+    path: 'milestones/milestone-1-aaa.jpg',
+    mimeType: 'image/jpeg',
+    sortIndex: 0,
+    createdAt: new Date('2025-08-21T09:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+function makeUpload(mimetype = 'image/jpeg'): Express.Multer.File {
+  return { mimetype, buffer: Buffer.from('bytes') } as Express.Multer.File;
+}
+
 describe('MilestoneService', () => {
   let prisma: {
     child: { findUnique: jest.Mock };
@@ -64,6 +81,12 @@ describe('MilestoneService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    milestonePhoto: { create: jest.Mock; delete: jest.Mock };
+  };
+  let photoStorage: {
+    save: jest.Mock;
+    read: jest.Mock;
+    delete: jest.Mock;
   };
   let service: MilestoneService;
 
@@ -77,8 +100,17 @@ describe('MilestoneService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      milestonePhoto: { create: jest.fn(), delete: jest.fn() },
     };
-    service = new MilestoneService(prisma as unknown as PrismaService);
+    photoStorage = {
+      save: jest.fn().mockResolvedValue('milestones/milestone-1-new.jpg'),
+      read: jest.fn(),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    service = new MilestoneService(
+      prisma as unknown as PrismaService,
+      photoStorage as unknown as MilestonePhotoStorageService,
+    );
   });
 
   describe('create', () => {
@@ -383,14 +415,41 @@ describe('MilestoneService', () => {
   });
 
   describe('remove', () => {
-    it('deletes the milestone row', async () => {
+    it('deletes the row first, then the photo files on disk (M-9)', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
-      prisma.milestone.findUnique.mockResolvedValue(makeMilestone());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({
+          photos: [
+            makePhoto({ id: 'photo-1', path: 'milestones/a.jpg' }),
+            makePhoto({ id: 'photo-2', path: 'milestones/b.png', sortIndex: 1 }),
+          ],
+        }),
+      );
       prisma.milestone.delete.mockResolvedValue(makeMilestone());
 
       await service.remove(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID);
 
       expect(prisma.milestone.delete).toHaveBeenCalledWith({ where: { id: MILESTONE_ID } });
+      expect(photoStorage.delete).toHaveBeenCalledWith('milestones/a.jpg');
+      expect(photoStorage.delete).toHaveBeenCalledWith('milestones/b.png');
+    });
+
+    it('still succeeds and keeps deleting when one file cannot be removed (M-9)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({
+          photos: [
+            makePhoto({ id: 'photo-1', path: 'milestones/a.jpg' }),
+            makePhoto({ id: 'photo-2', path: 'milestones/b.png', sortIndex: 1 }),
+          ],
+        }),
+      );
+      prisma.milestone.delete.mockResolvedValue(makeMilestone());
+      photoStorage.delete.mockRejectedValueOnce(new Error('EACCES'));
+
+      await expect(service.remove(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID)).resolves.toBeUndefined();
+      // The failing file must not abort the cleanup of the remaining ones.
+      expect(photoStorage.delete).toHaveBeenCalledWith('milestones/b.png');
     });
 
     it('404s for a milestone from another child', async () => {
@@ -401,6 +460,150 @@ describe('MilestoneService', () => {
         NotFoundException,
       );
       expect(prisma.milestone.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addPhoto', () => {
+    it('writes the file before the row and assigns the next sort index (M-10)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({
+          photos: [
+            makePhoto({ id: 'photo-1', sortIndex: 0 }),
+            makePhoto({ id: 'photo-2', sortIndex: 4 }),
+          ],
+        }),
+      );
+      prisma.milestonePhoto.create.mockResolvedValue(
+        makePhoto({ id: 'photo-3', sortIndex: 5, path: 'milestones/milestone-1-new.jpg' }),
+      );
+
+      const result = await service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload());
+
+      expect(photoStorage.save).toHaveBeenCalledWith(
+        MILESTONE_ID,
+        'image/jpeg',
+        expect.any(Buffer),
+      );
+      expect(prisma.milestonePhoto.create).toHaveBeenCalledWith({
+        data: {
+          milestoneId: MILESTONE_ID,
+          path: 'milestones/milestone-1-new.jpg',
+          mimeType: 'image/jpeg',
+          // "highest existing + 1", not the row count — deleting from the
+          // middle must never make a later upload collide.
+          sortIndex: 5,
+        },
+      });
+      expect(result).toEqual({ id: 'photo-3', sortIndex: 5, mimeType: 'image/jpeg' });
+    });
+
+    it('starts at sort index 0 for the first photo', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [] }));
+      prisma.milestonePhoto.create.mockResolvedValue(makePhoto({ sortIndex: 0 }));
+
+      await service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload());
+
+      expect(prisma.milestonePhoto.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ sortIndex: 0 }) }),
+      );
+    });
+
+    it('rejects an eleventh photo with a machine-readable conflict (M-7)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({
+          photos: Array.from({ length: 10 }, (_unused, index) =>
+            makePhoto({ id: `photo-${index}`, sortIndex: index }),
+          ),
+        }),
+      );
+
+      await expect(
+        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload()),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({ code: 'MILESTONE_PHOTO_LIMIT_REACHED' }),
+      });
+      expect(photoStorage.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects a mime type the upload pipe should already have filtered out', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [] }));
+
+      await expect(
+        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload('application/pdf')),
+      ).rejects.toThrow('Unexpected photo mime type: application/pdf');
+      expect(photoStorage.save).not.toHaveBeenCalled();
+    });
+
+    it('404s for a milestone from another household', async () => {
+      prisma.child.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload()),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('getPhoto', () => {
+    it('returns the stored bytes and mime type', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({ photos: [makePhoto({ path: 'milestones/a.jpg' })] }),
+      );
+      photoStorage.read.mockResolvedValue(Buffer.from('bytes'));
+
+      const result = await service.getPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, 'photo-1');
+
+      expect(photoStorage.read).toHaveBeenCalledWith('milestones/a.jpg');
+      expect(result.mimeType).toBe('image/jpeg');
+      expect(result.buffer.toString()).toBe('bytes');
+    });
+
+    it('404s for a photo id that belongs to another milestone', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [makePhoto()] }));
+
+      await expect(
+        service.getPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, 'photo-from-elsewhere'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('404s when the row exists but the file is gone (drift)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [makePhoto()] }));
+      photoStorage.read.mockResolvedValue(null);
+
+      await expect(
+        service.getPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, 'photo-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('removePhoto', () => {
+    it('deletes the row first, then the file', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({ photos: [makePhoto({ path: 'milestones/a.jpg' })] }),
+      );
+      prisma.milestonePhoto.delete.mockResolvedValue(makePhoto());
+
+      await service.removePhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, 'photo-1');
+
+      expect(prisma.milestonePhoto.delete).toHaveBeenCalledWith({ where: { id: 'photo-1' } });
+      expect(photoStorage.delete).toHaveBeenCalledWith('milestones/a.jpg');
+    });
+
+    it('404s for an unknown photo id', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [] }));
+
+      await expect(
+        service.removePhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, 'photo-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.milestonePhoto.delete).not.toHaveBeenCalled();
     });
   });
 });

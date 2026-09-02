@@ -4,6 +4,7 @@ import { ChildModule } from '../child/child.module';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
 import { HouseholdModule } from '../household/household.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { MilestonePhotoStorageService } from './milestone-photo-storage.service';
 import { MilestoneController } from './milestone.controller';
 import { MilestoneService } from './milestone.service';
 
@@ -18,6 +19,6 @@ import { MilestoneService } from './milestone.service';
   // than relying on HouseholdModule's export: NestJS resolves a guard
   // referenced via `@UseGuards(GuardClass)` from the module declaring the
   // controller — same pattern as ChildModule/GrowthModule.
-  providers: [MilestoneService, HouseholdMembershipGuard],
+  providers: [MilestoneService, MilestonePhotoStorageService, HouseholdMembershipGuard],
 })
 export class MilestoneModule {}

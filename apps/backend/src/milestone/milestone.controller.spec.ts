@@ -36,7 +36,16 @@ const summary: MilestoneSummary = {
   photos: [],
 };
 
-const ROUTE_METHOD_NAMES = ['create', 'list', 'getOne', 'update', 'remove'] as const;
+const ROUTE_METHOD_NAMES = [
+  'create',
+  'list',
+  'getOne',
+  'update',
+  'remove',
+  'addPhoto',
+  'getPhoto',
+  'removePhoto',
+] as const;
 
 /** The `@UseGuards(...)` classes Nest recorded for one controller method. */
 function guardsOf(methodName: (typeof ROUTE_METHOD_NAMES)[number]): unknown[] {
@@ -46,7 +55,10 @@ function guardsOf(methodName: (typeof ROUTE_METHOD_NAMES)[number]): unknown[] {
 
 describe('MilestoneController', () => {
   let milestoneService: jest.Mocked<
-    Pick<MilestoneService, 'create' | 'list' | 'findOne' | 'update' | 'remove'>
+    Pick<
+      MilestoneService,
+      'create' | 'list' | 'findOne' | 'update' | 'remove' | 'addPhoto' | 'getPhoto' | 'removePhoto'
+    >
   >;
   let controller: MilestoneController;
 
@@ -57,6 +69,9 @@ describe('MilestoneController', () => {
       findOne: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
+      addPhoto: jest.fn(),
+      getPhoto: jest.fn(),
+      removePhoto: jest.fn(),
     };
     controller = new MilestoneController(milestoneService as unknown as MilestoneService);
   });
@@ -111,19 +126,68 @@ describe('MilestoneController', () => {
     expect(milestoneService.remove).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID);
   });
 
+  it('delegates a photo upload and answers with the new photo reference', async () => {
+    const photoRef = { id: 'photo-1', sortIndex: 0, mimeType: 'image/jpeg' };
+    milestoneService.addPhoto.mockResolvedValue(photoRef);
+    const upload = { mimetype: 'image/jpeg', buffer: Buffer.from('bytes') } as Express.Multer.File;
+
+    const result = await controller.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, upload);
+
+    expect(milestoneService.addPhoto).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      MILESTONE_ID,
+      upload,
+    );
+    expect(result).toBe(photoRef);
+  });
+
+  it('serves a photo with its stored content type', async () => {
+    milestoneService.getPhoto.mockResolvedValue({
+      buffer: Buffer.from('bytes'),
+      mimeType: 'image/png',
+    });
+    const res = { set: jest.fn() };
+
+    const result = await controller.getPhoto(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      MILESTONE_ID,
+      'photo-1',
+      res as never,
+    );
+
+    expect(res.set).toHaveBeenCalledWith({ 'Content-Type': 'image/png' });
+    expect(result.getStream()).toBeDefined();
+  });
+
+  it('delegates a single photo delete', async () => {
+    milestoneService.removePhoto.mockResolvedValue(undefined);
+
+    await expect(
+      controller.removePhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, 'photo-1'),
+    ).resolves.toBeUndefined();
+    expect(milestoneService.removePhoto).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      MILESTONE_ID,
+      'photo-1',
+    );
+  });
+
   describe('route metadata', () => {
-    it('answers DELETE with 204 No Content', () => {
-      expect(Reflect.getMetadata('__httpCode__', MilestoneController.prototype.remove)).toBe(204);
+    it.each(['remove', 'removePhoto'] as const)('answers DELETE %s with 204 No Content', (name) => {
+      expect(Reflect.getMetadata('__httpCode__', MilestoneController.prototype[name])).toBe(204);
     });
 
-    it.each(['create', 'update', 'remove'] as const)(
+    it.each(['create', 'update', 'remove', 'addPhoto', 'removePhoto'] as const)(
       'guards the write route %s with authentication, membership and CSRF',
       (methodName) => {
         expect(guardsOf(methodName)).toEqual([JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard]);
       },
     );
 
-    it.each(['list', 'getOne'] as const)(
+    it.each(['list', 'getOne', 'getPhoto'] as const)(
       'guards the read route %s with authentication and membership only',
       (methodName) => {
         expect(guardsOf(methodName)).toEqual([JwtAuthGuard, HouseholdMembershipGuard]);

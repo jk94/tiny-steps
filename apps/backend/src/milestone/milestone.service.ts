@@ -2,12 +2,16 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Child, Milestone, MilestonePhoto, Prisma } from '@prisma/client';
 import { ageInDaysAt } from '../common/age/age-in-days';
 import { ageInMonthsAt } from '../common/age/age-in-months';
+import { toAllowedPhotoMimeType } from '../common/photo/photo-upload';
+import { MAX_PHOTOS_PER_MILESTONE } from '../common/photo/photo.constants';
 import { PrismaService } from '../prisma/prisma.service';
+import { MilestonePhotoStorageService } from './milestone-photo-storage.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { MilestoneRangeQueryDto } from './dto/milestone-range-query.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
@@ -72,7 +76,12 @@ export interface MilestoneSummary {
  */
 @Injectable()
 export class MilestoneService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(MilestoneService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly photoStorage: MilestonePhotoStorageService,
+  ) {}
 
   async create(
     householdId: string,
@@ -211,10 +220,118 @@ export class MilestoneService {
     return toMilestoneSummary(updated, child, updated.photos);
   }
 
-  /** Hard delete; the photo rows go with it through the FK cascade. */
+  /**
+   * Hard delete. The photo rows go with the milestone through the FK cascade;
+   * the files on disk are then removed best-effort (M-9) — the DB is the
+   * authoritative state, so a filesystem error is logged and swallowed rather
+   * than failing an operation that has already committed. Same ordering as
+   * `ChildService.remove()`.
+   */
   async remove(householdId: string, childId: string, milestoneId: string): Promise<void> {
-    await this.findMilestoneOrThrow(householdId, childId, milestoneId);
+    const { milestone } = await this.findMilestoneOrThrow(householdId, childId, milestoneId);
+
     await this.prisma.milestone.delete({ where: { id: milestoneId } });
+
+    for (const photo of milestone.photos) {
+      // `photoStorage.delete()` already swallows filesystem errors, but this
+      // is a loop: one unexpected rejection must not skip the remaining files,
+      // and must never turn an already-committed delete into a failed request
+      // (M-9).
+      await this.photoStorage.delete(photo.path).catch((error: unknown) => {
+        this.logger.warn(
+          `Failed to delete milestone photo file "${photo.path}" (milestoneId=${milestoneId}): ${String(error)}`,
+        );
+      });
+    }
+  }
+
+  /**
+   * Appends one photo to a milestone (M-7).
+   *
+   * The file is written *before* the DB row is created, so a failed write
+   * never leaves a `MilestonePhoto` row pointing at nothing. The reverse case
+   * — write succeeds, insert fails — leaves an orphaned file, which is logged;
+   * orphan sweeping stays out of scope, exactly as in ADR-0003.
+   */
+  async addPhoto(
+    householdId: string,
+    childId: string,
+    milestoneId: string,
+    photo: Express.Multer.File,
+  ): Promise<MilestonePhotoRef> {
+    const { milestone } = await this.findMilestoneOrThrow(householdId, childId, milestoneId);
+
+    if (milestone.photos.length >= MAX_PHOTOS_PER_MILESTONE) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'MILESTONE_PHOTO_LIMIT_REACHED',
+        message: `A milestone can carry at most ${MAX_PHOTOS_PER_MILESTONE} photos`,
+      });
+    }
+
+    const mimeType = toAllowedPhotoMimeType(photo.mimetype);
+    // M-10: "current maximum + 1" rather than the row count, so deleting a
+    // photo from the middle can never make a later upload collide with an
+    // existing index.
+    const sortIndex =
+      milestone.photos.reduce((max, existing) => Math.max(max, existing.sortIndex), -1) + 1;
+
+    const path = await this.photoStorage.save(milestoneId, mimeType, photo.buffer);
+
+    try {
+      const created = await this.prisma.milestonePhoto.create({
+        data: { milestoneId, path, mimeType, sortIndex },
+      });
+      return { id: created.id, sortIndex: created.sortIndex, mimeType: created.mimeType };
+    } catch (error) {
+      this.logger.warn(
+        `Milestone photo insert failed after the file write succeeded; orphaned file at "${path}" (milestoneId=${milestoneId})`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Serves one photo's bytes (M-8). Buffers the whole (<=2MB) file into memory
+   * rather than streaming, so an async ENOENT after headers are already sent
+   * can't happen — same reasoning as `ChildService.getPhoto()`.
+   */
+  async getPhoto(
+    householdId: string,
+    childId: string,
+    milestoneId: string,
+    photoId: string,
+  ): Promise<{ buffer: Buffer; mimeType: string }> {
+    const photo = await this.findPhotoOrThrow(householdId, childId, milestoneId, photoId);
+
+    const buffer = await this.photoStorage.read(photo.path);
+    if (!buffer) {
+      // A stored row with no backing file — a normal 404 to the caller
+      // (indistinguishable from "no such photo"), but logged server-side since
+      // it indicates drift worth investigating.
+      this.logger.warn(
+        `Milestone photo ${photoId} has path "${photo.path}" set but the file is missing on disk`,
+      );
+      throw new NotFoundException();
+    }
+
+    return { buffer, mimeType: photo.mimeType };
+  }
+
+  /**
+   * Removes a single photo (M-9). The DB row goes first — that is the
+   * authoritative state change — and the file is then deleted best-effort.
+   */
+  async removePhoto(
+    householdId: string,
+    childId: string,
+    milestoneId: string,
+    photoId: string,
+  ): Promise<void> {
+    const photo = await this.findPhotoOrThrow(householdId, childId, milestoneId, photoId);
+
+    await this.prisma.milestonePhoto.delete({ where: { id: photoId } });
+    await this.photoStorage.delete(photo.path);
   }
 
   private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
@@ -239,6 +356,24 @@ export class MilestoneService {
       throw new NotFoundException();
     }
     return { milestone, child };
+  }
+
+  /**
+   * Resolves one photo through the full household -> child -> milestone chain,
+   * so a photo id from another household is a 404 rather than a leak (M-8).
+   */
+  private async findPhotoOrThrow(
+    householdId: string,
+    childId: string,
+    milestoneId: string,
+    photoId: string,
+  ): Promise<MilestonePhoto> {
+    const { milestone } = await this.findMilestoneOrThrow(householdId, childId, milestoneId);
+    const photo = milestone.photos.find((candidate) => candidate.id === photoId);
+    if (!photo) {
+      throw new NotFoundException();
+    }
+    return photo;
   }
 }
 
