@@ -148,8 +148,10 @@ describe('GrowthMeasurementForm', () => {
       const user = userEvent.setup();
       renderForm('create', onSubmit);
 
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      setDate(tomorrow);
+      // Two days out, not one: `.toISOString()` is UTC, so a single day added
+      // near local midnight west of UTC can still resolve to the local "today".
+      const future = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      setDate(future);
       setWeight('6.2');
       await user.click(screen.getByRole('button', { name: 'Save' }));
 
