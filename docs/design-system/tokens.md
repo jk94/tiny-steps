@@ -56,6 +56,13 @@ appear both here and in the Event-type table below.
 | `--color-diaper-stool-foreground` | `#ffffff` | `#1f2933` |
 | `--color-diaper-both` | `#0d9488` | `#2dd4bf` |
 | `--color-diaper-both-foreground` | `#000000` | `#1f2933` |
+| `--color-growth-weight` | `#4338ca` | `#818cf8` |
+| `--color-growth-weight-foreground` | `#ffffff` | `#1f2933` |
+| `--color-growth-length` | `#047857` | `#34d399` |
+| `--color-growth-length-foreground` | `#ffffff` | `#1f2933` |
+| `--color-growth-head-circumference` | `#a21caf` | `#e879f9` |
+| `--color-growth-head-circumference-foreground` | `#ffffff` | `#1f2933` |
+| `--color-growth-band` | `#4338ca` | `#818cf8` |
 
 ## Typography
 
