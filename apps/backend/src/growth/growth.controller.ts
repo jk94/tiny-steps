@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -64,13 +63,14 @@ export class GrowthController {
   // route matching would capture "reference" as the id param (same reason
   // FeedingController declares `active-timer` first).
   //
-  // The WHO tables are static, vendored data: the bands for a given
-  // (child, indicator) only change if the child's sex changes, so a day of
-  // private caching removes a ~250-point-per-curve payload from every tab
-  // switch without any staleness risk worth worrying about.
+  // Deliberately NOT HTTP-cached. The WHO tables themselves are static, but
+  // the response also depends on `Child.sex`: a parent who fills that in on
+  // the settings page must see percentile bands immediately, and a day-long
+  // `Cache-Control` would serve them the `available: false` body instead.
+  // React Query's `staleTime` already removes the per-tab-switch refetch,
+  // without surviving the change that invalidates it.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard)
   @Get('reference')
-  @Header('Cache-Control', 'private, max-age=86400')
   async getReference(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,

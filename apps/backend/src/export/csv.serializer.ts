@@ -8,7 +8,6 @@ import { RawExportRow } from './export.service';
  */
 const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'id',
-  'recordKind',
   'childId',
   'userId',
   'type',
@@ -20,7 +19,13 @@ const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'side',
   'amountMl',
   'diaperType',
-  // Growth-measurement columns, blank on event rows.
+  'note',
+  'createdAt',
+  'updatedAt',
+  // Appended in Phase 7.1, strictly after the original columns: a consumer
+  // that reads this CSV positionally keeps working, since nothing before this
+  // point moved. Blank on every event row.
+  'recordKind',
   'weightGrams',
   'lengthMillimeters',
   'headCircumferenceMillimeters',
@@ -28,9 +33,9 @@ const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'weightPercentile',
   'lengthPercentile',
   'headCircumferencePercentile',
-  'note',
-  'createdAt',
-  'updatedAt',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
 ];
 
 /**

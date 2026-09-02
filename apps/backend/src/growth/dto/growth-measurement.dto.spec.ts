@@ -11,8 +11,8 @@ import { LengthMeasurementPosition } from '../length-measurement-position.enum';
 import { CreateGrowthMeasurementDto } from './create-growth-measurement.dto';
 import { UpdateGrowthMeasurementDto } from './update-growth-measurement.dto';
 
-const MEASURED_AT = '2025-04-01T09:00:00.000Z';
-const ONE_HOUR_MS = 60 * 60 * 1000;
+const MEASURED_AT = '2025-04-01';
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Mirrors the global ValidationPipe's `transform: true` behaviour. */
 function failingProperties<T extends object>(
@@ -69,16 +69,34 @@ describe('CreateGrowthMeasurementDto', () => {
     ).toEqual(['lengthMillimeters', 'headCircumferenceMillimeters']);
   });
 
-  it('rejects a measurement timestamp in the future (W-5)', () => {
+  it('accepts today as a calendar day', () => {
     expect(
       failingProperties(CreateGrowthMeasurementDto, {
-        measuredAt: new Date(Date.now() + ONE_HOUR_MS).toISOString(),
+        measuredAt: new Date().toISOString().slice(0, 10),
+        weightGrams: 6400,
+      }),
+    ).toEqual([]);
+  });
+
+  it('rejects a calendar day in the future (W-5)', () => {
+    expect(
+      failingProperties(CreateGrowthMeasurementDto, {
+        measuredAt: new Date(Date.now() + 5 * ONE_DAY_MS).toISOString().slice(0, 10),
         weightGrams: 6400,
       }),
     ).toEqual(['measuredAt']);
   });
 
-  it('rejects a non-ISO measurement timestamp', () => {
+  it('rejects a full instant, which would make the stored day timezone-dependent', () => {
+    expect(
+      failingProperties(CreateGrowthMeasurementDto, {
+        measuredAt: '2025-04-01T09:00:00.000Z',
+        weightGrams: 6400,
+      }),
+    ).toEqual(['measuredAt']);
+  });
+
+  it('rejects a non-ISO measurement date', () => {
     expect(
       failingProperties(CreateGrowthMeasurementDto, {
         measuredAt: '01.04.2025',
@@ -143,6 +161,14 @@ describe('UpdateGrowthMeasurementDto', () => {
     expect(
       failingProperties(UpdateGrowthMeasurementDto, { weightGrams: MAX_WEIGHT_GRAMS + 1 }),
     ).toEqual(['weightGrams']);
+  });
+
+  it('rejects a full instant on update too', () => {
+    expect(
+      failingProperties(UpdateGrowthMeasurementDto, {
+        measuredAt: '2025-04-01T09:00:00.000Z',
+      }),
+    ).toEqual(['measuredAt']);
   });
 
   it('rejects an unknown field, matching the global whitelist pipe', () => {

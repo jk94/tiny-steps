@@ -53,7 +53,8 @@ interface GrowthMeasurementBody {
 
 const BIRTH_DATE = '2025-01-01T00:00:00.000Z';
 // 90 completed days after the birth date.
-const MEASURED_AT = '2025-04-01T09:00:00.000Z';
+// A bare calendar day, like `Child.birthDate` — 90 completed days after birth.
+const MEASURED_AT = '2025-04-01';
 
 describe('Growth measurements (e2e)', () => {
   const originalEnv = {
@@ -218,15 +219,15 @@ describe('Growth measurements (e2e)', () => {
     expect(listed.body).toHaveLength(1);
   });
 
-  it('lists several same-day measurements chronologically (W-6)', async () => {
+  it('allows several measurements on the same calendar day (W-6)', async () => {
     const owner = await registerUser('same-day');
     const { householdId, childId } = await createHouseholdWithChild(owner, { sex: 'FEMALE' });
 
     await post(owner, householdId, childId)
-      .send({ measuredAt: '2025-04-01T18:00:00.000Z', weightGrams: 6450 })
+      .send({ measuredAt: '2025-04-02', weightGrams: 6450 })
       .expect(201);
     await post(owner, householdId, childId)
-      .send({ measuredAt: '2025-04-01T09:00:00.000Z', weightGrams: 6400 })
+      .send({ measuredAt: '2025-04-01', weightGrams: 6400 })
       .expect(201);
 
     const listed = await request(app.getHttpServer())
@@ -238,15 +239,62 @@ describe('Growth measurements (e2e)', () => {
     expect(body.map((entry) => entry.weightGrams)).toEqual([6400, 6450]);
   });
 
+  it('accepts two measurements on the very same day (W-6)', async () => {
+    const owner = await registerUser('same-day-twice');
+    const { householdId, childId } = await createHouseholdWithChild(owner, { sex: 'FEMALE' });
+
+    await post(owner, householdId, childId)
+      .send({ measuredAt: MEASURED_AT, weightGrams: 6400 })
+      .expect(201);
+    await post(owner, householdId, childId)
+      .send({ measuredAt: MEASURED_AT, lengthMillimeters: 615 })
+      .expect(201);
+
+    const listed = await request(app.getHttpServer())
+      .get(growthUrl(householdId, childId))
+      .set('Cookie', owner.cookies)
+      .expect(200);
+    expect(listed.body).toHaveLength(2);
+  });
+
+  it('accepts a measurement taken on the birth date itself (W-5)', async () => {
+    const owner = await registerUser('birth-day');
+    const { householdId, childId } = await createHouseholdWithChild(owner, { sex: 'FEMALE' });
+
+    const created = await post(owner, householdId, childId)
+      .send({ measuredAt: BIRTH_DATE.slice(0, 10), weightGrams: 3400 })
+      .expect(201);
+
+    expect((created.body as GrowthMeasurementBody).ageInDaysAtMeasurement).toBe(0);
+  });
+
+  it("accepts today's calendar day, whatever the server's timezone", async () => {
+    const owner = await registerUser('today');
+    const { householdId, childId } = await createHouseholdWithChild(owner, { sex: 'FEMALE' });
+
+    await post(owner, householdId, childId)
+      .send({ measuredAt: new Date().toISOString().slice(0, 10), weightGrams: 9000 })
+      .expect(201);
+  });
+
+  it('rejects a full instant, so the stored day cannot drift by timezone', async () => {
+    const owner = await registerUser('instant');
+    const { householdId, childId } = await createHouseholdWithChild(owner, { sex: 'FEMALE' });
+
+    await post(owner, householdId, childId)
+      .send({ measuredAt: '2025-04-01T09:00:00.000Z', weightGrams: 6400 })
+      .expect(400);
+  });
+
   it('windows the list by from/to', async () => {
     const owner = await registerUser('range');
     const { householdId, childId } = await createHouseholdWithChild(owner, { sex: 'FEMALE' });
 
     await post(owner, householdId, childId)
-      .send({ measuredAt: '2025-02-01T09:00:00.000Z', weightGrams: 5000 })
+      .send({ measuredAt: '2025-02-01', weightGrams: 5000 })
       .expect(201);
     await post(owner, householdId, childId)
-      .send({ measuredAt: '2025-06-01T09:00:00.000Z', weightGrams: 7000 })
+      .send({ measuredAt: '2025-06-01', weightGrams: 7000 })
       .expect(201);
 
     const listed = await request(app.getHttpServer())
@@ -281,7 +329,7 @@ describe('Growth measurements (e2e)', () => {
     const { householdId, childId } = await createHouseholdWithChild(owner);
 
     await post(owner, householdId, childId)
-      .send({ measuredAt: '2024-11-01T09:00:00.000Z', weightGrams: 3200 })
+      .send({ measuredAt: '2024-11-01', weightGrams: 3200 })
       .expect(400);
   });
 
@@ -372,13 +420,40 @@ describe('Growth measurements (e2e)', () => {
       .set('Cookie', owner.cookies)
       .expect(200);
 
-    expect(response.headers['cache-control']).toBe('private, max-age=86400');
+    // Deliberately uncached: the body depends on `Child.sex`.
+    expect(response.headers['cache-control']).toBeUndefined();
     expect(response.body.available).toBe(true);
     expect(response.body.curves).toHaveLength(5);
     expect(response.body.curves.map((curve: { percentile: number }) => curve.percentile)).toEqual([
       3, 15, 50, 85, 97,
     ]);
     expect(response.body.lengthToHeightBoundaryDays).toBe(731);
+  });
+
+  it('serves the bands as soon as the sex is filled in, with no stale cached body', async () => {
+    const owner = await registerUser('reference-after-sex');
+    const { householdId, childId } = await createHouseholdWithChild(owner);
+
+    const before = await request(app.getHttpServer())
+      .get(growthUrl(householdId, childId, '/reference'))
+      .query({ indicator: 'WEIGHT_FOR_AGE' })
+      .set('Cookie', owner.cookies)
+      .expect(200);
+    expect(before.body.available).toBe(false);
+
+    await request(app.getHttpServer())
+      .patch(`/api/households/${householdId}/children/${childId}`)
+      .set('Cookie', owner.cookies)
+      .set(CSRF_HEADER_NAME, owner.csrfToken)
+      .field('sex', 'MALE')
+      .expect(200);
+
+    const after = await request(app.getHttpServer())
+      .get(growthUrl(householdId, childId, '/reference'))
+      .query({ indicator: 'WEIGHT_FOR_AGE' })
+      .set('Cookie', owner.cookies)
+      .expect(200);
+    expect(after.body.available).toBe(true);
   });
 
   it('reports the missing sex on the reference endpoint instead of guessing (W-10)', async () => {

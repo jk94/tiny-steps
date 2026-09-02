@@ -21,6 +21,24 @@ import {
  * the third consumer needing it — see those modules' git history for the
  * original per-module copies.
  */
+
+/** Matches a bare calendar day (`2026-09-02`), with no time or zone. */
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The largest UTC offset in civil use (UTC+14, Kiritimati). A date-only value
+ * is a *calendar day in the sender's local zone*, but `new Date('2026-09-02')`
+ * parses it as UTC midnight — so for a user far enough east, "today" is
+ * already a UTC instant in the future. Allowing this much slack means a
+ * date-only value is rejected only once it is in the future *everywhere on
+ * Earth*, which is the only interpretation that doesn't reject a legitimate
+ * "I measured this today" entry in Auckland or Kiritimati.
+ *
+ * The cost is at most one day of slack for users west of UTC+14, which the
+ * clients' own `max` attribute on the date input already prevents.
+ */
+const MAX_UTC_OFFSET_MS = 14 * 60 * 60 * 1000;
+
 @ValidatorConstraint({ name: 'isNotFutureDate', async: false })
 export class IsNotFutureDateConstraint implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
@@ -28,7 +46,14 @@ export class IsNotFutureDateConstraint implements ValidatorConstraintInterface {
       return false;
     }
     const date = new Date(value);
-    return !Number.isNaN(date.getTime()) && date.getTime() <= Date.now();
+    if (Number.isNaN(date.getTime())) {
+      return false;
+    }
+
+    const latestAcceptable = DATE_ONLY_PATTERN.test(value)
+      ? Date.now() + MAX_UTC_OFFSET_MS
+      : Date.now();
+    return date.getTime() <= latestAcceptable;
   }
 
   defaultMessage(args: ValidationArguments): string {

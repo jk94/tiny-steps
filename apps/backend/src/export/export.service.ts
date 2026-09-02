@@ -43,7 +43,6 @@ export const GROWTH_EXPORT_TYPE = 'GROWTH';
  */
 export interface RawExportRow {
   id: string;
-  recordKind: typeof RECORD_KIND_EVENT | typeof RECORD_KIND_GROWTH_MEASUREMENT;
   childId: string;
   userId: string;
   type: string;
@@ -57,10 +56,20 @@ export interface RawExportRow {
   side: string | null;
   amountMl: number | null;
   diaperType: string | null;
-  // Growth columns (null on event rows). Values are in the stored base units
-  // (grams / millimetres, W-3); the percentiles are computed with the very
-  // same pure function the API uses, so an exported number always matches
-  // what the app displayed.
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // --- Appended in roadmap Phase 7.1 -------------------------------------
+  // Deliberately at the END of the row, after the original columns: the CSV
+  // header is positional for consumers that already parse this export, so new
+  // columns are additive only if nothing before them shifts.
+  //
+  // `recordKind` discriminates the two kinds of record the flat array now
+  // holds; the rest are null on every event row. Values are in the stored base
+  // units (grams / millimetres, W-3). The percentiles come from the very same
+  // pure function the API uses, so an exported number always matches what the
+  // app displayed.
+  recordKind: typeof RECORD_KIND_EVENT | typeof RECORD_KIND_GROWTH_MEASUREMENT;
   weightGrams: number | null;
   lengthMillimeters: number | null;
   headCircumferenceMillimeters: number | null;
@@ -68,9 +77,9 @@ export interface RawExportRow {
   weightPercentile: number | null;
   lengthPercentile: number | null;
   headCircumferencePercentile: number | null;
-  note: string | null;
-  createdAt: string;
-  updatedAt: string;
+  weightZScore: number | null;
+  lengthZScore: number | null;
+  headCircumferenceZScore: number | null;
 }
 
 const MS_PER_SECOND = 1000;
@@ -152,7 +161,6 @@ function toRawExportRow(event: EventWithDetails): RawExportRow {
 
   return {
     id: event.id,
-    recordKind: RECORD_KIND_EVENT,
     childId: event.childId,
     userId: event.userId,
     type: event.type,
@@ -164,6 +172,10 @@ function toRawExportRow(event: EventWithDetails): RawExportRow {
     side: event.feedingDetail?.side ?? null,
     amountMl: event.feedingDetail?.amountMl ?? null,
     diaperType: event.diaperDetail?.diaperType ?? null,
+    note,
+    createdAt: event.createdAt.toISOString(),
+    updatedAt: event.updatedAt.toISOString(),
+    recordKind: RECORD_KIND_EVENT,
     weightGrams: null,
     lengthMillimeters: null,
     headCircumferenceMillimeters: null,
@@ -171,22 +183,52 @@ function toRawExportRow(event: EventWithDetails): RawExportRow {
     weightPercentile: null,
     lengthPercentile: null,
     headCircumferencePercentile: null,
-    note,
-    createdAt: event.createdAt.toISOString(),
-    updatedAt: event.updatedAt.toISOString(),
+    weightZScore: null,
+    lengthZScore: null,
+    headCircumferenceZScore: null,
   };
 }
 
-/** The percentile column each stored measurement value feeds. */
-const GROWTH_PERCENTILE_COLUMNS: Record<
+/**
+ * Precision of the derived classification columns.
+ *
+ * The percentile is rounded to a whole number, matching what the UI shows —
+ * an export reading `41.8` next to a screen reading `42` would look like two
+ * different numbers. The z-score keeps two decimals, the precision it is
+ * quoted with clinically and the reason it is exported alongside the
+ * percentile at all (they diverge sharply at the tails).
+ */
+const EXPORTED_PERCENTILE_DECIMALS = 0;
+const EXPORTED_Z_SCORE_DECIMALS = 2;
+
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+/** The derived columns each stored measurement value feeds. */
+const GROWTH_CLASSIFICATION_COLUMNS: Record<
   (typeof MEASUREMENT_VALUE_FIELDS)[number],
-  { indicator: GrowthIndicator; column: keyof RawExportRow }
+  {
+    indicator: GrowthIndicator;
+    percentileColumn: keyof RawExportRow;
+    zScoreColumn: keyof RawExportRow;
+  }
 > = {
-  weightGrams: { indicator: 'WEIGHT_FOR_AGE', column: 'weightPercentile' },
-  lengthMillimeters: { indicator: 'LENGTH_OR_HEIGHT_FOR_AGE', column: 'lengthPercentile' },
+  weightGrams: {
+    indicator: 'WEIGHT_FOR_AGE',
+    percentileColumn: 'weightPercentile',
+    zScoreColumn: 'weightZScore',
+  },
+  lengthMillimeters: {
+    indicator: 'LENGTH_OR_HEIGHT_FOR_AGE',
+    percentileColumn: 'lengthPercentile',
+    zScoreColumn: 'lengthZScore',
+  },
   headCircumferenceMillimeters: {
     indicator: 'HEAD_CIRCUMFERENCE_FOR_AGE',
-    column: 'headCircumferencePercentile',
+    percentileColumn: 'headCircumferencePercentile',
+    zScoreColumn: 'headCircumferenceZScore',
   },
 };
 
@@ -206,17 +248,30 @@ function toGrowthExportRow(measurement: GrowthMeasurement, child: Child): RawExp
     ? toLengthMeasurementPosition(measurement.lengthMeasurementPosition)
     : null;
 
-  const percentiles: Pick<
+  type ClassificationColumns = Pick<
     RawExportRow,
-    'weightPercentile' | 'lengthPercentile' | 'headCircumferencePercentile'
-  > = { weightPercentile: null, lengthPercentile: null, headCircumferencePercentile: null };
+    | 'weightPercentile'
+    | 'lengthPercentile'
+    | 'headCircumferencePercentile'
+    | 'weightZScore'
+    | 'lengthZScore'
+    | 'headCircumferenceZScore'
+  >;
+  const classification: ClassificationColumns = {
+    weightPercentile: null,
+    lengthPercentile: null,
+    headCircumferencePercentile: null,
+    weightZScore: null,
+    lengthZScore: null,
+    headCircumferenceZScore: null,
+  };
 
   for (const field of MEASUREMENT_VALUE_FIELDS) {
     const value = measurement[field];
     if (value === null) {
       continue;
     }
-    const { indicator, column } = GROWTH_PERCENTILE_COLUMNS[field];
+    const { indicator, percentileColumn, zScoreColumn } = GROWTH_CLASSIFICATION_COLUMNS[field];
     const outcome = computeGrowthPercentile({
       indicator,
       sex,
@@ -225,16 +280,22 @@ function toGrowthExportRow(measurement: GrowthMeasurement, child: Child): RawExp
       bodyMeasurePositionOverride: positionOverride,
     });
     if (outcome.status === 'COMPUTED') {
-      // An UNAVAILABLE classification (no sex on the profile, age past the
+      // An UNAVAILABLE classification (no sex on the profile, age outside the
       // reference range) stays an empty cell rather than a sentinel number —
       // the raw values next to it are what the export is really about.
-      percentiles[column as keyof typeof percentiles] = outcome.percentile;
+      classification[percentileColumn as keyof ClassificationColumns] = roundTo(
+        outcome.percentile,
+        EXPORTED_PERCENTILE_DECIMALS,
+      );
+      classification[zScoreColumn as keyof ClassificationColumns] = roundTo(
+        outcome.zScore,
+        EXPORTED_Z_SCORE_DECIMALS,
+      );
     }
   }
 
   return {
     id: measurement.id,
-    recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
     childId: measurement.childId,
     userId: measurement.userId,
     type: GROWTH_EXPORT_TYPE,
@@ -246,13 +307,14 @@ function toGrowthExportRow(measurement: GrowthMeasurement, child: Child): RawExp
     side: null,
     amountMl: null,
     diaperType: null,
+    note: measurement.note,
+    createdAt: measurement.createdAt.toISOString(),
+    updatedAt: measurement.updatedAt.toISOString(),
+    recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
     weightGrams: measurement.weightGrams,
     lengthMillimeters: measurement.lengthMillimeters,
     headCircumferenceMillimeters: measurement.headCircumferenceMillimeters,
     lengthMeasurementPosition: positionOverride,
-    ...percentiles,
-    note: measurement.note,
-    createdAt: measurement.createdAt.toISOString(),
-    updatedAt: measurement.updatedAt.toISOString(),
+    ...classification,
   };
 }

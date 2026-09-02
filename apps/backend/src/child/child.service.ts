@@ -94,7 +94,10 @@ export class ChildService {
           householdId,
           name: dto.name,
           birthDate: new Date(dto.birthDate),
-          sex: dto.sex ?? null,
+          // The empty string is the multipart wire form of "not specified";
+          // normalised to a NULL column so nothing downstream has to know
+          // about the sentinel (see `CLEAR_CHILD_SEX`).
+          sex: dto.sex ? dto.sex : null,
           photoPath,
           photoMimeType,
         },

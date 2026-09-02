@@ -52,7 +52,10 @@ export type GrowthPercentileOutcome =
       percentile: number;
       referenceUsed: BodyMeasureReference | null;
     }
-  | { status: 'UNAVAILABLE'; reason: 'CHILD_SEX_NOT_SET' | 'AGE_ABOVE_REFERENCE_RANGE' };
+  | {
+      status: 'UNAVAILABLE';
+      reason: 'CHILD_SEX_NOT_SET' | 'AGE_BELOW_REFERENCE_RANGE' | 'AGE_ABOVE_REFERENCE_RANGE';
+    };
 
 /** Unit conversions between this app's integer base units and the WHO tables. */
 const GRAMS_PER_KILOGRAM = 1000;
@@ -142,50 +145,58 @@ function lmsPointAt(points: LmsPoint[], ageInDays: number): LmsPoint {
   return points[Math.min(Math.max(index, 0), points.length - 1)];
 }
 
-/** True when `points`' age axis actually contains `ageInDays`. */
-function covers(points: LmsPoint[], ageInDays: number): boolean {
-  const roundedAge = Math.round(ageInDays);
-  return roundedAge >= points[0].ageInDays && roundedAge <= points[points.length - 1].ageInDays;
-}
-
 /**
- * Picks the body-measure LMS rows for one measurement.
+ * WHO's recumbent↔standing correction. A child measured lying down reads about
+ * 0.7 cm taller than the same child measured standing, so a measurement taken
+ * in the position the age-appropriate reference does *not* assume has to be
+ * converted before it can be scored.
  *
- * WHO publishes length-for-age and height-for-age as two age-disjoint halves
- * of a single table (0–730 days recumbent, 731–1826 days standing) — there is
- * no published "height at 400 days" or "length at 1200 days" row. So when a
- * manual position override (W-18) points at the half that does not cover the
- * child's age, the score is necessarily read from the half that does; the
- * override still determines the measurement method reported to the UI (W-19).
- *
- * WHO's own algorithm bridges that gap with a ±0.7 cm cross-adjustment of the
- * measured value. This app deliberately does not apply it (see
- * `reference-data/README.md`), so an out-of-range override is informational
- * only rather than silently scoring a three-year-old against a two-year-old
- * reference row.
+ * Expressed in millimetres because that is this app's base unit for body
+ * measures; converted to the table's centimetres alongside the value itself.
  */
-function bodyMeasurePoints(
-  sexKey: 'male' | 'female',
-  ageInDays: number,
-  referenceUsed: BodyMeasureReference,
-): LmsPoint[] {
-  const requested =
-    referenceUsed === 'LENGTH'
-      ? LENGTH_HEIGHT_FOR_AGE[sexKey].length
-      : LENGTH_HEIGHT_FOR_AGE[sexKey].height;
-  if (covers(requested, ageInDays)) {
-    return requested;
-  }
-  return referenceUsed === 'LENGTH'
-    ? LENGTH_HEIGHT_FOR_AGE[sexKey].height
-    : LENGTH_HEIGHT_FOR_AGE[sexKey].length;
-}
+const LENGTH_HEIGHT_ADJUSTMENT_MM = 7;
 
 interface IndicatorLookup {
   points: LmsPoint[];
   referenceUsed: BodyMeasureReference | null;
   /** Divisor turning this app's integer base unit into the table's unit. */
   baseUnitsPerTableUnit: number;
+  /**
+   * Added to the measured value (in base units) before scoring, to convert a
+   * measurement taken in one position into the position the reference assumes.
+   * Zero for every case except a manual override that contradicts the age.
+   */
+  valueAdjustmentInBaseUnit: number;
+}
+
+/**
+ * The WHO cross-adjustment for one measurement, in base units (W-17/W-18).
+ *
+ * `lenanthro.txt` is a single age axis whose rows are flagged recumbent up to
+ * day 730 and standing from day 731, so the reference row is always the one
+ * covering the child's age — an override cannot select a different row. What it
+ * *does* change is which position the value is assumed to have been taken in,
+ * and that is corrected here:
+ *
+ * - measured lying down at ≥ 24 months (reference assumes standing) → subtract
+ * - measured standing at < 24 months (reference assumes recumbent) → add
+ *
+ * Without this the override would be purely cosmetic; with it, the percentile
+ * of a 3-year-old measured lying down is actually right.
+ */
+function bodyMeasureAdjustment(
+  ageInDays: number,
+  override: LengthMeasurementPositionValue | null,
+): number {
+  if (override === null) {
+    return 0;
+  }
+  const ageDerived = resolveBodyMeasureReference(ageInDays, null);
+  const measured = resolveBodyMeasureReference(ageInDays, override);
+  if (measured === ageDerived) {
+    return 0;
+  }
+  return measured === 'LENGTH' ? -LENGTH_HEIGHT_ADJUSTMENT_MM : LENGTH_HEIGHT_ADJUSTMENT_MM;
 }
 
 function resolveIndicatorLookup(
@@ -202,25 +213,30 @@ function resolveIndicatorLookup(
         points: WEIGHT_FOR_AGE[sexKey],
         referenceUsed: null,
         baseUnitsPerTableUnit: GRAMS_PER_KILOGRAM,
+        valueAdjustmentInBaseUnit: 0,
       };
     case 'HEAD_CIRCUMFERENCE_FOR_AGE':
       return {
         points: HEAD_CIRCUMFERENCE_FOR_AGE[sexKey],
         referenceUsed: null,
         baseUnitsPerTableUnit: MILLIMETRES_PER_CENTIMETRE,
+        valueAdjustmentInBaseUnit: 0,
       };
     case 'LENGTH_OR_HEIGHT_FOR_AGE': {
-      const referenceUsed = resolveBodyMeasureReference(ageInDays, bodyMeasurePositionOverride);
-      // Deliberately NO WHO +-0.7 cm length/height cross-adjustment when the
-      // chosen reference contradicts the age (W-18 explicitly allows that
-      // combination): the measured value is compared to the reference as
-      // entered, so the displayed percentile always reconciles with the number
-      // the parent typed in. See reference-data/README.md and
-      // `bodyMeasurePoints`.
+      // The reference row is always the one covering the child's age — the two
+      // halves of `lenanthro.txt` are age-disjoint, so an override cannot pick
+      // a different row. It instead corrects the *value* (see
+      // `bodyMeasureAdjustment`), while `referenceUsed` keeps reporting the
+      // method the user chose (W-19).
+      const ageRow = resolveBodyMeasureReference(ageInDays, null);
       return {
-        points: bodyMeasurePoints(sexKey, ageInDays, referenceUsed),
-        referenceUsed,
+        points:
+          ageRow === 'LENGTH'
+            ? LENGTH_HEIGHT_FOR_AGE[sexKey].length
+            : LENGTH_HEIGHT_FOR_AGE[sexKey].height,
+        referenceUsed: resolveBodyMeasureReference(ageInDays, bodyMeasurePositionOverride),
         baseUnitsPerTableUnit: MILLIMETRES_PER_CENTIMETRE,
+        valueAdjustmentInBaseUnit: bodyMeasureAdjustment(ageInDays, bodyMeasurePositionOverride),
       };
     }
   }
@@ -233,10 +249,12 @@ function resolveIndicatorLookup(
  * mapping is not defined:
  * - no sex on the child profile (W-10) — a sex-neutral default would silently
  *   fabricate a classification, which is exactly what the requirement forbids;
- * - age past the end of the 0–5y standards (W-11).
+ * - age outside the 0–5y standards in either direction (W-11).
  *
- * An age *below* zero is not handled here — `GrowthService` rejects a
- * measurement before the birth date outright (W-5).
+ * The lower bound matters even though `GrowthService` rejects a measurement
+ * before the birth date (W-5): this is a pure function reused by the export and
+ * by tests, and a negative age would otherwise be silently clamped to day 0 and
+ * produce a confident, wrong percentile.
  */
 export function computeGrowthPercentile(params: {
   indicator: GrowthIndicator;
@@ -251,6 +269,9 @@ export function computeGrowthPercentile(params: {
   if (sex === null) {
     return { status: 'UNAVAILABLE', reason: 'CHILD_SEX_NOT_SET' };
   }
+  if (ageInDays < REFERENCE_MIN_AGE_DAYS) {
+    return { status: 'UNAVAILABLE', reason: 'AGE_BELOW_REFERENCE_RANGE' };
+  }
   if (ageInDays > REFERENCE_MAX_AGE_DAYS) {
     return { status: 'UNAVAILABLE', reason: 'AGE_ABOVE_REFERENCE_RANGE' };
   }
@@ -262,7 +283,8 @@ export function computeGrowthPercentile(params: {
     params.bodyMeasurePositionOverride ?? null,
   );
   const point = lmsPointAt(lookup.points, ageInDays);
-  const valueInTableUnit = valueInBaseUnit / lookup.baseUnitsPerTableUnit;
+  const valueInTableUnit =
+    (valueInBaseUnit + lookup.valueAdjustmentInBaseUnit) / lookup.baseUnitsPerTableUnit;
   const zScore = zScoreFromLms(valueInTableUnit, point);
 
   return {
@@ -276,7 +298,11 @@ export function computeGrowthPercentile(params: {
 /**
  * The LMS row a measurement would be scored against, exposed for the
  * reference-band endpoint so it samples exactly the same grid points the
- * percentile computation uses. Returns `null` past the reference range.
+ * percentile computation uses.
+ *
+ * Deliberately does not surface `valueAdjustmentInBaseUnit`: the bands are
+ * drawn for an age axis, not for one measurement, so `getReference` calls this
+ * without an override and the WHO cross-adjustment is always zero there.
  */
 export function lmsPointForIndicator(params: {
   indicator: GrowthIndicator;

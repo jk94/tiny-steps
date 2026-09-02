@@ -158,15 +158,12 @@ describe('GrowthController', () => {
       },
     );
 
-    it('caches the static reference bands for a day', () => {
-      const headers = Reflect.getMetadata(
-        '__headers__',
-        GrowthController.prototype.getReference,
-      ) as { name: string; value: string }[];
-      expect(headers).toContainEqual({
-        name: 'Cache-Control',
-        value: 'private, max-age=86400',
-      });
+    it('sets no Cache-Control on the reference bands', () => {
+      // The response depends on `Child.sex`, so an HTTP cache would keep
+      // serving `available: false` after a parent fills that field in.
+      expect(
+        Reflect.getMetadata('__headers__', GrowthController.prototype.getReference),
+      ).toBeUndefined();
     });
 
     // Deliberate: no route requires a specific household role — both OWNER and

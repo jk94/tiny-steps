@@ -214,6 +214,31 @@ describe('computeGrowthPercentile', () => {
       ).toEqual({ status: 'UNAVAILABLE', reason: 'AGE_ABOVE_REFERENCE_RANGE' });
     });
 
+    it.each([-1, -5, -31])('reports day %i as below the range', (ageInDays) => {
+      // Reachable through the export and other pure-function callers even
+      // though the service rejects a pre-birth measurement (W-5); clamping to
+      // day 0 would produce a confident, wrong percentile.
+      expect(
+        computeGrowthPercentile({
+          indicator: 'WEIGHT_FOR_AGE',
+          sex: 'MALE',
+          ageInDays,
+          valueInBaseUnit: 3400,
+        }),
+      ).toEqual({ status: 'UNAVAILABLE', reason: 'AGE_BELOW_REFERENCE_RANGE' });
+    });
+
+    it('still computes on the first day inside the range', () => {
+      expect(
+        computeGrowthPercentile({
+          indicator: 'WEIGHT_FOR_AGE',
+          sex: 'MALE',
+          ageInDays: 0,
+          valueInBaseUnit: 3400,
+        }).status,
+      ).toBe('COMPUTED');
+    });
+
     it('still computes on the last day inside the range', () => {
       expect(
         computeGrowthPercentile({
@@ -252,57 +277,107 @@ describe('resolveBodyMeasureReference (W-17 / W-18)', () => {
     expect(resolveBodyMeasureReference(1200, 'LYING')).toBe('LENGTH');
   });
 
-  it('reports the overridden reference without scoring against an out-of-range age', () => {
-    // WHO publishes length-for-age and height-for-age as two age-disjoint
-    // halves of one table, so "length at 800 days" has no published LMS row.
-    // The override therefore changes the reported measurement method (W-19)
-    // but must not silently score an almost-2.5-year-old against the last
-    // available 730-day length row.
-    const params = {
-      indicator: 'LENGTH_OR_HEIGHT_FOR_AGE' as const,
-      sex: 'MALE' as const,
-      ageInDays: 800,
-      valueInBaseUnit: 860,
-    };
+  describe('the WHO recumbent/standing cross-adjustment', () => {
+    it('subtracts 0.7 cm for a 26-month-old measured lying down', () => {
+      // Age 800 days: the reference row assumes standing height, but the child
+      // was measured lying down, which reads about 0.7 cm taller.
+      const params = {
+        indicator: 'LENGTH_OR_HEIGHT_FOR_AGE' as const,
+        sex: 'MALE' as const,
+        ageInDays: 800,
+        valueInBaseUnit: 860,
+      };
 
-    const auto = computeGrowthPercentile(params);
-    const overridden = computeGrowthPercentile({
-      ...params,
-      bodyMeasurePositionOverride: 'LYING',
+      const auto = computeGrowthPercentile(params);
+      const overridden = computeGrowthPercentile({
+        ...params,
+        bodyMeasurePositionOverride: 'LYING',
+      });
+
+      // The reported method follows the user's choice (W-19)...
+      expect(auto).toMatchObject({ status: 'COMPUTED', referenceUsed: 'HEIGHT' });
+      expect(overridden).toMatchObject({ status: 'COMPUTED', referenceUsed: 'LENGTH' });
+      if (auto.status !== 'COMPUTED' || overridden.status !== 'COMPUTED') {
+        return;
+      }
+      // ...and the score genuinely differs, rather than the override being
+      // cosmetic.
+      expect(overridden.zScore).toBeLessThan(auto.zScore);
+      expect(overridden.zScore).toBeCloseTo(
+        zScoreFromLms(
+          85.3,
+          LENGTH_HEIGHT_FOR_AGE.male.height[800 - LENGTH_TO_HEIGHT_BOUNDARY_DAYS],
+        ),
+        10,
+      );
     });
 
-    expect(auto).toMatchObject({ status: 'COMPUTED', referenceUsed: 'HEIGHT' });
-    expect(overridden).toMatchObject({ status: 'COMPUTED', referenceUsed: 'LENGTH' });
-    if (auto.status !== 'COMPUTED' || overridden.status !== 'COMPUTED') {
-      return;
-    }
-    expect(overridden.zScore).toBeCloseTo(auto.zScore, 10);
-    expect(overridden.zScore).toBeCloseTo(
-      zScoreFromLms(86, LENGTH_HEIGHT_FOR_AGE.male.height[800 - LENGTH_TO_HEIGHT_BOUNDARY_DAYS]),
-      10,
-    );
-  });
+    it('adds 0.7 cm for a 20-month-old measured standing', () => {
+      const params = {
+        indicator: 'LENGTH_OR_HEIGHT_FOR_AGE' as const,
+        sex: 'FEMALE' as const,
+        ageInDays: 600,
+        valueInBaseUnit: 800,
+      };
 
-  it('uses the age-appropriate reference row when the override matches the age', () => {
-    const params = {
-      indicator: 'LENGTH_OR_HEIGHT_FOR_AGE' as const,
-      sex: 'FEMALE' as const,
-      ageInDays: 400,
-      valueInBaseUnit: 720,
-    };
+      const auto = computeGrowthPercentile(params);
+      const overridden = computeGrowthPercentile({
+        ...params,
+        bodyMeasurePositionOverride: 'STANDING',
+      });
 
-    const outcome = computeGrowthPercentile({
-      ...params,
-      bodyMeasurePositionOverride: 'LYING',
+      expect(auto).toMatchObject({ status: 'COMPUTED', referenceUsed: 'LENGTH' });
+      expect(overridden).toMatchObject({ status: 'COMPUTED', referenceUsed: 'HEIGHT' });
+      if (auto.status !== 'COMPUTED' || overridden.status !== 'COMPUTED') {
+        return;
+      }
+      expect(overridden.zScore).toBeGreaterThan(auto.zScore);
+      expect(overridden.zScore).toBeCloseTo(
+        zScoreFromLms(80.7, LENGTH_HEIGHT_FOR_AGE.female.length[600]),
+        10,
+      );
     });
 
-    expect(outcome).toMatchObject({ status: 'COMPUTED', referenceUsed: 'LENGTH' });
-    if (outcome.status !== 'COMPUTED') {
-      return;
-    }
-    expect(outcome.zScore).toBeCloseTo(
-      zScoreFromLms(72, LENGTH_HEIGHT_FOR_AGE.female.length[400]),
-      10,
-    );
+    it('applies no adjustment when the override agrees with the age', () => {
+      const params = {
+        indicator: 'LENGTH_OR_HEIGHT_FOR_AGE' as const,
+        sex: 'FEMALE' as const,
+        ageInDays: 400,
+        valueInBaseUnit: 720,
+      };
+
+      const auto = computeGrowthPercentile(params);
+      const overridden = computeGrowthPercentile({
+        ...params,
+        bodyMeasurePositionOverride: 'LYING',
+      });
+
+      expect(overridden).toMatchObject({ status: 'COMPUTED', referenceUsed: 'LENGTH' });
+      if (auto.status !== 'COMPUTED' || overridden.status !== 'COMPUTED') {
+        return;
+      }
+      expect(overridden.zScore).toBeCloseTo(auto.zScore, 10);
+      expect(overridden.zScore).toBeCloseTo(
+        zScoreFromLms(72, LENGTH_HEIGHT_FOR_AGE.female.length[400]),
+        10,
+      );
+    });
+
+    it('applies no adjustment at all without an override', () => {
+      const withoutOverride = computeGrowthPercentile({
+        indicator: 'LENGTH_OR_HEIGHT_FOR_AGE',
+        sex: 'MALE',
+        ageInDays: 1000,
+        valueInBaseUnit: 900,
+      });
+
+      if (withoutOverride.status !== 'COMPUTED') {
+        throw new Error('expected a computed outcome');
+      }
+      expect(withoutOverride.zScore).toBeCloseTo(
+        zScoreFromLms(90, LENGTH_HEIGHT_FOR_AGE.male.height[1000 - LENGTH_TO_HEIGHT_BOUNDARY_DAYS]),
+        10,
+      );
+    });
   });
 });

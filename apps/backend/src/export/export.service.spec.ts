@@ -35,6 +35,7 @@ function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
 
 /** Empty growth columns, spread into every expected event row. */
 const NO_GROWTH_COLUMNS = {
+  recordKind: RECORD_KIND_EVENT,
   weightGrams: null,
   lengthMillimeters: null,
   headCircumferenceMillimeters: null,
@@ -42,6 +43,9 @@ const NO_GROWTH_COLUMNS = {
   weightPercentile: null,
   lengthPercentile: null,
   headCircumferencePercentile: null,
+  weightZScore: null,
+  lengthZScore: null,
+  headCircumferenceZScore: null,
 };
 
 function makeGrowthMeasurement(overrides: Partial<Record<string, unknown>> = {}) {
@@ -235,7 +239,6 @@ describe('ExportService', () => {
 
     expect(row).toEqual({
       id: 'feeding-1',
-      recordKind: RECORD_KIND_EVENT,
       childId: CHILD_ID,
       userId: USER_ID,
       type: EventType.FEEDING,
@@ -247,10 +250,10 @@ describe('ExportService', () => {
       side: FeedingSide.LEFT,
       amountMl: null,
       diaperType: null,
-      ...NO_GROWTH_COLUMNS,
       note: 'good latch',
       createdAt: '2026-01-01T08:00:00.000Z',
       updatedAt: '2026-01-01T08:16:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -262,7 +265,6 @@ describe('ExportService', () => {
 
     expect(row).toEqual({
       id: 'sleep-1',
-      recordKind: RECORD_KIND_EVENT,
       childId: CHILD_ID,
       userId: USER_ID,
       type: EventType.SLEEP,
@@ -274,10 +276,10 @@ describe('ExportService', () => {
       side: null,
       amountMl: null,
       diaperType: null,
-      ...NO_GROWTH_COLUMNS,
       note: null,
       createdAt: '2026-01-01T09:00:00.000Z',
       updatedAt: '2026-01-01T10:00:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -289,7 +291,6 @@ describe('ExportService', () => {
 
     expect(row).toEqual({
       id: 'diaper-1',
-      recordKind: RECORD_KIND_EVENT,
       childId: CHILD_ID,
       userId: USER_ID,
       type: EventType.DIAPER,
@@ -301,10 +302,10 @@ describe('ExportService', () => {
       side: null,
       amountMl: null,
       diaperType: DiaperType.BOTH,
-      ...NO_GROWTH_COLUMNS,
       note: 'soft',
       createdAt: '2026-01-01T07:00:00.000Z',
       updatedAt: '2026-01-01T07:00:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -362,6 +363,32 @@ describe('ExportService', () => {
       expect(row.headCircumferencePercentile).not.toBeNull();
     });
 
+    it('rounds the percentile to whole numbers and the z-score to two decimals', () => {
+      // The exported percentile must read the same as the one on screen, and
+      // the z-score is only useful at the precision it is quoted with.
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      return service.getRawEvents(HOUSEHOLD_ID, CHILD_ID).then(([row]) => {
+        expect(row.weightPercentile).toBe(Math.round(row.weightPercentile as number));
+        expect(row.weightZScore).toBeCloseTo(
+          Math.round((row.weightZScore as number) * 100) / 100,
+          10,
+        );
+      });
+    });
+
+    it('exports the z-score alongside the percentile (W-9)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(typeof row.weightZScore).toBe('number');
+      expect(typeof row.lengthZScore).toBe('number');
+      expect(typeof row.headCircumferenceZScore).toBe('number');
+    });
+
     it('carries the stored measurement-method override', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.growthMeasurement.findMany.mockResolvedValue([
@@ -383,6 +410,7 @@ describe('ExportService', () => {
       expect(row.weightPercentile).toBeNull();
       expect(row.lengthPercentile).toBeNull();
       expect(row.headCircumferencePercentile).toBeNull();
+      expect(row.weightZScore).toBeNull();
     });
 
     it('leaves the percentile column of an absent value empty', async () => {

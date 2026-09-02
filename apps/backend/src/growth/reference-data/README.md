@@ -82,22 +82,28 @@ The generator is deterministic: running it twice produces byte-identical
 output. Commit the regenerated `*.data.ts` files together with any change to
 `source/*.txt`.
 
-## Deliberate simplification: no length/height cross-adjustment
+## The recumbent↔standing cross-adjustment
 
-WHO's own algorithm adds/subtracts 0.7 cm when a child is measured in a
-position that does not match the position the reference assumes (lying down
-after 24 months, or standing before 24 months). This app deliberately **does
-not** apply that adjustment: the raw measured value is compared to the
-reference as entered. Applying a silent ±0.7 cm correction on top of a value
-the parent explicitly typed in would make the displayed percentile impossible
-to reconcile with the entered number.
+`lenanthro.txt` is **one** table whose age axis is partitioned by the `loh`
+flag — there is no published "height at 400 days" or "length at 1200 days" row.
+The LMS row used to score a body measure is therefore always the one covering
+the child's age.
 
-A consequence worth spelling out: `lenanthro.txt` is **one** table whose age
-axis is partitioned by the `loh` flag — there is no published "height at 400
-days" or "length at 1200 days" row. So a manual position override (W-18) that
-contradicts the age changes the *reported measurement method* (W-19) but not
-the LMS row used, which is always the one covering the child's actual age.
-Without the ±0.7 cm adjustment there is nothing else the override could
-legitimately change; the alternative — reusing the last in-range row of the
-other half — would score a three-year-old against a two-year-old reference.
-See `bodyMeasurePoints` in `../percentiles/growth-percentiles.ts`.
+What the manual position override (W-18) changes is the *value*: WHO's own
+algorithm converts a measurement taken in the position the age-appropriate
+reference does not assume, because a child measured lying down reads about
+0.7 cm taller than the same child measured standing.
+
+- measured lying down at ≥ 24 months → subtract 7 mm before scoring
+- measured standing at < 24 months → add 7 mm before scoring
+
+This app applies that correction (`LENGTH_HEIGHT_ADJUSTMENT_MM` in
+`../percentiles/growth-percentiles.ts`). Without it the override would be
+purely cosmetic — it could not change the reference row, so it would change
+nothing at all. The measurement itself is stored and displayed exactly as
+entered; only the scoring input is corrected, and the UI states which method
+was used (W-19) so the percentile can still be reconciled with the number.
+
+The reference bands are unaffected: they are drawn for an age axis rather than
+for a single measurement, so `getReference` evaluates the LMS rows without any
+override and therefore without any adjustment.

@@ -11,8 +11,10 @@ const USER_ID = 'user-1';
 const MEASUREMENT_ID = 'measurement-1';
 
 const BIRTH_DATE = new Date('2025-01-01T00:00:00.000Z');
-// 90 completed days after birth.
-const MEASURED_AT = new Date('2025-04-01T09:00:00.000Z');
+// A bare calendar day parsed to UTC midnight, exactly like `Child.birthDate`
+// — 90 completed days after birth.
+const MEASURED_AT_DAY = '2025-04-01';
+const MEASURED_AT = new Date(MEASURED_AT_DAY);
 
 function makeChild(overrides: Record<string, unknown> = {}) {
   return {
@@ -78,7 +80,7 @@ describe('GrowthService', () => {
       prisma.growthMeasurement.create.mockResolvedValue(makeGrowthMeasurement());
 
       const result = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: MEASURED_AT.toISOString(),
+        measuredAt: MEASURED_AT_DAY,
         weightGrams: 6400,
         lengthMillimeters: 615,
         headCircumferenceMillimeters: 405,
@@ -106,7 +108,7 @@ describe('GrowthService', () => {
       prisma.growthMeasurement.create.mockResolvedValue(makeGrowthMeasurement());
 
       const result = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: MEASURED_AT.toISOString(),
+        measuredAt: MEASURED_AT_DAY,
         weightGrams: 6400,
       });
 
@@ -129,7 +131,7 @@ describe('GrowthService', () => {
       );
 
       const result = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: MEASURED_AT.toISOString(),
+        measuredAt: MEASURED_AT_DAY,
         weightGrams: 6400,
       });
 
@@ -144,7 +146,7 @@ describe('GrowthService', () => {
 
       await expect(
         service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-          measuredAt: '2024-12-31T23:00:00.000Z',
+          measuredAt: '2024-12-31',
           weightGrams: 3400,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -158,11 +160,11 @@ describe('GrowthService', () => {
         .mockResolvedValueOnce(makeGrowthMeasurement({ id: 'measurement-2', weightGrams: 6450 }));
 
       const first = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: '2025-04-01T09:00:00.000Z',
+        measuredAt: MEASURED_AT_DAY,
         weightGrams: 6400,
       });
       const second = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: '2025-04-01T18:00:00.000Z',
+        measuredAt: MEASURED_AT_DAY,
         weightGrams: 6450,
       });
 
@@ -175,7 +177,7 @@ describe('GrowthService', () => {
 
       await expect(
         service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-          measuredAt: MEASURED_AT.toISOString(),
+          measuredAt: MEASURED_AT_DAY,
           weightGrams: 6400,
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
@@ -188,7 +190,7 @@ describe('GrowthService', () => {
       prisma.growthMeasurement.create.mockResolvedValue(makeGrowthMeasurement());
 
       const result = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: MEASURED_AT.toISOString(),
+        measuredAt: MEASURED_AT_DAY,
         weightGrams: 6400,
       });
 
@@ -208,7 +210,7 @@ describe('GrowthService', () => {
       prisma.growthMeasurement.create.mockResolvedValue(makeGrowthMeasurement({ measuredAt }));
 
       const result = await service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
-        measuredAt: measuredAt.toISOString(),
+        measuredAt: measuredAt.toISOString().slice(0, 10),
         weightGrams: 20000,
       });
 
@@ -365,7 +367,7 @@ describe('GrowthService', () => {
     it('rejects moving a measurement before the child birth date (W-5)', async () => {
       await expect(
         service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
-          measuredAt: '2024-06-01T00:00:00.000Z',
+          measuredAt: '2024-06-01',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.growthMeasurement.update).not.toHaveBeenCalled();

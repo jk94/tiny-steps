@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/validators/is-date-only.validator';
 import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
 import {
   MAX_HEAD_CIRCUMFERENCE_MILLIMETERS,
@@ -29,12 +30,19 @@ import { AtLeastOneMeasurementValue } from '../validators/at-least-one-measureme
  * are a frontend concern; the API deliberately never accepts floats, so a
  * value cannot drift through rounding on the way in.
  *
+ * `measuredAt` is a bare calendar day (`YYYY-MM-DD`), not an instant: W-1 asks
+ * for "a timestamp (date, no forced time-of-day)", and a measurement is
+ * recorded from a paper record, not clocked. Stored the same way
+ * `Child.birthDate` is — parsed to UTC midnight — so the two can be compared
+ * as calendar days without any timezone reasoning.
+ *
  * The "not before the child's birth date" half of W-5 is *not* checked here:
  * this DTO has no access to the child. `GrowthService.create` enforces it.
  */
 export class CreateGrowthMeasurementDto {
   // `@AtLeastOneMeasurementValue` (W-1) is attached to this required field on
   // purpose — see the validator's doc comment.
+  @IsDateOnly()
   @IsISO8601({ strict: true })
   @IsNotFutureDate()
   @AtLeastOneMeasurementValue()

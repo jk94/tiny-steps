@@ -32,9 +32,12 @@ import {
  * module's outcome minus `referenceUsed`, which is reported once per
  * measurement (`lengthOrHeightReferenceUsed`) rather than repeated per value.
  */
+export type GrowthPercentileUnavailableReason =
+  'CHILD_SEX_NOT_SET' | 'AGE_BELOW_REFERENCE_RANGE' | 'AGE_ABOVE_REFERENCE_RANGE';
+
 export type GrowthPercentile =
   | { status: 'COMPUTED'; zScore: number; percentile: number }
-  | { status: 'UNAVAILABLE'; reason: 'CHILD_SEX_NOT_SET' | 'AGE_ABOVE_REFERENCE_RANGE' };
+  | { status: 'UNAVAILABLE'; reason: GrowthPercentileUnavailableReason };
 
 export interface GrowthMeasurementSummary {
   id: string;
@@ -340,9 +343,22 @@ export class GrowthService {
   }
 }
 
-/** W-5: a measurement can never predate the child it belongs to. */
+/** The UTC calendar day a stored date falls on, as `YYYY-MM-DD`. */
+function toCalendarDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * W-5: a measurement can never predate the child it belongs to.
+ *
+ * Compared as calendar days, not instants: both columns hold a *day* stored as
+ * UTC midnight (`measuredAt` is sent as `YYYY-MM-DD`, `birthDate` the same way
+ * — see `IsDateOnly`), so an instant comparison would only differ if a legacy
+ * row carried a time-of-day, and would then wrongly reject a measurement taken
+ * on the birth date itself.
+ */
 function assertNotBeforeBirth(measuredAt: Date, child: Child): void {
-  if (measuredAt.getTime() < child.birthDate.getTime()) {
+  if (toCalendarDay(measuredAt) < toCalendarDay(child.birthDate)) {
     throw new BadRequestException('measuredAt must not be before the child birth date');
   }
 }

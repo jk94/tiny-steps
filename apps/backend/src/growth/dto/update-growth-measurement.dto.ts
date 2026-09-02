@@ -9,6 +9,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/validators/is-date-only.validator';
 import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
 import {
   MAX_HEAD_CIRCUMFERENCE_MILLIMETERS,
@@ -39,7 +40,9 @@ import { LengthMeasurementPosition } from '../length-measurement-position.enum';
  * so ADR-0011's Last-Write-Wins handling does not apply.
  */
 export class UpdateGrowthMeasurementDto {
+  // Same bare calendar day (`YYYY-MM-DD`) as on create — see that DTO.
   @IsOptional()
+  @IsDateOnly()
   @IsISO8601({ strict: true })
   @IsNotFutureDate()
   measuredAt?: string;

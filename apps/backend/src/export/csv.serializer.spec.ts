@@ -14,7 +14,6 @@ import {
  */
 const COLUMNS = [
   'id',
-  'recordKind',
   'childId',
   'userId',
   'type',
@@ -26,6 +25,11 @@ const COLUMNS = [
   'side',
   'amountMl',
   'diaperType',
+  'note',
+  'createdAt',
+  'updatedAt',
+  // Appended in Phase 7.1 — everything above keeps its original position.
+  'recordKind',
   'weightGrams',
   'lengthMillimeters',
   'headCircumferenceMillimeters',
@@ -33,10 +37,29 @@ const COLUMNS = [
   'weightPercentile',
   'lengthPercentile',
   'headCircumferencePercentile',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
+] as const;
+
+/** The column order this export had before Phase 7.1 appended to it. */
+const PRE_GROWTH_COLUMNS = [
+  'id',
+  'childId',
+  'userId',
+  'type',
+  'occurredAt',
+  'startedAt',
+  'endedAt',
+  'durationSeconds',
+  'feedingType',
+  'side',
+  'amountMl',
+  'diaperType',
   'note',
   'createdAt',
   'updatedAt',
-] as const;
+];
 
 const HEADER = COLUMNS.join(',');
 
@@ -67,6 +90,9 @@ function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
     weightPercentile: null,
     lengthPercentile: null,
     headCircumferencePercentile: null,
+    weightZScore: null,
+    lengthZScore: null,
+    headCircumferenceZScore: null,
     note: null,
     createdAt: '2026-01-01T07:00:00.000Z',
     updatedAt: '2026-01-01T07:00:00.000Z',
@@ -77,6 +103,12 @@ function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
 describe('toCsv', () => {
   it('emits only the header row for an empty export', () => {
     expect(toCsv([])).toBe(`${HEADER}\n`);
+  });
+
+  it('keeps the pre-Phase-7.1 columns in their original positions', () => {
+    // Positional CSV consumers of the existing export must not break: the
+    // growth columns are appended, never interleaved.
+    expect(HEADER.split(',').slice(0, PRE_GROWTH_COLUMNS.length)).toEqual(PRE_GROWTH_COLUMNS);
   });
 
   it('renders null columns as empty fields and derived values verbatim', () => {
@@ -124,6 +156,9 @@ describe('toCsv', () => {
         weightPercentile: 42,
         lengthPercentile: 55,
         headCircumferencePercentile: 61,
+        weightZScore: -0.21,
+        lengthZScore: 0.13,
+        headCircumferenceZScore: 0.28,
       }),
     ]);
 
@@ -136,6 +171,7 @@ describe('toCsv', () => {
       headCircumferenceMillimeters: '480',
       lengthMeasurementPosition: 'LYING',
       weightPercentile: '42',
+      weightZScore: '-0.21',
       // Event-only columns stay blank rather than being omitted, so the header
       // keeps matching every row.
       feedingType: '',
