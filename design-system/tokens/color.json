@@ -43,5 +43,13 @@
   "growth-weight": { "light": "#4338ca", "dark": "#818cf8" },
   "growth-length": { "light": "#047857", "dark": "#34d399" },
   "growth-head-circumference": { "light": "#a21caf", "dark": "#e879f9" },
-  "growth-band": { "light": "#4338ca", "dark": "#818cf8" }
+  "growth-band": { "light": "#4338ca", "dark": "#818cf8" },
+  "milestone-motor": { "light": "#4338ca", "dark": "#a5b4fc" },
+  "milestone-motor-foreground": { "light": "#ffffff", "dark": "#1f2933" },
+  "milestone-language": { "light": "#0f766e", "dark": "#5eead4" },
+  "milestone-language-foreground": { "light": "#ffffff", "dark": "#1f2933" },
+  "milestone-social": { "light": "#d97706", "dark": "#fcd34d" },
+  "milestone-social-foreground": { "light": "#000000", "dark": "#1f2933" },
+  "milestone-physical": { "light": "#be123c", "dark": "#fda4af" },
+  "milestone-physical-foreground": { "light": "#ffffff", "dark": "#1f2933" }
 }

@@ -58,6 +58,25 @@ export const EventTypes: Story = {
   ),
 };
 
+export const MilestoneCategories: Story = {
+  render: (args) => (
+    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <Badge {...args} variant="milestone-motor">
+        Motor
+      </Badge>
+      <Badge {...args} variant="milestone-language">
+        Language
+      </Badge>
+      <Badge {...args} variant="milestone-social">
+        Social
+      </Badge>
+      <Badge {...args} variant="milestone-physical">
+        Physical
+      </Badge>
+    </div>
+  ),
+};
+
 export const Sizes: Story = {
   render: (args) => (
     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
