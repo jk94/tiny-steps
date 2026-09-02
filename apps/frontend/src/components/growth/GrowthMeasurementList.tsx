@@ -9,12 +9,12 @@ import {
 } from '../../api/growth-api';
 import { listHouseholdMembers, type HouseholdMemberSummary } from '../../api/household-api';
 import { ageInMonths } from '../../lib/childAge';
-import { formatGrowthValue } from '../../lib/growthFormat';
-import { growthMeasureVisuals, GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
+import { formatCalendarDate, parseCalendarDate } from '../../lib/growthFormat';
+import { GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ErrorMessage } from '../ErrorMessage';
-import { Badge, Button, Card, EmptyState, Skeleton, toast } from '../ui';
-import { growthPercentileText } from './growthPercentileText';
+import { Button, Card, EmptyState, Skeleton, toast } from '../ui';
+import { GrowthMeasureValueRow } from './GrowthMeasureValueRow';
 
 export interface GrowthMeasurementListProps {
   householdId: string;
@@ -24,20 +24,6 @@ export interface GrowthMeasurementListProps {
   measurements: GrowthMeasurementSummary[];
   isLoading: boolean;
 }
-
-/** Which stored field each measure reads, in display order. */
-const MEASURE_VALUE_FIELDS = {
-  WEIGHT: 'weightGrams',
-  LENGTH: 'lengthMillimeters',
-  HEAD_CIRCUMFERENCE: 'headCircumferenceMillimeters',
-} as const;
-
-/** Which percentile slot each measure reads. */
-const MEASURE_PERCENTILE_SLOTS = {
-  WEIGHT: 'weight',
-  LENGTH: 'length',
-  HEAD_CIRCUMFERENCE: 'headCircumference',
-} as const;
 
 /**
  * Resolves a recording user's id to their email via the household member list
@@ -139,50 +125,26 @@ export function GrowthMeasurementList({
               <Card.Body className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-medium text-foreground">
-                    {new Date(measurement.measuredAt).toLocaleDateString(i18n.language)}
+                    {formatCalendarDate(measurement.measuredAt, i18n.language)}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {t('growth.list.ageAtMeasurement', {
-                      count: ageInMonths(birthDate, new Date(measurement.measuredAt)),
+                      count: ageInMonths(
+                        birthDate,
+                        parseCalendarDate(measurement.measuredAt) ?? new Date(),
+                      ),
                     })}
                   </span>
                 </div>
 
                 <ul className="flex flex-col gap-1">
-                  {GROWTH_MEASURES.map((measure) => {
-                    const value = measurement[MEASURE_VALUE_FIELDS[measure]];
-                    if (value === null) {
-                      return null;
-                    }
-                    const visual = growthMeasureVisuals[measure];
-                    const percentile = growthPercentileText(
-                      t,
-                      i18n.language,
-                      measurement.percentiles[MEASURE_PERCENTILE_SLOTS[measure]],
-                    );
-                    return (
-                      <li key={measure} className="flex flex-wrap items-center gap-2 text-sm">
-                        <visual.Icon
-                          aria-hidden="true"
-                          className="h-4 w-4"
-                          style={{ color: `var(${visual.colorVar})` }}
-                        />
-                        <span className="text-foreground">
-                          {t(visual.labelKey)}: {formatGrowthValue(measure, value, i18n.language)}{' '}
-                          {t(visual.unitKey)}
-                        </span>
-                        {percentile && <Badge variant="default">{percentile}</Badge>}
-                        {/* W-19: the method used is visible on the measurement. */}
-                        {measure === 'LENGTH' && measurement.effectiveLengthMeasurementPosition && (
-                          <Badge variant="default">
-                            {measurement.effectiveLengthMeasurementPosition === 'LYING'
-                              ? t('growth.chart.position.lying')
-                              : t('growth.chart.position.standing')}
-                          </Badge>
-                        )}
-                      </li>
-                    );
-                  })}
+                  {GROWTH_MEASURES.map((measure) => (
+                    <GrowthMeasureValueRow
+                      key={measure}
+                      measure={measure}
+                      measurement={measurement}
+                    />
+                  ))}
                 </ul>
 
                 {measurement.note && (

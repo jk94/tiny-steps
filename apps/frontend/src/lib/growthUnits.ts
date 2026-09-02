@@ -10,10 +10,6 @@
 const GRAMS_PER_KILOGRAM = 1000;
 const MILLIMETRES_PER_CENTIMETRE = 10;
 
-/** Decimal places the UI shows for each display unit. */
-export const KILOGRAM_DECIMALS = 1;
-export const CENTIMETRE_DECIMALS = 1;
-
 export function kilogramsToGrams(kilograms: number): number {
   return Math.round(kilograms * GRAMS_PER_KILOGRAM);
 }

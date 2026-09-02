@@ -50,3 +50,28 @@ export const growthMeasureVisuals: Record<GrowthMeasure, GrowthMeasureVisual> = 
 
 /** Stable render order for the measure tabs and the summary card. */
 export const GROWTH_MEASURES: GrowthMeasure[] = ['WEIGHT', 'LENGTH', 'HEAD_CIRCUMFERENCE'];
+
+/**
+ * Which fields of a `GrowthMeasurementSummary` each measure reads.
+ *
+ * One table for the whole frontend: the chart series, the measurement list and
+ * the ChildHome card previously each carried their own copy, which is exactly
+ * the kind of duplication that lets a fourth measure be added to two of three
+ * places.
+ */
+export interface GrowthMeasureFields {
+  valueField: 'weightGrams' | 'lengthMillimeters' | 'headCircumferenceMillimeters';
+  percentileSlot: 'weight' | 'length' | 'headCircumference';
+  /** True for the body measure, the only one with a recumbent/standing method. */
+  isBodyMeasure: boolean;
+}
+
+export const growthMeasureFields: Record<GrowthMeasure, GrowthMeasureFields> = {
+  WEIGHT: { valueField: 'weightGrams', percentileSlot: 'weight', isBodyMeasure: false },
+  LENGTH: { valueField: 'lengthMillimeters', percentileSlot: 'length', isBodyMeasure: true },
+  HEAD_CIRCUMFERENCE: {
+    valueField: 'headCircumferenceMillimeters',
+    percentileSlot: 'headCircumference',
+    isBodyMeasure: false,
+  },
+};

@@ -7,7 +7,7 @@ import { scaleLinear } from '@visx/scale';
 import { Area, Circle, LinePath } from '@visx/shape';
 import { Text } from '@visx/text';
 import type { GrowthReferenceResponse } from '../../api/growth-api';
-import { formatGrowthValue } from '../../lib/growthFormat';
+import { formatCalendarDate, formatGrowthValue } from '../../lib/growthFormat';
 import { growthMeasureVisuals, type GrowthMeasure } from '../../lib/growthMeasureVisuals';
 import type { GrowthPoint } from './growthChartData';
 import { GROWTH_CHART_HEIGHT, GROWTH_CHART_MARGIN as MARGIN } from './growthChartGeometry';
@@ -268,8 +268,13 @@ export function GrowthChartInner({
           {/*
           One transparent overlay carries every input modality (W-13/W-14):
           pointer hover, touch long-press scrubbing and arrow-key stepping.
-          `touch-action: none` only while scrubbing, so an ordinary swipe over
-          the chart still scrolls the page.
+
+          `touchAction: 'none'` is set unconditionally, not just while
+          scrubbing: the browser decides whether a gesture is a scroll before
+          the long-press timer could ever fire, so a conditional value arrives
+          too late and the scrub never starts on a real device. The accepted
+          cost is that a swipe starting inside the plot area does not scroll
+          the page — every other part of the page still does.
         */}
           <rect
             width={innerWidth}
@@ -284,14 +289,14 @@ export function GrowthChartInner({
             aria-valuetext={
               activePoint
                 ? t('growth.chart.valueText', {
-                    date: new Date(activePoint.measuredAt).toLocaleDateString(i18n.language),
+                    date: formatCalendarDate(activePoint.measuredAt, i18n.language),
                     value: formatGrowthValue(measure, activePoint.value, i18n.language),
                     unit: t(visual.unitKey),
                   })
                 : t('growth.chart.valueTextEmpty')
             }
             className="cursor-crosshair outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-ring)]"
-            style={cursor.isScrubbing ? { touchAction: 'none' } : undefined}
+            style={{ touchAction: 'none' }}
             data-testid="growth-chart-overlay"
             onKeyDown={cursor.keyDownHandler}
             {...cursor.pointerHandlers}

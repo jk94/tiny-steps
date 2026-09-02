@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreateGrowthMeasurementInput, LengthMeasurementPosition } from '../../api/growth-api';
 import { growthMeasureLimits, MAX_NOTE_LENGTH } from '../../lib/growthLimits';
+import { todayAsCalendarDate } from '../../lib/growthFormat';
 import { centimetresToMillimetres, kilogramsToGrams } from '../../lib/growthUnits';
 import { ErrorMessage } from '../ErrorMessage';
 import { Button, Input, Select, Textarea } from '../ui';
@@ -67,10 +68,6 @@ export interface GrowthMeasurementFormProps {
   onSubmit: (output: GrowthMeasurementFormOutput) => Promise<void>;
 }
 
-function todayAsIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /** Parses a display-unit input, returning `null` for an empty field. */
 function parseOptionalNumber(value: string): number | null | undefined {
   const trimmed = value.trim();
@@ -98,7 +95,7 @@ export function GrowthMeasurementForm({
   onSubmit,
 }: GrowthMeasurementFormProps) {
   const { t } = useTranslation();
-  const [measuredAt, setMeasuredAt] = useState(initialValues?.measuredAt ?? todayAsIsoDate());
+  const [measuredAt, setMeasuredAt] = useState(initialValues?.measuredAt ?? todayAsCalendarDate());
   const [weight, setWeight] = useState(initialValues?.weightKilograms ?? '');
   const [length, setLength] = useState(initialValues?.lengthCentimetres ?? '');
   const [headCircumference, setHeadCircumference] = useState(
@@ -118,7 +115,7 @@ export function GrowthMeasurementForm({
 
     if (measuredAt.trim().length === 0) {
       errors.measuredAt = 'growth.validation.measuredAtRequired';
-    } else if (measuredAt > todayAsIsoDate()) {
+    } else if (measuredAt > todayAsCalendarDate()) {
       errors.measuredAt = 'growth.validation.measuredAtFuture';
     } else if (measuredAt < birthDate) {
       errors.measuredAt = 'growth.validation.measuredAtBeforeBirth';
@@ -208,11 +205,11 @@ export function GrowthMeasurementForm({
       };
 
       await onSubmit({
-        // A date input carries no time of day (W-1 asks for a date, not an
-        // instant), so noon local time is used as the representative instant —
-        // far enough from both midnights that a timezone shift cannot move the
-        // measurement onto an adjacent day.
-        measuredAt: new Date(`${measuredAt}T12:00:00`).toISOString(),
+        // Sent as the bare calendar day the user picked, exactly like
+        // `Child.birthDate`. Turning it into an instant here would make the
+        // stored day depend on the entering device's timezone (and could push
+        // a measurement taken this morning into the server's "future").
+        measuredAt,
         weightGrams: toBaseUnit(weightGrams, kilogramsToGrams),
         lengthMillimeters: toBaseUnit(lengthMillimetres, centimetresToMillimetres),
         headCircumferenceMillimeters: toBaseUnit(
@@ -257,7 +254,7 @@ export function GrowthMeasurementForm({
         type="date"
         required
         min={birthDate}
-        max={todayAsIsoDate()}
+        max={todayAsCalendarDate()}
         value={measuredAt}
         onChange={(event) => setMeasuredAt(event.target.value)}
         error={fieldErrors.measuredAt ? t(fieldErrors.measuredAt) : undefined}

@@ -134,6 +134,14 @@ describe('GrowthChart', () => {
     });
   });
 
+  it('keeps the plot area non-scrollable so a long-press can start (W-13)', () => {
+    // `touch-action: none` has to be set before the gesture begins — the
+    // browser decides scroll-vs-gesture long before the long-press timer runs.
+    renderChart();
+
+    expect(screen.getByTestId('growth-chart-overlay')).toHaveStyle({ touchAction: 'none' });
+  });
+
   it('renders no animation attributes at all (reduced motion by construction)', () => {
     const { container } = renderChart();
 
@@ -156,6 +164,8 @@ describe('GrowthChart', () => {
       const tooltip = await screen.findByTestId('growth-chart-tooltip');
       expect(within(tooltip).getByText('7.8 kg')).toBeInTheDocument();
       expect(within(tooltip).getByText('38th percentile')).toBeInTheDocument();
+      // W-9: the z-score is shown alongside the percentile, not instead of it.
+      expect(within(tooltip).getByText('z-score -0.30')).toBeInTheDocument();
     });
 
     it('shows the reason instead of a percentile when it could not be computed (W-10)', async () => {
@@ -190,6 +200,7 @@ describe('GrowthChart', () => {
       expect(slider).toHaveAttribute('aria-valuenow', '1');
       expect(screen.getByTestId('growth-chart-readout')).toHaveTextContent('7.8 kg');
       expect(screen.getByTestId('growth-chart-readout')).toHaveTextContent('38th percentile');
+      expect(screen.getByTestId('growth-chart-readout')).toHaveTextContent('z-score -0.30');
     });
 
     it('stays on the first point when arrowing left at the start', async () => {

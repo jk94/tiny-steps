@@ -98,7 +98,9 @@ export function GrowthHome() {
   const hasOutOfRangeMeasurement = measurements.some((measurement) =>
     Object.values(measurement.percentiles).some(
       (percentile) =>
-        percentile?.status === 'UNAVAILABLE' && percentile.reason === 'AGE_ABOVE_REFERENCE_RANGE',
+        percentile?.status === 'UNAVAILABLE' &&
+        (percentile.reason === 'AGE_ABOVE_REFERENCE_RANGE' ||
+          percentile.reason === 'AGE_BELOW_REFERENCE_RANGE'),
     ),
   );
 

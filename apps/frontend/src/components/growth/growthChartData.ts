@@ -3,7 +3,7 @@ import type {
   GrowthPercentile,
   LengthMeasurementPosition,
 } from '../../api/growth-api';
-import type { GrowthMeasure } from '../../lib/growthMeasureVisuals';
+import { growthMeasureFields, type GrowthMeasure } from '../../lib/growthMeasureVisuals';
 
 /** One plotted measurement point for a single measure. */
 export interface GrowthPoint {
@@ -21,22 +21,6 @@ export interface GrowthPoint {
   position: LengthMeasurementPosition | null;
 }
 
-/** Which stored field and percentile slot each measure reads. */
-const MEASURE_FIELDS = {
-  WEIGHT: { value: 'weightGrams', percentile: 'weight' },
-  LENGTH: { value: 'lengthMillimeters', percentile: 'length' },
-  HEAD_CIRCUMFERENCE: {
-    value: 'headCircumferenceMillimeters',
-    percentile: 'headCircumference',
-  },
-} as const satisfies Record<
-  GrowthMeasure,
-  {
-    value: keyof GrowthMeasurementSummary;
-    percentile: keyof GrowthMeasurementSummary['percentiles'];
-  }
->;
-
 /**
  * Projects the measurement list onto the series for one measure, dropping
  * every measurement that does not carry that value (all three are
@@ -47,19 +31,26 @@ export function toGrowthSeries(
   measurements: GrowthMeasurementSummary[],
   measure: GrowthMeasure,
 ): GrowthPoint[] {
-  const fields = MEASURE_FIELDS[measure];
+  const fields = growthMeasureFields[measure];
 
-  return measurements
-    .filter((measurement) => measurement[fields.value] !== null)
-    .map((measurement) => ({
-      measurementId: measurement.id,
-      ageInDays: measurement.ageInDaysAtMeasurement,
-      value: measurement[fields.value] as number,
-      measuredAt: measurement.measuredAt,
-      percentile: measurement.percentiles[fields.percentile],
-      position: measure === 'LENGTH' ? measurement.effectiveLengthMeasurementPosition : null,
-    }))
-    .sort((a, b) => a.ageInDays - b.ageInDays);
+  return (
+    measurements
+      .filter((measurement) => measurement[fields.valueField] !== null)
+      // A negative age cannot be placed on the chart's age axis at all. The API
+      // rejects a pre-birth measurement (W-5), so this only guards against
+      // legacy/imported rows — dropping them keeps the plot honest instead of
+      // clamping them onto day 0.
+      .filter((measurement) => measurement.ageInDaysAtMeasurement >= 0)
+      .map((measurement) => ({
+        measurementId: measurement.id,
+        ageInDays: measurement.ageInDaysAtMeasurement,
+        value: measurement[fields.valueField] as number,
+        measuredAt: measurement.measuredAt,
+        percentile: measurement.percentiles[fields.percentileSlot],
+        position: fields.isBodyMeasure ? measurement.effectiveLengthMeasurementPosition : null,
+      }))
+      .sort((a, b) => a.ageInDays - b.ageInDays)
+  );
 }
 
 /**

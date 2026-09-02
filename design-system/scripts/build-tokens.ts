@@ -57,8 +57,8 @@ function cssVars(prefix: string, record: ScaleTokens): string[] {
  * Prettier's print width. The generated CSS is committed and must pass
  * `bun run format:check`, so any line the mapping below would push past this
  * is pre-wrapped exactly the way Prettier would wrap it — otherwise a
- * long-named token (e.g. `growth-head-circumference-foreground`) silently
- * breaks the format check after every token rebuild.
+ * long-named token (e.g. `growth-head-circumference`) silently breaks the
+ * format check after every token rebuild.
  */
 const CSS_PRINT_WIDTH = 100;
 

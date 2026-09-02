@@ -10,6 +10,7 @@ import { GrowthMeasurementForm } from '../components/growth/GrowthMeasurementFor
 import type { GrowthMeasurementFormOutput } from '../components/growth/GrowthMeasurementForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Card, toast } from '../components/ui';
+import { toCalendarDateInputValue } from '../lib/growthFormat';
 import { gramsToKilograms, millimetresToCentimetres } from '../lib/growthUnits';
 
 /** Renders a stored base-unit value as the form's display-unit string. */
@@ -92,7 +93,7 @@ export function GrowthMeasurementEdit() {
             mode="edit"
             birthDate={childQuery.data.birthDate.slice(0, 10)}
             initialValues={{
-              measuredAt: measurement.measuredAt.slice(0, 10),
+              measuredAt: toCalendarDateInputValue(measurement.measuredAt),
               weightKilograms: toInputValue(measurement.weightGrams, gramsToKilograms),
               lengthCentimetres: toInputValue(
                 measurement.lengthMillimeters,

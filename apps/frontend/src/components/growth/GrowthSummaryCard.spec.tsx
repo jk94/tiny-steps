@@ -75,6 +75,7 @@ describe('GrowthSummaryCard (W-15)', () => {
 
     expect(await screen.findByText('Weight: 6.4 kg')).toBeInTheDocument();
     expect(screen.getByText('54th percentile')).toBeInTheDocument();
+    expect(screen.getByText('z-score 0.10')).toBeInTheDocument();
     expect(screen.getByText('3 months old')).toBeInTheDocument();
     // The older measurement is not shown — only the latest one.
     expect(screen.queryByText('Weight: 5 kg')).not.toBeInTheDocument();

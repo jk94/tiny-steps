@@ -21,7 +21,8 @@ export type LengthMeasurementPosition = 'LYING' | 'STANDING';
 export type BodyMeasureReference = 'LENGTH' | 'HEIGHT';
 
 /** Why a percentile could not be computed — surfaced to the user, never hidden. */
-export type GrowthPercentileUnavailableReason = 'CHILD_SEX_NOT_SET' | 'AGE_ABOVE_REFERENCE_RANGE';
+export type GrowthPercentileUnavailableReason =
+  'CHILD_SEX_NOT_SET' | 'AGE_BELOW_REFERENCE_RANGE' | 'AGE_ABOVE_REFERENCE_RANGE';
 
 export type GrowthPercentile =
   | { status: 'COMPUTED'; zScore: number; percentile: number }
@@ -120,21 +121,20 @@ export function growthQueryKey(householdId: string, childId: string) {
   return ['households', householdId, 'children', childId, 'growth'] as const;
 }
 
-/** Query key for one indicator's reference bands. */
+/**
+ * Query key for one indicator's reference bands.
+ *
+ * Deliberately a **sibling** of `growthQueryKey`, not a descendant: the bands
+ * are vendored WHO data, so a create/update/delete must not drag them into its
+ * prefix-based invalidation and refetch a ~250-point-per-curve payload that
+ * cannot have changed.
+ */
 export function growthReferenceQueryKey(
   householdId: string,
   childId: string,
   indicator: GrowthIndicator,
 ) {
-  return [
-    'households',
-    householdId,
-    'children',
-    childId,
-    'growth',
-    'reference',
-    indicator,
-  ] as const;
+  return ['households', householdId, 'children', childId, 'growth-reference', indicator] as const;
 }
 
 export function listGrowthMeasurements(

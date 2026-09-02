@@ -157,9 +157,17 @@ describe('growth-api', () => {
       HOUSEHOLD_ID,
       'children',
       CHILD_ID,
-      'growth',
-      'reference',
+      'growth-reference',
       'LENGTH_OR_HEIGHT_FOR_AGE',
     ]);
+  });
+
+  it('keeps the reference key outside the measurement key prefix', () => {
+    // Otherwise every create/update/delete invalidation would also refetch the
+    // immutable WHO bands.
+    const measurementKey = growthQueryKey(HOUSEHOLD_ID, CHILD_ID);
+    const referenceKey = growthReferenceQueryKey(HOUSEHOLD_ID, CHILD_ID, 'WEIGHT_FOR_AGE');
+
+    expect(referenceKey.slice(0, measurementKey.length)).not.toEqual(measurementKey);
   });
 });

@@ -75,6 +75,15 @@ describe('toGrowthSeries', () => {
     expect(weightPoint.position).toBeNull();
   });
 
+  it('drops a measurement with a negative age, which has no place on the axis', () => {
+    const measurements = [
+      makeMeasurement({ id: 'valid', ageInDaysAtMeasurement: 30 }),
+      makeMeasurement({ id: 'before-birth', ageInDaysAtMeasurement: -5 }),
+    ];
+
+    expect(toGrowthSeries(measurements, 'WEIGHT').map((p) => p.measurementId)).toEqual(['valid']);
+  });
+
   it('sorts by age so the line and the cursor can assume a monotone x axis', () => {
     const measurements = [
       makeMeasurement({ id: 'late', ageInDaysAtMeasurement: 365 }),

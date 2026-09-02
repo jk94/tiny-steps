@@ -423,9 +423,6 @@
     }
   },
   "growth": {
-    "nav": {
-      "link": "Wachstum"
-    },
     "home": {
       "title": "Wachstum — {{name}}",
       "backLink": "Zurück zum Haushalt",
@@ -435,7 +432,6 @@
     "measures": {
       "weight": "Gewicht",
       "length": "Länge/Größe",
-      "height": "Größe",
       "headCircumference": "Kopfumfang"
     },
     "units": {
@@ -529,6 +525,7 @@
       "unavailable": {
         "sexUnknown": "Perzentile brauchen das Geschlecht des Kindes.",
         "sexUnknownLink": "Im Kind-Profil ergänzen",
+        "ageBelowRange": "Vor dem Geburtsdatum — außerhalb des WHO-Referenzbereichs.",
         "ageOutOfRange": "Außerhalb des WHO-Referenzbereichs (0–5 Jahre)."
       }
     },

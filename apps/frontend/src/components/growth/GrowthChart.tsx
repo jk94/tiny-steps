@@ -2,12 +2,12 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParentSize } from '@visx/responsive';
 import type { GrowthReferenceResponse } from '../../api/growth-api';
-import { formatGrowthValue } from '../../lib/growthFormat';
+import { formatCalendarDate, formatGrowthValue } from '../../lib/growthFormat';
 import { growthMeasureVisuals, type GrowthMeasure } from '../../lib/growthMeasureVisuals';
 import type { GrowthPoint } from './growthChartData';
 import { GROWTH_CHART_HEIGHT, growthChartGeometry } from './growthChartGeometry';
 import { GrowthChartInner } from './GrowthChartInner';
-import { growthPercentileText } from './growthPercentileText';
+import { growthPercentileText, growthZScoreText } from './growthPercentileText';
 import { useGrowthChartCursor } from './useGrowthChartCursor';
 
 export interface GrowthChartProps {
@@ -70,15 +70,19 @@ export default function GrowthChart({
       return '';
     }
     const values = {
-      date: new Date(point.measuredAt).toLocaleDateString(i18n.language),
+      date: formatCalendarDate(point.measuredAt, i18n.language),
       measure: t(visual.labelKey),
       value: formatGrowthValue(measure, point.value, i18n.language),
       unit: t(visual.unitKey),
     };
     const percentileText = growthPercentileText(t, i18n.language, point.percentile);
-    return percentileText
-      ? t('growth.chart.liveReadout', { ...values, percentile: percentileText })
-      : t('growth.chart.liveReadoutNoPercentile', values);
+    const zScoreText = growthZScoreText(t, i18n.language, point.percentile);
+    if (!percentileText) {
+      return t('growth.chart.liveReadoutNoPercentile', values);
+    }
+    // W-9: a screen-reader user hears the z-score too, not just the percentile.
+    const classification = zScoreText ? `${percentileText}, ${zScoreText}` : percentileText;
+    return t('growth.chart.liveReadout', { ...values, percentile: classification });
   }, [cursor.activePoint, i18n.language, measure, t, visual.labelKey, visual.unitKey]);
 
   return (

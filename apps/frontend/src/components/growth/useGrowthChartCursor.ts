@@ -21,15 +21,11 @@ export interface GrowthChartCursor {
   activePoint: GrowthPoint | null;
   /** True while a touch long-press is holding the cursor. */
   isScrubbing: boolean;
-  setActive: (index: number | null) => void;
-  /** Moves the cursor by `delta` points, clamped to the series (W-14). */
-  stepActive: (delta: number) => void;
   pointerHandlers: {
     onPointerMove: (event: PointerEvent<SVGElement>) => void;
     onPointerDown: (event: PointerEvent<SVGElement>) => void;
-    onPointerUp: () => void;
-    onPointerCancel: () => void;
-    onPointerLeave: () => void;
+    onPointerUp: (event: PointerEvent<SVGElement>) => void;
+    onPointerCancel: (event: PointerEvent<SVGElement>) => void;
   };
   keyDownHandler: (event: KeyboardEvent<SVGElement>) => void;
 }
@@ -56,6 +52,7 @@ export function useGrowthChartCursor({
   const [selectedIndex, setActiveIndex] = useState<number | null>(null);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const capturedPointerId = useRef<number | null>(null);
 
   const clearLongPressTimer = useCallback(() => {
     if (longPressTimer.current !== null) {
@@ -83,6 +80,11 @@ export function useGrowthChartCursor({
     [ageFromX, series],
   );
 
+  /**
+   * Moves the cursor by `delta` points, clamped to the series (W-14). Kept
+   * internal: the only way to move the cursor from outside is through the
+   * handlers below, so there is no second, untested path into this state.
+   */
   const stepActive = useCallback(
     (delta: number) => {
       if (series.length === 0) {
@@ -117,6 +119,12 @@ export function useGrowthChartCursor({
 
   const onPointerDown = useCallback(
     (event: PointerEvent<SVGElement>) => {
+      // Pointer capture routes every subsequent move/up to this element even
+      // once the finger leaves its bounds, which is what makes scrubbing to
+      // the edge of the plot keep working instead of silently stopping.
+      capturedPointerId.current = event.pointerId;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+
       if (event.pointerType !== 'touch') {
         setActiveFromEvent(event);
         return;
@@ -136,10 +144,18 @@ export function useGrowthChartCursor({
     [ageFromX, clearLongPressTimer, series, setActiveFromEvent],
   );
 
-  const endPointerInteraction = useCallback(() => {
-    clearLongPressTimer();
-    setIsScrubbing(false);
-  }, [clearLongPressTimer]);
+  const endPointerInteraction = useCallback(
+    (event?: PointerEvent<SVGElement>) => {
+      clearLongPressTimer();
+      setIsScrubbing(false);
+      const pointerId = event?.pointerId ?? capturedPointerId.current;
+      if (pointerId !== null && event?.currentTarget.hasPointerCapture?.(pointerId)) {
+        event.currentTarget.releasePointerCapture?.(pointerId);
+      }
+      capturedPointerId.current = null;
+    },
+    [clearLongPressTimer],
+  );
 
   const keyDownHandler = useCallback(
     (event: KeyboardEvent<SVGElement>) => {
@@ -176,14 +192,13 @@ export function useGrowthChartCursor({
     activeIndex,
     activePoint: activeIndex === null ? null : (series[activeIndex] ?? null),
     isScrubbing,
-    setActive: setActiveIndex,
-    stepActive,
     pointerHandlers: {
       onPointerMove,
       onPointerDown,
       onPointerUp: endPointerInteraction,
       onPointerCancel: endPointerInteraction,
-      onPointerLeave: endPointerInteraction,
+      // Deliberately no `onPointerLeave`: with pointer capture held, leaving
+      // the rect's bounds mid-scrub is normal and must not end the gesture.
     },
     keyDownHandler,
   };

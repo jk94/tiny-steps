@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PointerEvent } from 'react';
+import type { KeyboardEvent, PointerEvent } from 'react';
 import type { GrowthPoint } from './growthChartData';
 import { LONG_PRESS_MS, useGrowthChartCursor } from './useGrowthChartCursor';
 
@@ -25,12 +25,42 @@ const series: GrowthPoint[] = [0, 90, 365].map((ageInDays) => ({
 /** Identity mapping: the test's "pixel" x is the age in days. */
 const ageFromX = (x: number) => x;
 
-function pointerEvent(pointerType: 'mouse' | 'touch', clientX: number): PointerEvent<SVGElement> {
+interface CapturingTarget {
+  ownerSVGElement: null;
+  captured: Set<number>;
+  setPointerCapture: (pointerId: number) => void;
+  releasePointerCapture: (pointerId: number) => void;
+  hasPointerCapture: (pointerId: number) => boolean;
+}
+
+/** A stand-in for the overlay rect that records pointer-capture calls. */
+function capturingTarget(): CapturingTarget {
+  const captured = new Set<number>();
+  return {
+    ownerSVGElement: null,
+    captured,
+    setPointerCapture: (pointerId: number) => void captured.add(pointerId),
+    releasePointerCapture: (pointerId: number) => void captured.delete(pointerId),
+    hasPointerCapture: (pointerId: number) => captured.has(pointerId),
+  };
+}
+
+function pointerEvent(
+  pointerType: 'mouse' | 'touch',
+  clientX: number,
+  target: CapturingTarget = capturingTarget(),
+  pointerId = 1,
+): PointerEvent<SVGElement> {
   return {
     pointerType,
     clientX,
-    currentTarget: { ownerSVGElement: null },
+    pointerId,
+    currentTarget: target,
   } as unknown as PointerEvent<SVGElement>;
+}
+
+function keyEvent(key: string): KeyboardEvent<SVGElement> {
+  return { key, preventDefault: () => {} } as unknown as KeyboardEvent<SVGElement>;
 }
 
 function setup(points: GrowthPoint[] = series) {
@@ -91,7 +121,7 @@ describe('useGrowthChartCursor', () => {
 
       act(() => result.current.pointerHandlers.onPointerDown(pointerEvent('touch', 80)));
       act(() => vi.advanceTimersByTime(LONG_PRESS_MS - 1));
-      act(() => result.current.pointerHandlers.onPointerUp());
+      act(() => result.current.pointerHandlers.onPointerUp(pointerEvent('touch', 80)));
       act(() => vi.advanceTimersByTime(LONG_PRESS_MS));
 
       expect(result.current.isScrubbing).toBe(false);
@@ -111,12 +141,36 @@ describe('useGrowthChartCursor', () => {
       expect(result.current.activePoint?.measurementId).toBe('m-365');
     });
 
+    it('captures the pointer so scrubbing survives leaving the plot bounds', () => {
+      // Without capture, dragging past the rect's edge silently ends the
+      // gesture. Real-device behaviour is a manual verification item; this
+      // pins the contract the browser relies on.
+      const { result } = setup();
+      const target = capturingTarget();
+
+      act(() => result.current.pointerHandlers.onPointerDown(pointerEvent('touch', 0, target)));
+      expect(target.captured.has(1)).toBe(true);
+
+      act(() => result.current.pointerHandlers.onPointerUp(pointerEvent('touch', 0, target)));
+      expect(target.captured.has(1)).toBe(false);
+    });
+
+    it('releases the captured pointer when the gesture is cancelled', () => {
+      const { result } = setup();
+      const target = capturingTarget();
+
+      act(() => result.current.pointerHandlers.onPointerDown(pointerEvent('touch', 0, target)));
+      act(() => result.current.pointerHandlers.onPointerCancel(pointerEvent('touch', 0, target)));
+
+      expect(target.captured.has(1)).toBe(false);
+    });
+
     it('stops scrubbing when the touch is cancelled', () => {
       const { result } = setup();
 
       act(() => result.current.pointerHandlers.onPointerDown(pointerEvent('touch', 0)));
       act(() => vi.advanceTimersByTime(LONG_PRESS_MS));
-      act(() => result.current.pointerHandlers.onPointerCancel());
+      act(() => result.current.pointerHandlers.onPointerCancel(pointerEvent('touch', 0)));
 
       expect(result.current.isScrubbing).toBe(false);
     });
@@ -126,7 +180,7 @@ describe('useGrowthChartCursor', () => {
     it('steps forward from nothing selected to the first point', () => {
       const { result } = setup();
 
-      act(() => result.current.stepActive(1));
+      act(() => result.current.keyDownHandler(keyEvent('ArrowRight')));
 
       expect(result.current.activeIndex).toBe(0);
     });
@@ -134,7 +188,7 @@ describe('useGrowthChartCursor', () => {
     it('steps backwards from nothing selected to the last point', () => {
       const { result } = setup();
 
-      act(() => result.current.stepActive(-1));
+      act(() => result.current.keyDownHandler(keyEvent('ArrowLeft')));
 
       expect(result.current.activeIndex).toBe(series.length - 1);
     });
@@ -142,19 +196,28 @@ describe('useGrowthChartCursor', () => {
     it('clamps at both ends instead of wrapping around', () => {
       const { result } = setup();
 
-      act(() => result.current.setActive(0));
-      act(() => result.current.stepActive(-1));
+      act(() => result.current.keyDownHandler(keyEvent('Home')));
+      act(() => result.current.keyDownHandler(keyEvent('ArrowLeft')));
       expect(result.current.activeIndex).toBe(0);
 
-      act(() => result.current.setActive(series.length - 1));
-      act(() => result.current.stepActive(1));
+      act(() => result.current.keyDownHandler(keyEvent('End')));
+      act(() => result.current.keyDownHandler(keyEvent('ArrowRight')));
       expect(result.current.activeIndex).toBe(series.length - 1);
+    });
+
+    it('clears the cursor on Escape', () => {
+      const { result } = setup();
+
+      act(() => result.current.keyDownHandler(keyEvent('End')));
+      act(() => result.current.keyDownHandler(keyEvent('Escape')));
+
+      expect(result.current.activeIndex).toBeNull();
     });
 
     it('does nothing on an empty series', () => {
       const { result } = setup([]);
 
-      act(() => result.current.stepActive(1));
+      act(() => result.current.keyDownHandler(keyEvent('ArrowRight')));
 
       expect(result.current.activeIndex).toBeNull();
     });
@@ -166,7 +229,7 @@ describe('useGrowthChartCursor', () => {
       { initialProps: { points: series } },
     );
 
-    act(() => result.current.setActive(2));
+    act(() => result.current.keyDownHandler(keyEvent('End')));
     expect(result.current.activeIndex).toBe(2);
 
     rerender({ points: series.slice(0, 1) });

@@ -110,6 +110,20 @@ describe('GrowthMeasurementList', () => {
     expect(screen.getByText("Percentiles need the child's sex.")).toBeInTheDocument();
   });
 
+  it('shows the z-score next to the percentile (W-9)', () => {
+    renderList([makeMeasurement()]);
+
+    expect(screen.getByText('z-score 0.10')).toBeInTheDocument();
+  });
+
+  it('shows no z-score when the percentile could not be computed', () => {
+    renderList([makeMeasurement()]);
+
+    // The length percentile is UNAVAILABLE in the fixture, so there is exactly
+    // one z-score on the row (the weight's).
+    expect(screen.getAllByText(/z-score/)).toHaveLength(1);
+  });
+
   it('shows the measurement method used for the body measure (W-19)', () => {
     renderList([makeMeasurement({ effectiveLengthMeasurementPosition: 'STANDING' })]);
 

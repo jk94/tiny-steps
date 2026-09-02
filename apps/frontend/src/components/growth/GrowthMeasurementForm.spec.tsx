@@ -173,9 +173,38 @@ describe('GrowthMeasurementForm', () => {
     it('constrains the picker itself to the birth date and today', () => {
       renderForm('create', vi.fn());
 
+      const now = new Date();
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+        now.getDate(),
+      ).padStart(2, '0')}`;
       const input = screen.getByLabelText('Measurement date');
       expect(input).toHaveAttribute('min', BIRTH_DATE);
-      expect(input).toHaveAttribute('max', new Date().toISOString().slice(0, 10));
+      expect(input).toHaveAttribute('max', localToday);
+    });
+
+    it('submits the picked day verbatim, never a timezone-dependent instant', async () => {
+      // Turning the day into an instant here made the stored date drift by a
+      // day and could push a measurement taken this morning into the server's
+      // "future" — see the calendar-day handling of `Child.birthDate`.
+      const onSubmit = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      renderForm('create', onSubmit);
+
+      setDate(MEASURED_AT);
+      setWeight('6.2');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ measuredAt: '2025-04-01' }));
+    });
+
+    it("defaults to the user's local today, not the UTC day", () => {
+      renderForm('create', vi.fn());
+
+      const now = new Date();
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+        now.getDate(),
+      ).padStart(2, '0')}`;
+      expect(screen.getByLabelText('Measurement date')).toHaveValue(localToday);
     });
   });
 

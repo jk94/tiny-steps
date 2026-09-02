@@ -43,7 +43,7 @@ function makeMeasurement(
     id: MEASUREMENT_ID,
     childId: CHILD_ID,
     userId: 'u1',
-    measuredAt: '2025-04-01T12:00:00.000Z',
+    measuredAt: '2025-04-01T00:00:00.000Z',
     ageInDaysAtMeasurement: 90,
     weightGrams: 6400,
     lengthMillimeters: 615,
@@ -124,6 +124,24 @@ describe('GrowthMeasurementEdit', () => {
     expect(
       await screen.findByRole('combobox', { name: 'Length/height measurement method' }),
     ).toHaveTextContent('Automatic (by age)');
+  });
+
+  it('round-trips the measurement day without shifting it', async () => {
+    const user = userEvent.setup();
+    mockedGrowthApi.updateGrowthMeasurement.mockResolvedValue(makeMeasurement());
+
+    renderPage();
+    // The stored instant is UTC midnight of 2025-04-01; the input must show
+    // that same day, and saving must send it back unchanged.
+    expect(await screen.findByLabelText('Measurement date')).toHaveValue('2025-04-01');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(mockedGrowthApi.updateGrowthMeasurement).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      MEASUREMENT_ID,
+      expect.objectContaining({ measuredAt: '2025-04-01' }),
+    );
   });
 
   it('PATCHes the changed value and returns to the overview', async () => {

@@ -423,9 +423,6 @@
     }
   },
   "growth": {
-    "nav": {
-      "link": "Growth"
-    },
     "home": {
       "title": "Growth — {{name}}",
       "backLink": "Back to household",
@@ -435,7 +432,6 @@
     "measures": {
       "weight": "Weight",
       "length": "Length/height",
-      "height": "Height",
       "headCircumference": "Head circumference"
     },
     "units": {
@@ -529,6 +525,7 @@
       "unavailable": {
         "sexUnknown": "Percentiles need the child's sex.",
         "sexUnknownLink": "Add it in the child profile",
+        "ageBelowRange": "Before the birth date — outside the WHO reference range.",
         "ageOutOfRange": "Outside the WHO reference range (0–5 years)."
       }
     },

@@ -38,6 +38,14 @@ export interface ChildFormInitialValues {
   hasPhoto: boolean;
 }
 
+/** Maps the select's UI value onto what create/edit should actually send. */
+function resolveSubmittedSex(mode: 'create' | 'edit', sex: string): string | undefined {
+  if (sex !== SEX_NOT_SPECIFIED_OPTION) {
+    return sex;
+  }
+  return mode === 'edit' ? CLEAR_CHILD_SEX : undefined;
+}
+
 export interface ChildFormProps {
   mode: 'create' | 'edit';
   initialValues?: ChildFormInitialValues;
@@ -117,7 +125,10 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
       const formData = buildChildFormData({
         name,
         birthDate,
-        sex: sex === SEX_NOT_SPECIFIED_OPTION ? CLEAR_CHILD_SEX : sex,
+        // Create omits the field entirely for "not specified" (there is
+        // nothing to clear yet); edit sends the empty sentinel, which is how
+        // a previously-set sex is reset — see `CLEAR_CHILD_SEX`.
+        sex: resolveSubmittedSex(mode, sex),
         photo: photoFile,
       });
       await onSubmit(formData);

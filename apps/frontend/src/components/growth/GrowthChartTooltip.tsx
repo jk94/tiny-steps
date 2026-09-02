@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { TooltipWithBounds } from '@visx/tooltip';
-import { formatGrowthValue } from '../../lib/growthFormat';
+import { formatCalendarDate, formatGrowthValue } from '../../lib/growthFormat';
 import { growthMeasureVisuals, type GrowthMeasure } from '../../lib/growthMeasureVisuals';
 import type { GrowthPoint } from './growthChartData';
-import { growthPercentileText } from './growthPercentileText';
+import { growthPercentileText, growthZScoreText } from './growthPercentileText';
 
 export interface GrowthChartTooltipProps {
   measure: GrowthMeasure;
@@ -25,6 +25,7 @@ export function GrowthChartTooltip({ measure, point, left, top }: GrowthChartToo
   const { t, i18n } = useTranslation();
   const visual = growthMeasureVisuals[measure];
   const percentileText = growthPercentileText(t, i18n.language, point.percentile);
+  const zScoreText = growthZScoreText(t, i18n.language, point.percentile);
 
   return (
     <TooltipWithBounds
@@ -36,13 +37,13 @@ export function GrowthChartTooltip({ measure, point, left, top }: GrowthChartToo
       className="pointer-events-none z-10 rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md"
     >
       <div data-testid="growth-chart-tooltip" className="flex flex-col gap-0.5">
-        <span className="font-medium">
-          {new Date(point.measuredAt).toLocaleDateString(i18n.language)}
-        </span>
+        <span className="font-medium">{formatCalendarDate(point.measuredAt, i18n.language)}</span>
         <span>
           {formatGrowthValue(measure, point.value, i18n.language)} {t(visual.unitKey)}
         </span>
         {percentileText && <span className="text-muted-foreground">{percentileText}</span>}
+        {/* W-9: percentile and z-score are both shown. */}
+        {zScoreText && <span className="text-muted-foreground">{zScoreText}</span>}
         {point.position && (
           <span className="text-muted-foreground">
             {point.position === 'LYING'

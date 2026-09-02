@@ -50,9 +50,3 @@ export const growthMeasureLimits: Record<GrowthMeasure, GrowthMeasureLimits> = {
     maxDisplay: millimetresToCentimetres(MAX_HEAD_CIRCUMFERENCE_MILLIMETERS),
   },
 };
-
-/** True when `value` (base unit) is inside the measure's plausibility range. */
-export function isWithinGrowthLimits(measure: GrowthMeasure, value: number): boolean {
-  const { min, max } = growthMeasureLimits[measure];
-  return value >= min && value <= max;
-}

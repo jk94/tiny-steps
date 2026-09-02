@@ -310,7 +310,9 @@ describe('ChildForm sex field (W-10)', () => {
     expect(formData.get('sex')).toBe('FEMALE');
   });
 
-  it('submits the empty sentinel when nothing is chosen, so the field can be cleared', async () => {
+  it('omits the field entirely when creating without choosing a sex', async () => {
+    // There is nothing to clear on create, and sending the empty sentinel
+    // would be rejected as an invalid enum value.
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderChildForm('create', onSubmit);
@@ -318,6 +320,26 @@ describe('ChildForm sex field (W-10)', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Alex' } });
     fireEvent.change(screen.getByLabelText('Birth date'), { target: { value: '2020-01-01' } });
     await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const formData = onSubmit.mock.calls[0][0] as FormData;
+    expect(formData.has('sex')).toBe(false);
+    expect(formData.get('name')).toBe('Alex');
+  });
+
+  it('submits the empty sentinel when editing, so a stored sex can be cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderChildForm('edit', onSubmit, {
+      name: 'Alex',
+      birthDate: '2020-01-01',
+      sex: 'MALE',
+      childId: 'c1',
+      householdId: 'h1',
+      hasPhoto: false,
+    });
+
+    await chooseSelectOption(user, 'Sex (optional)', 'Not specified');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const formData = onSubmit.mock.calls[0][0] as FormData;
     expect(formData.get('sex')).toBe('');

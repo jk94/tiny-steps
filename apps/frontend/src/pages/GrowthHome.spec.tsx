@@ -189,6 +189,24 @@ describe('GrowthHome', () => {
       ).toBeInTheDocument();
     });
 
+    it('shows the same hint for a measurement below the range', async () => {
+      mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([
+        makeMeasurement({
+          percentiles: {
+            weight: { status: 'UNAVAILABLE', reason: 'AGE_BELOW_REFERENCE_RANGE' },
+            length: null,
+            headCircumference: null,
+          },
+        }),
+      ]);
+
+      renderPage();
+
+      expect(
+        await screen.findByText(/No WHO reference curves exist for this range/i),
+      ).toBeInTheDocument();
+    });
+
     it('shows no hint when everything is inside the range', async () => {
       renderPage();
       await screen.findByTestId('growth-chart');
