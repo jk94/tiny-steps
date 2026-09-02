@@ -243,8 +243,10 @@ Aufbereitung gehört in den PDF-Bericht aus 7.4.
 - Mehrere Fotos pro Meilenstein können hochgeladen, angezeigt und einzeln gelöscht werden; beim
   Löschen eines Meilensteins bleiben keine Dateien zurück.
 - Fotos sind nur für Haushaltsmitglieder abrufbar; Dateipfade verlassen den Server nie.
-- Timeline und Vorlagenkatalog sind vollständig übersetzt (de/en); Vorlagentexte kommen aus den
-  i18n-Ressourcen, nicht aus der Datenbank.
+- Timeline und Vorlagenkatalog sind vollständig übersetzt (de/en); die Vorlagentexte **im Katalog
+  und im Formular** kommen aus den i18n-Ressourcen. Der Anzeigetext eines **gespeicherten** Eintrags
+  kommt hingegen aus `Milestone.title` — er wird bei der Erfassung aus dem übersetzten Katalogtext
+  eingefroren (siehe „Zu treffende Entscheidungen" Punkt 2, bei der Umsetzung umgekehrt entschieden).
 - Kategorie-Farben erfüllen den WCAG-AA-Kontrast und sind über den Kontrast-Regressionstest
   abgesichert.
 - Meilensteine sind im Rohdaten-Export enthalten.
