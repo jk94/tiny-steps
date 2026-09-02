@@ -11,8 +11,21 @@ export interface ChildSummary {
   name: string;
   birthDate: string;
   hasPhoto: boolean;
+  /**
+   * Optional; `null` means "not specified". Consumed only by the WHO growth
+   * percentiles — without it the growth page shows values and trends but no
+   * percentiles, with an explanatory hint (W-10).
+   */
+  sex: 'FEMALE' | 'MALE' | null;
   createdAt: string;
 }
+
+/**
+ * Wire value that resets `sex` back to "not specified". `multipart/form-data`
+ * cannot carry JSON `null`, so the backend reads the empty string as "clear
+ * it" (see `CLEAR_CHILD_SEX` in the backend's update-child DTO).
+ */
+export const CLEAR_CHILD_SEX = '';
 
 /**
  * Fields a create/update child form may submit. All optional — `ChildForm`
@@ -23,6 +36,8 @@ export interface ChildSummary {
 export interface ChildFormInput {
   name?: string;
   birthDate?: string;
+  /** `'FEMALE' | 'MALE'`, or `CLEAR_CHILD_SEX` to reset it to "not specified". */
+  sex?: string;
   photo?: File | null;
 }
 
@@ -41,6 +56,11 @@ export function buildChildFormData(input: ChildFormInput): FormData {
   }
   if (input.birthDate !== undefined) {
     formData.append('birthDate', input.birthDate);
+  }
+  // Sent even when empty, unlike `photo`: the empty string is a meaningful
+  // value here ("not specified"), not an absent field.
+  if (input.sex !== undefined) {
+    formData.append('sex', input.sex);
   }
   if (input.photo) {
     formData.append('photo', input.photo);

@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 import { fetchHousehold } from '../api/household-api';
-import { deleteChild, fetchChild, updateChild } from '../api/child-api';
+import { CLEAR_CHILD_SEX, deleteChild, fetchChild, updateChild } from '../api/child-api';
 import {
   fetchNotificationSettings,
   updateNotificationSettings,
@@ -140,6 +140,7 @@ export function ChildSettings() {
                 // `birthDate` arrives as a full ISO8601 datetime string; an
                 // `<input type="date">` value must be the date-only portion.
                 birthDate: child.birthDate.slice(0, 10),
+                sex: child.sex ?? CLEAR_CHILD_SEX,
                 childId: child.id,
                 householdId: household.id,
                 hasPhoto: child.hasPhoto,

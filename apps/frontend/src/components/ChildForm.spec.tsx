@@ -3,12 +3,16 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChildForm } from './ChildForm';
 import { ApiError } from '../api/http-client';
+import { chooseSelectOption } from '../test/chooseSelectOption';
 import { stubImageLoading } from '../test/stubImageLoading';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 // ChildForm renders the existing photo via ChildPhoto, which is backed by
 // the Radix-based Avatar primitive — its image load is async in a real
 // browser, so jsdom needs this stub to resolve synchronously in tests.
 stubImageLoading();
+// The sex field is a Radix combobox — see `chooseSelectOption`'s doc comment.
+stubPopupLayoutApis();
 
 function renderChildForm(
   mode: 'create' | 'edit',
@@ -21,6 +25,7 @@ function renderChildForm(
 type ChildFormInitialValuesArg = {
   name: string;
   birthDate: string;
+  sex: string;
   childId: string;
   householdId: string;
   hasPhoto: boolean;
@@ -217,6 +222,7 @@ describe('ChildForm (edit mode)', () => {
   const initialValues: ChildFormInitialValuesArg = {
     name: 'Alex',
     birthDate: '2020-01-01',
+    sex: '',
     childId: 'c1',
     householdId: 'h1',
     hasPhoto: false,
@@ -272,5 +278,61 @@ describe('ChildForm photo dropzone', () => {
     expect(screen.queryByText('Add photo')).not.toBeInTheDocument();
     // Decorative preview (`alt=""`), so queried directly rather than via role.
     expect(container.querySelector('label[for="child-photo"] img')).toBeInTheDocument();
+  });
+});
+
+describe('ChildForm sex field (W-10)', () => {
+  it('defaults to "not specified" rather than guessing a sex', () => {
+    renderChildForm('create', vi.fn());
+
+    expect(screen.getByRole('combobox', { name: 'Sex (optional)' })).toHaveTextContent(
+      'Not specified',
+    );
+  });
+
+  it('explains what the field is used for', () => {
+    renderChildForm('create', vi.fn());
+
+    expect(screen.getByText(/only for the WHO growth percentiles/i)).toBeInTheDocument();
+  });
+
+  it('submits the chosen sex', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderChildForm('create', onSubmit);
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Alex' } });
+    fireEvent.change(screen.getByLabelText('Birth date'), { target: { value: '2020-01-01' } });
+    await chooseSelectOption(user, 'Sex (optional)', 'Female');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const formData = onSubmit.mock.calls[0][0] as FormData;
+    expect(formData.get('sex')).toBe('FEMALE');
+  });
+
+  it('submits the empty sentinel when nothing is chosen, so the field can be cleared', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderChildForm('create', onSubmit);
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Alex' } });
+    fireEvent.change(screen.getByLabelText('Birth date'), { target: { value: '2020-01-01' } });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const formData = onSubmit.mock.calls[0][0] as FormData;
+    expect(formData.get('sex')).toBe('');
+  });
+
+  it('pre-fills the stored sex in edit mode', () => {
+    renderChildForm('edit', vi.fn(), {
+      name: 'Alex',
+      birthDate: '2020-01-01',
+      sex: 'MALE',
+      childId: 'c1',
+      householdId: 'h1',
+      hasPhoto: false,
+    });
+
+    expect(screen.getByRole('combobox', { name: 'Sex (optional)' })).toHaveTextContent('Male');
   });
 });

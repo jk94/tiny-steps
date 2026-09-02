@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buildChildFormData } from '../api/child-api';
+import { buildChildFormData, CLEAR_CHILD_SEX } from '../api/child-api';
 import { ALLOWED_PHOTO_MIME_TYPES, MAX_PHOTO_BYTES } from '../child/childPhotoConstraints';
 import { mapChildError, type ChildErrorKey } from '../child/mapChildError';
 import { cn } from '../lib/cn';
 import { ChildPhoto } from './ChildPhoto';
 import { ErrorMessage } from './ErrorMessage';
-import { Button, Input } from './ui';
+import { Button, Input, Select } from './ui';
 
 const MAX_NAME_LENGTH = 120;
+
+/**
+ * UI-only value of the "not specified" option. Radix's `Select` reserves the
+ * empty string (an item may not use it), so the wire sentinel
+ * `CLEAR_CHILD_SEX` cannot double as the option value and is mapped on submit.
+ */
+const SEX_NOT_SPECIFIED_OPTION = 'NOT_SPECIFIED';
 
 /** `<input type="date">` max attribute + the JS not-in-the-future check. */
 function todayAsIsoDate(): string {
@@ -24,6 +31,8 @@ type FieldErrorKeys = {
 export interface ChildFormInitialValues {
   name: string;
   birthDate: string;
+  /** `'FEMALE' | 'MALE'`, or `CLEAR_CHILD_SEX` for "not specified". */
+  sex: string;
   childId: string;
   householdId: string;
   hasPhoto: boolean;
@@ -39,6 +48,9 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState(initialValues?.name ?? '');
   const [birthDate, setBirthDate] = useState(initialValues?.birthDate ?? '');
+  // "Not specified" is the default and a first-class choice, never a guessed
+  // value — see W-10 and `child.fields.sexHint`.
+  const [sex, setSex] = useState(initialValues?.sex || SEX_NOT_SPECIFIED_OPTION);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [fieldErrorKeys, setFieldErrorKeys] = useState<FieldErrorKeys>({});
   const [formErrorKey, setFormErrorKey] = useState<ChildErrorKey | null>(null);
@@ -102,7 +114,12 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
     setFormErrorKey(null);
     setIsSubmitting(true);
     try {
-      const formData = buildChildFormData({ name, birthDate, photo: photoFile });
+      const formData = buildChildFormData({
+        name,
+        birthDate,
+        sex: sex === SEX_NOT_SPECIFIED_OPTION ? CLEAR_CHILD_SEX : sex,
+        photo: photoFile,
+      });
       await onSubmit(formData);
       // No `finally`-reset here — a successful submit navigates away, so
       // resetting `isSubmitting` right before unmount would be pure churn.
@@ -217,6 +234,23 @@ export function ChildForm({ mode, initialValues, onSubmit }: ChildFormProps) {
         error={fieldErrorKeys.birthDate ? t(fieldErrorKeys.birthDate) : undefined}
         disabled={isSubmitting}
       />
+
+      <div className="flex flex-col gap-1">
+        <Select
+          id="child-sex"
+          label={t('child.fields.sexLabel')}
+          value={sex}
+          disabled={isSubmitting}
+          onValueChange={setSex}
+        >
+          <Select.Item value={SEX_NOT_SPECIFIED_OPTION}>
+            {t('child.fields.sexOptionNotSpecified')}
+          </Select.Item>
+          <Select.Item value="FEMALE">{t('child.fields.sexOptionFemale')}</Select.Item>
+          <Select.Item value="MALE">{t('child.fields.sexOptionMale')}</Select.Item>
+        </Select>
+        <p className="text-xs text-muted-foreground">{t('child.fields.sexHint')}</p>
+      </div>
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
