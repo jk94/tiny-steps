@@ -262,7 +262,9 @@
   --color-growth-length: var(--rt-color-growth-length);
   --color-growth-length-foreground: var(--rt-color-growth-length-foreground);
   --color-growth-head-circumference: var(--rt-color-growth-head-circumference);
-  --color-growth-head-circumference-foreground: var(--rt-color-growth-head-circumference-foreground);
+  --color-growth-head-circumference-foreground: var(
+    --rt-color-growth-head-circumference-foreground
+  );
   --color-growth-band: var(--rt-color-growth-band);
   /* Breakpoints (literal — media queries cannot read a CSS variable) */
   --breakpoint-sm: 480px;
