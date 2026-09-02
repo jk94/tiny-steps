@@ -21,7 +21,8 @@ import type { MilestoneFormOutput } from '../components/milestone/MilestoneForm'
 import { Button, Card, toast } from '../components/ui';
 import { toCalendarDateInputValue } from '../lib/calendarDate';
 import { mapMilestoneError } from '../milestone/mapMilestoneError';
-import { countFailedPhotos, uploadQueuedPhotos } from '../milestone/uploadQueuedPhotos';
+import { takePhotoRetryQueue } from '../milestone/photoRetryHandoff';
+import { countPendingPhotos, uploadQueuedPhotos } from '../milestone/uploadQueuedPhotos';
 import type { QueuedPhoto } from '../milestone/uploadQueuedPhotos';
 
 /**
@@ -44,7 +45,15 @@ export function MilestoneEdit() {
   }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [photoResults, setPhotoResults] = useState<QueuedPhoto[] | undefined>();
+
+  // Seeded once from the create page's handoff, when the user arrived here
+  // after a partial photo-upload failure: the still-unuploaded `File` objects
+  // travel with them so a retry needs no re-picking. `takePhotoRetryQueue`
+  // tolerates StrictMode's double-invoked initializer (see its doc comment). A
+  // page reload has no handoff and correctly starts from the stored milestone.
+  const [photoResults, setPhotoResults] = useState<QueuedPhoto[] | undefined>(() =>
+    milestoneId ? takePhotoRetryQueue(milestoneId) : undefined,
+  );
   const [pendingPhotoDeleteId, setPendingPhotoDeleteId] = useState<string | null>(null);
 
   const milestonePath = `/households/${householdId}/children/${childId}/milestones`;
@@ -111,12 +120,12 @@ export function MilestoneEdit() {
     const uploaded = await uploadQueuedPhotos(householdId!, childId!, milestone.id, output.photos);
     await queryClient.invalidateQueries({ queryKey: milestonesQueryKey(householdId!, childId!) });
 
-    const failedCount = countFailedPhotos(uploaded);
-    if (failedCount > 0) {
+    const pendingCount = countPendingPhotos(uploaded);
+    if (pendingCount > 0) {
       // M-15: the edit itself was saved, but some photos were not — stay here
       // with the failed files listed rather than claiming everything worked.
       setPhotoResults(uploaded);
-      toast.error(t('milestone.validation.photoUploadFailed', { count: failedCount }));
+      toast.error(t('milestone.validation.photoUploadFailed', { count: pendingCount }));
       return;
     }
 

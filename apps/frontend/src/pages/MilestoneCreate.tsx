@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -12,8 +11,8 @@ import { MilestoneForm } from '../components/milestone/MilestoneForm';
 import type { MilestoneFormOutput } from '../components/milestone/MilestoneForm';
 import { Card, toast } from '../components/ui';
 import { mapMilestoneError } from '../milestone/mapMilestoneError';
-import { countFailedPhotos, uploadQueuedPhotos } from '../milestone/uploadQueuedPhotos';
-import type { QueuedPhoto } from '../milestone/uploadQueuedPhotos';
+import { stashPhotoRetryQueue } from '../milestone/photoRetryHandoff';
+import { countPendingPhotos, uploadQueuedPhotos } from '../milestone/uploadQueuedPhotos';
 
 /**
  * Create page for a single milestone.
@@ -35,7 +34,6 @@ export function MilestoneCreate() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [photoResults, setPhotoResults] = useState<QueuedPhoto[] | undefined>();
 
   const milestonePath = `/households/${householdId}/children/${childId}/milestones`;
   // Set when the user arrived from a catalog tile (M-12).
@@ -77,16 +75,17 @@ export function MilestoneCreate() {
     const uploaded = await uploadQueuedPhotos(householdId!, childId!, created.id, output.photos);
     await queryClient.invalidateQueries({ queryKey: milestonesQueryKey(householdId!, childId!) });
 
-    const failedCount = countFailedPhotos(uploaded);
-    if (failedCount === 0) {
+    const pendingCount = countPendingPhotos(uploaded);
+    if (pendingCount === 0) {
       await navigate(milestonePath, { replace: true });
       return;
     }
 
     // The milestone exists, so going "back" would strand it. Continue into its
-    // edit page with the failed files still visible.
-    setPhotoResults(uploaded);
-    toast.error(t('milestone.validation.photoUploadFailed', { count: failedCount }));
+    // edit page, handing the still-unuploaded files over so they can be
+    // retried there without being re-picked — never a faked success (M-15).
+    stashPhotoRetryQueue(created.id, uploaded);
+    toast.error(t('milestone.validation.photoUploadFailed', { count: pendingCount }));
     await navigate(`${milestonePath}/${created.id}/edit`, { replace: true });
   };
 
@@ -105,7 +104,6 @@ export function MilestoneCreate() {
             mode="create"
             birthDate={childQuery.data.birthDate.slice(0, 10)}
             templateKey={presetTemplateKey}
-            photoResults={photoResults}
             onSubmit={handleSubmit}
           />
           {createMutation.isError && (

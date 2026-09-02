@@ -608,7 +608,6 @@
         "addLabel": "Choose photos",
         "hint": "Up to {{max}} photos, each at most 2 MB (JPEG, PNG or WebP).",
         "statusPending": "Waiting to upload",
-        "statusUploading": "Uploading…",
         "statusDone": "Uploaded",
         "statusError": "Failed",
         "removeLabel": "Remove “{{name}}”",
@@ -640,8 +639,9 @@
       "noteTooLong": "The note may be at most {{max}} characters long.",
       "photoInvalidType": "“{{name}}” is not a JPEG, PNG or WebP image.",
       "photoTooLarge": "“{{name}}” is larger than 2 MB.",
+      "photosNeedAttention": "Some photos were rejected. Please remove them or choose different files before saving.",
       "saveFailed": "The milestone could not be saved. Please check your connection and try again.",
-      "photoUploadFailed": "The milestone was saved, but {{count}} photo(s) could not be uploaded. You can add them again here.",
+      "photoUploadFailed": "The milestone was saved, but {{count}} photo(s) could not be uploaded. The affected files are listed below — tap Save again to retry them.",
       "photoDeleteFailed": "The photo could not be deleted. Please try again.",
       "deleteFailed": "The milestone could not be deleted. Please try again.",
       "loadFailed": "The milestones could not be loaded. Please try again."

@@ -9,6 +9,7 @@ import type { MilestoneSummary } from '../api/milestone-api';
 import * as childApi from '../api/child-api';
 import * as milestoneApi from '../api/milestone-api';
 import { queryClient } from '../lib/query-client';
+import { clearPhotoRetryQueue, takePhotoRetryQueue } from '../milestone/photoRetryHandoff';
 
 vi.mock('../api/child-api', async () => {
   const actual = await vi.importActual<typeof childApi>('../api/child-api');
@@ -88,6 +89,7 @@ describe('MilestoneCreate', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+    clearPhotoRetryQueue();
   });
 
   it('creates the milestone and returns to the timeline', async () => {
@@ -195,5 +197,34 @@ describe('MilestoneCreate', () => {
     await waitFor(() => {
       expect(screen.getByTestId('location')).toHaveTextContent(`${BASE_PATH}/${created.id}/edit`);
     });
+  });
+
+  it('hands the not-yet-uploaded files to the edit page, keeping the stored one out (M-15)', async () => {
+    const user = userEvent.setup();
+    mockedMilestoneApi.createMilestone.mockResolvedValue(created);
+    mockedMilestoneApi.uploadMilestonePhoto
+      .mockResolvedValueOnce({ id: 'p1', sortIndex: 0, mimeType: 'image/png' })
+      .mockRejectedValueOnce(new Error('offline'));
+
+    renderPage();
+
+    await user.type(await screen.findByLabelText('Title'), 'With two photos');
+    await user.upload(screen.getByLabelText('Choose photos'), [
+      imageFile('ok.png'),
+      imageFile('bad.png'),
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(`${BASE_PATH}/${created.id}/edit`);
+    });
+
+    const handedOver = takePhotoRetryQueue(created.id);
+    // The succeeded upload is not carried on (it would duplicate on retry); the
+    // failed one is, still retryable, so the user need not re-pick it.
+    expect(handedOver?.map((photo) => `${photo.file.name}:${photo.status}`)).toEqual([
+      'ok.png:done',
+      'bad.png:pending',
+    ]);
   });
 });

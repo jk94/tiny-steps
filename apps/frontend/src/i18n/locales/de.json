@@ -608,7 +608,6 @@
         "addLabel": "Fotos auswählen",
         "hint": "Bis zu {{max}} Fotos, je höchstens 2 MB (JPEG, PNG oder WebP).",
         "statusPending": "Wartet auf den Upload",
-        "statusUploading": "Wird hochgeladen…",
         "statusDone": "Hochgeladen",
         "statusError": "Fehlgeschlagen",
         "removeLabel": "„{{name}}“ entfernen",
@@ -640,8 +639,9 @@
       "noteTooLong": "Die Notiz darf höchstens {{max}} Zeichen lang sein.",
       "photoInvalidType": "„{{name}}“ ist kein JPEG-, PNG- oder WebP-Bild.",
       "photoTooLarge": "„{{name}}“ ist größer als 2 MB.",
+      "photosNeedAttention": "Einige Fotos wurden abgelehnt. Bitte entferne sie oder wähle andere Dateien, bevor du speicherst.",
       "saveFailed": "Der Meilenstein konnte nicht gespeichert werden. Bitte prüfe deine Verbindung und versuche es erneut.",
-      "photoUploadFailed": "Der Meilenstein wurde gespeichert, aber {{count}} Foto(s) konnten nicht hochgeladen werden. Du kannst sie hier erneut hinzufügen.",
+      "photoUploadFailed": "Der Meilenstein wurde gespeichert, aber {{count}} Foto(s) konnten nicht hochgeladen werden. Die betroffenen Dateien sind unten aufgeführt — tippe erneut auf Speichern, um sie noch einmal hochzuladen.",
       "photoDeleteFailed": "Das Foto konnte nicht gelöscht werden. Bitte versuche es erneut.",
       "deleteFailed": "Der Meilenstein konnte nicht gelöscht werden. Bitte versuche es erneut.",
       "loadFailed": "Die Meilensteine konnten nicht geladen werden. Bitte versuche es erneut."

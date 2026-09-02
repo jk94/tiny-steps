@@ -16,6 +16,7 @@ import {
   MAX_PHOTO_BYTES,
   MAX_PHOTOS_PER_MILESTONE,
 } from '../../lib/photoConstraints';
+import { mergePhotoResults } from '../../milestone/uploadQueuedPhotos';
 import type { PhotoUploadStatus, QueuedPhoto } from '../../milestone/uploadQueuedPhotos';
 import { ErrorMessage } from '../ErrorMessage';
 import { Badge, Button, Input, Select, Textarea } from '../ui';
@@ -34,13 +35,16 @@ type MilestoneFieldErrorKey =
   | 'milestone.validation.achievedAtRequired'
   | 'milestone.validation.achievedAtInFuture'
   | 'milestone.validation.achievedAtBeforeBirth'
-  | 'milestone.validation.noteTooLong';
+  | 'milestone.validation.noteTooLong'
+  | 'milestone.validation.photosNeedAttention';
 
 interface FieldErrors {
   template?: MilestoneFieldErrorKey;
   title?: MilestoneFieldErrorKey;
   achievedAt?: MilestoneFieldErrorKey;
   note?: MilestoneFieldErrorKey;
+  /** Spans the whole photo queue, so it is reported once rather than per file. */
+  photos?: MilestoneFieldErrorKey;
 }
 
 export interface MilestoneFormInitialValues {
@@ -60,7 +64,11 @@ export interface MilestoneFormOutput {
   category: MilestoneCategory | null;
   achievedAt: string;
   note: string | null;
-  /** Only the files that passed client-side validation, in selection order. */
+  /**
+   * The files still to upload, in selection order: everything `pending`,
+   * which includes entries a previous run failed on. Already-stored (`done`)
+   * entries are never handed on, so a retry cannot duplicate a photo.
+   */
   photos: QueuedPhoto[];
 }
 
@@ -132,7 +140,9 @@ export function MilestoneForm({
   const [note, setNote] = useState(initialValues?.note ?? '');
   // Seeded from `photoResults` so a form mounted with an already-failed upload
   // run (create -> edit after a partial failure) shows it immediately.
-  const [photos, setPhotos] = useState<QueuedPhoto[]>(photoResults ?? []);
+  const [photos, setPhotos] = useState<QueuedPhoto[]>(() =>
+    mergePhotoResults([], photoResults ?? []),
+  );
   const [photoSelectionError, setPhotoSelectionError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,7 +157,9 @@ export function MilestoneForm({
   if (photoResults !== adoptedPhotoResults) {
     setAdoptedPhotoResults(photoResults);
     if (photoResults) {
-      setPhotos(photoResults);
+      // Merged by id, not assigned: the run only covers the files it was given,
+      // so anything else in the queue has to survive it untouched.
+      setPhotos((current) => mergePhotoResults(current, photoResults));
       // The submit is over; whatever failed is now visible per file.
       setIsSubmitting(false);
     }
@@ -173,9 +185,13 @@ export function MilestoneForm({
     };
   }, [previewUrls]);
 
+  // Only entries that are NOT on the server yet count here: once a photo
+  // uploads it leaves this queue and shows up in `existingPhotoCount` instead,
+  // and counting it twice would shrink the ceiling after every partial run.
+  const queuedNotYetUploaded = photos.filter((photo) => photo.status !== 'done').length;
   const remainingPhotoSlots = Math.max(
     0,
-    MAX_PHOTOS_PER_MILESTONE - existingPhotoCount - photos.length,
+    MAX_PHOTOS_PER_MILESTONE - existingPhotoCount - queuedNotYetUploaded,
   );
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -255,6 +271,14 @@ export function MilestoneForm({
       errors.note = 'milestone.validation.noteTooLong';
     }
 
+    // A client-rejected file can never be uploaded as-is, so submitting with
+    // one still queued would either drop it silently or strand the user on a
+    // "still failing" screen forever. Blocking here keeps the only outcome an
+    // honest one: remove it or pick a different file (M-15).
+    if (photos.some((photo) => photo.status === 'error')) {
+      errors.photos = 'milestone.validation.photosNeedAttention';
+    }
+
     return errors;
   };
 
@@ -280,7 +304,9 @@ export function MilestoneForm({
         // An emptied note is an explicit `null`, which the PATCH endpoint
         // reads as "clear it" rather than "leave it alone".
         note: note.trim().length > 0 ? note.trim() : null,
-        photos: photos.filter((photo) => photo.status !== 'error'),
+        // `pending` only — `done` entries are already on the server and
+        // must never be sent again, and `error` ones were rejected above.
+        photos: photos.filter((photo) => photo.status === 'pending'),
       });
       // No `finally` reset: a fully successful submit navigates away, and a
       // partial photo failure comes back through `photoResults`.
@@ -464,6 +490,7 @@ export function MilestoneForm({
           {t('milestone.form.photos.hint', { max: MAX_PHOTOS_PER_MILESTONE })}
         </p>
         {photoSelectionError && <ErrorMessage message={photoSelectionError} />}
+        {fieldErrors.photos && <ErrorMessage message={t(fieldErrors.photos)} />}
 
         {photos.length > 0 && (
           <ul className="flex flex-col gap-2">
@@ -524,7 +551,6 @@ export function MilestoneForm({
  */
 const PHOTO_STATUS_KEYS: Record<PhotoUploadStatus, ParseKeys> = {
   pending: 'milestone.form.photos.statusPending',
-  uploading: 'milestone.form.photos.statusUploading',
   done: 'milestone.form.photos.statusDone',
   error: 'milestone.form.photos.statusError',
 };

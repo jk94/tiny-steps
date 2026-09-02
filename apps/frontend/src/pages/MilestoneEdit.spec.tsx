@@ -8,6 +8,7 @@ import type { MilestoneSummary } from '../api/milestone-api';
 import * as childApi from '../api/child-api';
 import * as milestoneApi from '../api/milestone-api';
 import { queryClient } from '../lib/query-client';
+import { clearPhotoRetryQueue, stashPhotoRetryQueue } from '../milestone/photoRetryHandoff';
 
 vi.mock('../api/child-api', async () => {
   const actual = await vi.importActual<typeof childApi>('../api/child-api');
@@ -93,6 +94,7 @@ describe('MilestoneEdit', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+    clearPhotoRetryQueue();
   });
 
   it('never sends the title or category of a template entry', async () => {
@@ -173,6 +175,50 @@ describe('MilestoneEdit', () => {
       await screen.findByText('The photo could not be uploaded. Please try again.'),
     ).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent(`${BASE_PATH}/${MILESTONE_ID}/edit`);
+  });
+
+  it('retries only the handed-over failed file, never re-uploading the stored one (M-15)', async () => {
+    const user = userEvent.setup();
+    // The milestone already carries the photo that uploaded on the create page.
+    mockedMilestoneApi.fetchMilestone.mockResolvedValue(
+      makeMilestone({
+        templateKey: null,
+        category: null,
+        photos: [{ id: 'p1', sortIndex: 0, mimeType: 'image/png' }],
+      }),
+    );
+    mockedMilestoneApi.updateMilestone.mockResolvedValue(makeMilestone());
+    mockedMilestoneApi.uploadMilestonePhoto.mockResolvedValue({
+      id: 'p2',
+      sortIndex: 1,
+      mimeType: 'image/png',
+    });
+
+    stashPhotoRetryQueue(MILESTONE_ID, [
+      { id: '1', file: new File(['x'], 'ok.png', { type: 'image/png' }), status: 'done' },
+      {
+        id: '2',
+        file: new File(['x'], 'bad.png', { type: 'image/png' }),
+        status: 'pending',
+        errorKey: 'milestone.errors.photoUploadError',
+      },
+    ]);
+
+    renderPage();
+
+    // Only the still-failing file is listed for retry; the succeeded one is not.
+    expect(await screen.findByText('bad.png')).toBeInTheDocument();
+    expect(screen.queryByText('ok.png')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(mockedMilestoneApi.uploadMilestonePhoto).toHaveBeenCalledTimes(1);
+    });
+    // The retry fully succeeded, so it returns to the timeline (not the edit page).
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe(BASE_PATH);
+    });
   });
 
   it('surfaces a failed load instead of an empty form', async () => {

@@ -136,6 +136,18 @@ describe('MilestoneForm', () => {
     await user.type(screen.getByLabelText('Title'), 'With photos');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
+    // A client-rejected file can never be uploaded as-is, so the form blocks
+    // the submit until it is removed rather than dropping it silently (M-15).
+    expect(
+      await screen.findByText(
+        'Some photos were rejected. Please remove them or choose different files before saving.',
+      ),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Remove “huge.png”' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     // Only the file that passed client-side validation is handed on.
     const { photos } = onSubmit.mock.calls[0][0];
@@ -187,7 +199,9 @@ describe('MilestoneForm', () => {
           note: '',
         }}
         photoResults={[
-          { id: '1', file, status: 'error', errorKey: 'milestone.errors.photoUploadError' },
+          // A failed *server* attempt: still retryable, so it stays `pending`
+          // with a reason attached — this is what the page hands back.
+          { id: '1', file, status: 'pending', errorKey: 'milestone.errors.photoUploadError' },
         ]}
       />,
     );
