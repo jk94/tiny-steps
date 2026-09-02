@@ -1,3 +1,4 @@
+import type { ParseKeys } from 'i18next';
 import type { MilestoneCategory } from '../api/milestone-api';
 
 /**
@@ -60,6 +61,20 @@ export const MILESTONE_TEMPLATES: readonly MilestoneTemplateEntry[] = [
  */
 export function getTemplateEntry(key: string): MilestoneTemplateEntry | undefined {
   return MILESTONE_TEMPLATES.find((entry) => entry.key === key);
+}
+
+/**
+ * The i18n key holding a template's label.
+ *
+ * The one place in the app that builds a `milestone.templates.*` key from a
+ * runtime string, so the unavoidable cast lives here instead of at every call
+ * site: `ParseKeys` is a union of the literal keys in `de.json`, which a
+ * template literal cannot narrow to. `milestoneCatalog.spec.ts` pins the
+ * catalog against those translations in both directions, which is what
+ * actually makes this safe.
+ */
+export function milestoneTemplateLabelKey(key: string): ParseKeys {
+  return `milestone.templates.${key}` as ParseKeys;
 }
 
 /**

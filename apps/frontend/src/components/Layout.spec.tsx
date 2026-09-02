@@ -402,9 +402,26 @@ describe('Layout child navigation', () => {
     }
   });
 
+  it('offers a milestones link inside a child context', () => {
+    renderLayoutAt('/households/h1/children/c1');
+
+    for (const link of screen.getAllByRole('link', { name: 'Milestones' })) {
+      expect(link).toHaveAttribute('href', '/households/h1/children/c1/milestones');
+    }
+  });
+
+  it('highlights the milestones link while on a milestone sub-route', () => {
+    renderLayoutAt('/households/h1/children/c1/milestones/new');
+
+    for (const link of screen.getAllByRole('link', { name: 'Milestones' })) {
+      expect(link.className).toContain('text-primary');
+    }
+  });
+
   it('renders no child navigation outside a child context', () => {
     renderLayout();
 
     expect(screen.queryByRole('link', { name: 'Growth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Milestones' })).not.toBeInTheDocument();
   });
 });
