@@ -23,6 +23,9 @@ import { DiaperEventEdit } from './pages/DiaperEventEdit';
 import { GrowthHome } from './pages/GrowthHome';
 import { GrowthMeasurementCreate } from './pages/GrowthMeasurementCreate';
 import { GrowthMeasurementEdit } from './pages/GrowthMeasurementEdit';
+import { MilestoneTimeline } from './pages/MilestoneTimeline';
+import { MilestoneCreate } from './pages/MilestoneCreate';
+import { MilestoneEdit } from './pages/MilestoneEdit';
 import { DailyTimeline } from './pages/DailyTimeline';
 import { Export } from './pages/Export';
 import { InviteAccept } from './pages/InviteAccept';
@@ -81,6 +84,18 @@ function App() {
           <Route
             path="households/:householdId/children/:childId/growth/:measurementId/edit"
             element={<GrowthMeasurementEdit />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/milestones"
+            element={<MilestoneTimeline />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/milestones/new"
+            element={<MilestoneCreate />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/milestones/:milestoneId/edit"
+            element={<MilestoneEdit />}
           />
           <Route
             path="households/:householdId/children/:childId/timeline"

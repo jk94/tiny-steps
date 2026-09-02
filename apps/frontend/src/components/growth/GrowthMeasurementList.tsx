@@ -9,7 +9,7 @@ import {
 } from '../../api/growth-api';
 import { listHouseholdMembers, type HouseholdMemberSummary } from '../../api/household-api';
 import { ageInMonths } from '../../lib/childAge';
-import { formatCalendarDate, parseCalendarDate } from '../../lib/growthFormat';
+import { formatCalendarDate, parseCalendarDate } from '../../lib/calendarDate';
 import { GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ErrorMessage } from '../ErrorMessage';

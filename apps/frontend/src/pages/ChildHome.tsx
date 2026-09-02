@@ -9,6 +9,7 @@ import { mapChildError } from '../child/mapChildError';
 import { ChildPhoto } from '../components/ChildPhoto';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { GrowthSummaryCard } from '../components/growth/GrowthSummaryCard';
+import { MilestoneSummaryCard } from '../components/milestone/MilestoneSummaryCard';
 import { TimeSinceBadgeCard } from '../components/TimeSinceBadgeCard';
 import { Card, Skeleton } from '../components/ui';
 import { ageInMonths } from '../lib/childAge';
@@ -200,6 +201,8 @@ export function ChildHome() {
         childId={childId!}
         birthDate={child.birthDate}
       />
+
+      <MilestoneSummaryCard householdId={householdId!} childId={childId!} />
 
       <Link
         to={`/households/${householdId}/children/${childId}/timeline`}

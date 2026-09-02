@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { TooltipWithBounds } from '@visx/tooltip';
-import { formatCalendarDate, formatGrowthValue } from '../../lib/growthFormat';
+import { formatCalendarDate } from '../../lib/calendarDate';
+import { formatGrowthValue } from '../../lib/growthFormat';
 import { growthMeasureVisuals, type GrowthMeasure } from '../../lib/growthMeasureVisuals';
 import type { GrowthPoint } from './growthChartData';
 import { growthPercentileText, growthZScoreText } from './growthPercentileText';

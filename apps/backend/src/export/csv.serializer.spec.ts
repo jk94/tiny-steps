@@ -3,6 +3,7 @@ import { toCsv } from './csv.serializer';
 import {
   RECORD_KIND_EVENT,
   RECORD_KIND_GROWTH_MEASUREMENT,
+  RECORD_KIND_MILESTONE,
   type RawExportRow,
 } from './export.service';
 
@@ -40,7 +41,42 @@ const COLUMNS = [
   'weightZScore',
   'lengthZScore',
   'headCircumferenceZScore',
+  // Appended in Phase 7.2 — everything above keeps its original position.
+  'milestoneTemplateKey',
+  'milestoneTitle',
+  'milestoneCategory',
+  'milestonePhotoCount',
 ] as const;
+
+/** The column order this export had before Phase 7.2 appended to it. */
+const PRE_MILESTONE_COLUMNS = [
+  'id',
+  'childId',
+  'userId',
+  'type',
+  'occurredAt',
+  'startedAt',
+  'endedAt',
+  'durationSeconds',
+  'feedingType',
+  'side',
+  'amountMl',
+  'diaperType',
+  'note',
+  'createdAt',
+  'updatedAt',
+  'recordKind',
+  'weightGrams',
+  'lengthMillimeters',
+  'headCircumferenceMillimeters',
+  'lengthMeasurementPosition',
+  'weightPercentile',
+  'lengthPercentile',
+  'headCircumferencePercentile',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
+];
 
 /** The column order this export had before Phase 7.1 appended to it. */
 const PRE_GROWTH_COLUMNS = [
@@ -93,6 +129,10 @@ function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
     weightZScore: null,
     lengthZScore: null,
     headCircumferenceZScore: null,
+    milestoneTemplateKey: null,
+    milestoneTitle: null,
+    milestoneCategory: null,
+    milestonePhotoCount: null,
     note: null,
     createdAt: '2026-01-01T07:00:00.000Z',
     updatedAt: '2026-01-01T07:00:00.000Z',
@@ -109,6 +149,12 @@ describe('toCsv', () => {
     // Positional CSV consumers of the existing export must not break: the
     // growth columns are appended, never interleaved.
     expect(HEADER.split(',').slice(0, PRE_GROWTH_COLUMNS.length)).toEqual(PRE_GROWTH_COLUMNS);
+  });
+
+  it('keeps the pre-Phase-7.2 columns in their original positions', () => {
+    // Same rule one release later: the milestone columns are appended after
+    // the growth ones, so nothing a 7.1-era consumer reads has moved.
+    expect(HEADER.split(',').slice(0, PRE_MILESTONE_COLUMNS.length)).toEqual(PRE_MILESTONE_COLUMNS);
   });
 
   it('renders null columns as empty fields and derived values verbatim', () => {
@@ -177,6 +223,56 @@ describe('toCsv', () => {
       feedingType: '',
       diaperType: '',
       durationSeconds: '',
+    });
+  });
+
+  it('fills the milestone columns for a milestone row and leaves the others blank', () => {
+    const csv = toCsv([
+      makeRow({
+        id: 'milestone-1',
+        recordKind: RECORD_KIND_MILESTONE,
+        type: 'MILESTONE',
+        diaperType: null,
+        milestoneTemplateKey: 'FIRST_STEPS',
+        milestoneTitle: 'Erste Schritte',
+        milestoneCategory: 'MOTOR',
+        milestonePhotoCount: 3,
+      }),
+    ]);
+
+    const records = parse(csv, { columns: true }) as Record<string, string>[];
+    expect(records[0]).toMatchObject({
+      recordKind: RECORD_KIND_MILESTONE,
+      type: 'MILESTONE',
+      milestoneTemplateKey: 'FIRST_STEPS',
+      milestoneTitle: 'Erste Schritte',
+      milestoneCategory: 'MOTOR',
+      milestonePhotoCount: '3',
+      // Event- and growth-only columns stay blank rather than being omitted.
+      feedingType: '',
+      diaperType: '',
+      weightGrams: '',
+      weightPercentile: '',
+    });
+  });
+
+  it('leaves the milestone columns blank on a free entry without a template or category', () => {
+    const csv = toCsv([
+      makeRow({
+        recordKind: RECORD_KIND_MILESTONE,
+        type: 'MILESTONE',
+        milestoneTitle: 'Erste Zugfahrt',
+        milestonePhotoCount: 0,
+      }),
+    ]);
+
+    const records = parse(csv, { columns: true }) as Record<string, string>[];
+    expect(records[0]).toMatchObject({
+      milestoneTemplateKey: '',
+      milestoneCategory: '',
+      milestoneTitle: 'Erste Zugfahrt',
+      // Zero is a real count and must not collapse into a blank field.
+      milestonePhotoCount: '0',
     });
   });
 

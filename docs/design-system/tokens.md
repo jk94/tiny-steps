@@ -60,6 +60,14 @@ appear both here and in the Event-type table below.
 | `--color-growth-length` | `#047857` | `#34d399` |
 | `--color-growth-head-circumference` | `#a21caf` | `#e879f9` |
 | `--color-growth-band` | `#4338ca` | `#818cf8` |
+| `--color-milestone-motor` | `#4338ca` | `#a5b4fc` |
+| `--color-milestone-motor-foreground` | `#ffffff` | `#1f2933` |
+| `--color-milestone-language` | `#0f766e` | `#5eead4` |
+| `--color-milestone-language-foreground` | `#ffffff` | `#1f2933` |
+| `--color-milestone-social` | `#d97706` | `#fcd34d` |
+| `--color-milestone-social-foreground` | `#000000` | `#1f2933` |
+| `--color-milestone-physical` | `#be123c` | `#fda4af` |
+| `--color-milestone-physical-foreground` | `#ffffff` | `#1f2933` |
 
 ## Typography
 

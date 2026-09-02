@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Child, GrowthMeasurement, Prisma } from '@prisma/client';
 import { ChildSex, toChildSex } from '../child/child-sex.enum';
+import { ageInDaysAt } from '../common/age/age-in-days';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGrowthMeasurementDto } from './dto/create-growth-measurement.dto';
 import { GrowthRangeQueryDto } from './dto/growth-range-query.dto';
@@ -10,7 +11,6 @@ import {
   LengthMeasurementPosition,
   toLengthMeasurementPosition,
 } from './length-measurement-position.enum';
-import { ageInDaysAt } from './percentiles/age-in-days';
 import {
   BodyMeasureReference,
   GrowthIndicator,

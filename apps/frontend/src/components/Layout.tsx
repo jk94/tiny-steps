@@ -10,6 +10,7 @@ import {
   Milk,
   Moon,
   Settings,
+  Sparkles,
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
@@ -155,6 +156,14 @@ export function Layout() {
           Icon: TrendingUp,
           isActive: location.pathname.startsWith(
             `/households/${householdId}/children/${childId}/growth`,
+          ),
+        },
+        {
+          to: `/households/${householdId}/children/${childId}/milestones`,
+          label: t('child.list.milestonesLink'),
+          Icon: Sparkles,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/milestones`,
           ),
         },
         {

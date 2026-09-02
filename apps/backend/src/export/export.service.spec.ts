@@ -6,11 +6,15 @@ import { DiaperType } from '../diaper/diaper-type.enum';
 import { EventType } from '../event/event-type.enum';
 import { ChildSex } from '../child/child-sex.enum';
 import { LengthMeasurementPosition } from '../growth/length-measurement-position.enum';
+import { MilestoneCategory } from '../milestone/milestone-category.enum';
+import { MilestoneTemplate } from '../milestone/milestone-template.enum';
 import {
   ExportService,
   GROWTH_EXPORT_TYPE,
+  MILESTONE_EXPORT_TYPE,
   RECORD_KIND_EVENT,
   RECORD_KIND_GROWTH_MEASUREMENT,
+  RECORD_KIND_MILESTONE,
 } from './export.service';
 
 const HOUSEHOLD_ID = 'household-1';
@@ -33,7 +37,7 @@ function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
-/** Empty growth columns, spread into every expected event row. */
+/** Empty domain columns, spread into every expected event row. */
 const NO_GROWTH_COLUMNS = {
   recordKind: RECORD_KIND_EVENT,
   weightGrams: null,
@@ -46,7 +50,28 @@ const NO_GROWTH_COLUMNS = {
   weightZScore: null,
   lengthZScore: null,
   headCircumferenceZScore: null,
+  milestoneTemplateKey: null,
+  milestoneTitle: null,
+  milestoneCategory: null,
+  milestonePhotoCount: null,
 };
+
+function makeMilestone(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'milestone-1',
+    childId: CHILD_ID,
+    userId: USER_ID,
+    templateKey: MilestoneTemplate.FIRST_STEPS as string | null,
+    title: 'Erste Schritte',
+    category: MilestoneCategory.MOTOR as string | null,
+    achievedAt: new Date('2026-01-01T08:45:00.000Z'),
+    note: 'Im Wohnzimmer',
+    createdAt: new Date('2026-01-01T18:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T18:00:00.000Z'),
+    _count: { photos: 3 },
+    ...overrides,
+  };
+}
 
 function makeGrowthMeasurement(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -133,6 +158,7 @@ describe('ExportService', () => {
     child: { findUnique: jest.Mock };
     event: { findMany: jest.Mock };
     growthMeasurement: { findMany: jest.Mock };
+    milestone: { findMany: jest.Mock };
   };
   let service: ExportService;
 
@@ -141,6 +167,7 @@ describe('ExportService', () => {
       child: { findUnique: jest.fn() },
       event: { findMany: jest.fn().mockResolvedValue([]) },
       growthMeasurement: { findMany: jest.fn().mockResolvedValue([]) },
+      milestone: { findMany: jest.fn().mockResolvedValue([]) },
     };
     service = new ExportService(prisma as unknown as PrismaService);
   });
@@ -176,6 +203,11 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID },
       orderBy: { measuredAt: 'asc' },
     });
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
+    });
   });
 
   it('applies the [from, to) filter when both from and to are given', async () => {
@@ -195,6 +227,12 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID, measuredAt: { gte: FROM, lt: TO } },
       orderBy: { measuredAt: 'asc' },
     });
+    // And to `achievedAt`, the milestone equivalent.
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, achievedAt: { gte: FROM, lt: TO } },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
+    });
   });
 
   it('applies an open-ended upper bound when only from is given', async () => {
@@ -212,6 +250,11 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID, measuredAt: { gte: FROM } },
       orderBy: { measuredAt: 'asc' },
     });
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, achievedAt: { gte: FROM } },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
+    });
   });
 
   it('applies an open-ended lower bound when only to is given', async () => {
@@ -228,6 +271,11 @@ describe('ExportService', () => {
     expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
       where: { childId: CHILD_ID, measuredAt: { lt: TO } },
       orderBy: { measuredAt: 'asc' },
+    });
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, achievedAt: { lt: TO } },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
     });
   });
 
@@ -438,6 +486,88 @@ describe('ExportService', () => {
       expect(rows.map((row) => row.recordKind)).toEqual([
         RECORD_KIND_EVENT,
         RECORD_KIND_GROWTH_MEASUREMENT,
+        RECORD_KIND_EVENT,
+      ]);
+    });
+  });
+
+  describe('milestones', () => {
+    it('flattens a milestone with its frozen title, category and photo count', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findMany.mockResolvedValue([makeMilestone()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toEqual({
+        id: 'milestone-1',
+        recordKind: RECORD_KIND_MILESTONE,
+        childId: CHILD_ID,
+        userId: USER_ID,
+        type: MILESTONE_EXPORT_TYPE,
+        // `achievedAt` fills the shared occurredAt column.
+        occurredAt: '2026-01-01T08:45:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        durationSeconds: null,
+        feedingType: null,
+        side: null,
+        amountMl: null,
+        diaperType: null,
+        note: 'Im Wohnzimmer',
+        createdAt: '2026-01-01T18:00:00.000Z',
+        updatedAt: '2026-01-01T18:00:00.000Z',
+        weightGrams: null,
+        lengthMillimeters: null,
+        headCircumferenceMillimeters: null,
+        lengthMeasurementPosition: null,
+        weightPercentile: null,
+        lengthPercentile: null,
+        headCircumferencePercentile: null,
+        weightZScore: null,
+        lengthZScore: null,
+        headCircumferenceZScore: null,
+        milestoneTemplateKey: MilestoneTemplate.FIRST_STEPS,
+        milestoneTitle: 'Erste Schritte',
+        milestoneCategory: MilestoneCategory.MOTOR,
+        milestonePhotoCount: 3,
+      });
+    });
+
+    it('exports a free entry with no template key and no category', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findMany.mockResolvedValue([
+        makeMilestone({
+          templateKey: null,
+          category: null,
+          title: 'Erste Zugfahrt',
+          _count: { photos: 0 },
+        }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toMatchObject({
+        milestoneTemplateKey: null,
+        milestoneCategory: null,
+        milestoneTitle: 'Erste Zugfahrt',
+        milestonePhotoCount: 0,
+      });
+    });
+
+    it('merges events, measurements and milestones into one chronological list', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findMany.mockResolvedValue([makeDiaperEvent(), makeSleepEvent()]);
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+      prisma.milestone.findMany.mockResolvedValue([makeMilestone()]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // Diaper 07:00, growth 08:30, milestone 08:45, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual(['diaper-1', 'growth-1', 'milestone-1', 'sleep-1']);
+      expect(rows.map((row) => row.recordKind)).toEqual([
+        RECORD_KIND_EVENT,
+        RECORD_KIND_GROWTH_MEASUREMENT,
+        RECORD_KIND_MILESTONE,
         RECORD_KIND_EVENT,
       ]);
     });

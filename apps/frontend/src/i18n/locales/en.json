@@ -163,7 +163,8 @@
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
       "timelineLink": "Overview",
-      "growthLink": "Growth"
+      "growthLink": "Growth",
+      "milestonesLink": "Milestones"
     },
     "create": {
       "title": "Create child profile",
@@ -535,6 +536,166 @@
       "empty": "No measurement recorded yet.",
       "cta": "Record a measurement",
       "measuredOn": "Measured on {{date}}"
+    }
+  },
+  "milestone": {
+    "timeline": {
+      "title": "Milestones — {{name}}",
+      "backLink": "Back to household",
+      "addLink": "Add milestone",
+      "subtitle": "Your child's development, kept in order.",
+      "tabTimeline": "Timeline",
+      "tabCatalog": "What's next?"
+    },
+    "list": {
+      "title": "Recorded milestones",
+      "empty": {
+        "title": "No milestones yet",
+        "description": "Record the first step — from the template list or entirely in your own words.",
+        "cta": "Record the first milestone"
+      },
+      "recordedBy": "Recorded by {{name}}",
+      "unknownUser": "Unknown",
+      "ageAtMilestone_one": "at {{count}} month",
+      "ageAtMilestone_other": "at {{count}} months",
+      "photoCount_one": "{{count}} photo",
+      "photoCount_other": "{{count}} photos",
+      "morePhotos": "+{{count}}",
+      "openGallery": "View photos of “{{title}}”",
+      "editLink": "Edit",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete this milestone?",
+        "description": "The entry and its photos will be removed permanently. This cannot be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "catalog": {
+      "title": "What's next?",
+      "intro": "Typical developmental steps for orientation — not a schedule. Every child moves at their own pace.",
+      "ageGroupLabel": "{{min}}–{{max}} months",
+      "achievedMarker": "Recorded",
+      "typicalRange": "usually between {{min}} and {{max}} months",
+      "openAchieved": "Open “{{title}}”",
+      "recordTemplate": "Record “{{title}}”"
+    },
+    "form": {
+      "createTitle": "Record a milestone",
+      "editTitle": "Edit milestone",
+      "backLink": "Back to milestones",
+      "modeTemplate": "From a template",
+      "modeFree": "Free entry",
+      "templateLabel": "Template",
+      "templatePlaceholder": "Choose a template",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. First visit to the zoo",
+      "titleFixedHint": "The title comes from the template and cannot be changed.",
+      "categoryLabel": "Category (optional)",
+      "categoryNone": "No category",
+      "categoryHint": "For grouping only, never an assessment.",
+      "categoryFixedHint": "The category follows from the template.",
+      "achievedAtLabel": "Date",
+      "noteLabel": "Note (optional)",
+      "submit": {
+        "create": "Save",
+        "createPending": "Saving…",
+        "edit": "Save changes",
+        "editPending": "Saving…"
+      },
+      "photos": {
+        "sectionLabel": "Photos",
+        "addLabel": "Choose photos",
+        "hint": "Up to {{max}} photos, each at most 2 MB (JPEG, PNG or WebP).",
+        "statusPending": "Waiting to upload",
+        "statusDone": "Uploaded",
+        "statusError": "Failed",
+        "removeLabel": "Remove “{{name}}”",
+        "limitReached": "A milestone can carry at most {{max}} photos. {{count}} file(s) were not added.",
+        "existingLabel": "Already uploaded",
+        "deleteExisting": "Delete photo"
+      }
+    },
+    "gallery": {
+      "title": "Photos",
+      "previous": "Previous photo",
+      "next": "Next photo",
+      "counter": "{{current}} of {{total}}",
+      "photoAlt": "Photo {{index}} of “{{title}}”",
+      "deleteConfirm": {
+        "title": "Delete this photo?",
+        "description": "The photo will be removed permanently.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "validation": {
+      "titleRequired": "Please enter a title.",
+      "titleTooLong": "The title may be at most {{max}} characters long.",
+      "templateRequired": "Please choose a template.",
+      "achievedAtRequired": "Please enter a date.",
+      "achievedAtInFuture": "The date must not be in the future.",
+      "achievedAtBeforeBirth": "The date must not be before the birth date.",
+      "noteTooLong": "The note may be at most {{max}} characters long.",
+      "photoInvalidType": "“{{name}}” is not a JPEG, PNG or WebP image.",
+      "photoTooLarge": "“{{name}}” is larger than 2 MB.",
+      "photosNeedAttention": "Some photos were rejected. Please remove them or choose different files before saving.",
+      "saveFailed": "The milestone could not be saved. Please check your connection and try again.",
+      "photoUploadFailed": "The milestone was saved, but {{count}} photo(s) could not be uploaded. The affected files are listed below — tap Save again to retry them.",
+      "photoDeleteFailed": "The photo could not be deleted. Please try again.",
+      "deleteFailed": "The milestone could not be deleted. Please try again.",
+      "loadFailed": "The milestones could not be loaded. Please try again."
+    },
+    "errors": {
+      "notFound": "This milestone could not be found.",
+      "forbidden": "You are not allowed to perform this action.",
+      "templateAlreadyRecorded": "This milestone has already been recorded for this child.",
+      "photoLimitReached": "A milestone can carry at most 10 photos.",
+      "photoTooLarge": "The photo may be at most 2 MB.",
+      "photoInvalidType": "Please choose a JPEG, PNG or WebP image.",
+      "photoUploadError": "The photo could not be uploaded. Please try again.",
+      "templateFieldNotEditable": "The title and category of a template milestone cannot be changed.",
+      "invalidTitle": "Please enter a valid title.",
+      "invalidAchievedAt": "Please enter a valid date that is not in the future.",
+      "invalidInput": "Your input could not be saved. Please check the title and date.",
+      "generic": "Something went wrong. Please try again later."
+    },
+    "card": {
+      "title": "Milestones",
+      "link": "View all milestones",
+      "empty": "No milestone recorded yet.",
+      "cta": "Record a milestone",
+      "achievedOn": "On {{date}}",
+      "ageAt_one": "at {{count}} month",
+      "ageAt_other": "at {{count}} months"
+    },
+    "categories": {
+      "motor": "Motor",
+      "language": "Language",
+      "social": "Social",
+      "physical": "Physical"
+    },
+    "templates": {
+      "FIRST_SMILE": "First smile",
+      "HOLDS_HEAD_UP": "Holds their head up",
+      "FIRST_LAUGH": "First laugh",
+      "GRASPS_OBJECT": "Reaches for an object",
+      "ROLLS_OVER": "Rolls from back to front",
+      "FIRST_SOLID_FOOD": "First solid food",
+      "BABBLES": "First babbling",
+      "FIRST_TOOTH": "First tooth",
+      "SITS_UNSUPPORTED": "Sits unsupported",
+      "CRAWLS": "Crawls",
+      "PULLS_TO_STAND": "Pulls up to stand",
+      "WAVES_BYE": "Waves goodbye",
+      "FIRST_WORD": "First word",
+      "FIRST_STEPS": "First steps",
+      "DRINKS_FROM_CUP": "Drinks from a cup",
+      "CLIMBS_STAIRS": "Climbs stairs",
+      "RUNS": "Runs steadily",
+      "TWO_WORD_SENTENCE": "First two-word sentence",
+      "SAYS_OWN_NAME": "Says their own name",
+      "POTTY_TRAINED_DAY": "Dry during the day"
     }
   },
   "timeline": {

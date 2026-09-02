@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreateGrowthMeasurementInput, LengthMeasurementPosition } from '../../api/growth-api';
 import { growthMeasureLimits, MAX_NOTE_LENGTH } from '../../lib/growthLimits';
-import { todayAsCalendarDate } from '../../lib/growthFormat';
+import { todayAsCalendarDate } from '../../lib/calendarDate';
 import { centimetresToMillimetres, kilogramsToGrams } from '../../lib/growthUnits';
 import { ErrorMessage } from '../ErrorMessage';
 import { Button, Input, Select, Textarea } from '../ui';

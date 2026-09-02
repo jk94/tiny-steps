@@ -1,10 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Child, DiaperDetail, Event, FeedingDetail, GrowthMeasurement } from '@prisma/client';
+import {
+  Child,
+  DiaperDetail,
+  Event,
+  FeedingDetail,
+  GrowthMeasurement,
+  Milestone,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { toChildSex } from '../child/child-sex.enum';
+import { ageInDaysAt } from '../common/age/age-in-days';
 import { MEASUREMENT_VALUE_FIELDS } from '../growth/growth-measurement.constants';
 import { toLengthMeasurementPosition } from '../growth/length-measurement-position.enum';
-import { ageInDaysAt } from '../growth/percentiles/age-in-days';
 import {
   computeGrowthPercentile,
   type GrowthIndicator,
@@ -25,9 +32,13 @@ type EventWithDetails = Event & {
  */
 export const RECORD_KIND_EVENT = 'EVENT';
 export const RECORD_KIND_GROWTH_MEASUREMENT = 'GROWTH_MEASUREMENT';
+export const RECORD_KIND_MILESTONE = 'MILESTONE';
 
 /** `type` value carried by growth rows, alongside the event types. */
 export const GROWTH_EXPORT_TYPE = 'GROWTH';
+
+/** `type` value carried by milestone rows, alongside the event types. */
+export const MILESTONE_EXPORT_TYPE = 'MILESTONE';
 
 /**
  * One flattened raw-data row per `Event`, joining the type-specific
@@ -69,7 +80,8 @@ export interface RawExportRow {
   // units (grams / millimetres, W-3). The percentiles come from the very same
   // pure function the API uses, so an exported number always matches what the
   // app displayed.
-  recordKind: typeof RECORD_KIND_EVENT | typeof RECORD_KIND_GROWTH_MEASUREMENT;
+  recordKind:
+    typeof RECORD_KIND_EVENT | typeof RECORD_KIND_GROWTH_MEASUREMENT | typeof RECORD_KIND_MILESTONE;
   weightGrams: number | null;
   lengthMillimeters: number | null;
   headCircumferenceMillimeters: number | null;
@@ -80,9 +92,48 @@ export interface RawExportRow {
   weightZScore: number | null;
   lengthZScore: number | null;
   headCircumferenceZScore: number | null;
+  // --- Appended in roadmap Phase 7.2 -------------------------------------
+  // Same rule as the Phase 7.1 block above: strictly at the END, after every
+  // pre-existing column, so a positional consumer keeps working. Null on every
+  // event and growth row.
+  //
+  // Milestones join the same flat array rather than getting their own export
+  // file. That deviates from the phase-7 README's Festlegung 5 ("one dataset
+  // per domain") and follows what Phase 7.1 actually did instead — one file
+  // with a `recordKind` discriminator is what a spreadsheet user can work
+  // with, and 7.4's PDF report is where the per-domain presentation belongs.
+  //
+  // `milestoneTitle` is the stored, frozen label (see `schema.prisma`), so an
+  // export always reads the way the entry read when it was recorded.
+  milestoneTemplateKey: string | null;
+  milestoneTitle: string | null;
+  milestoneCategory: string | null;
+  milestonePhotoCount: number | null;
 }
 
 const MS_PER_SECOND = 1000;
+
+/** The Phase 7.1 growth columns, blank on any row that is not a measurement. */
+const EMPTY_GROWTH_COLUMNS = {
+  weightGrams: null,
+  lengthMillimeters: null,
+  headCircumferenceMillimeters: null,
+  lengthMeasurementPosition: null,
+  weightPercentile: null,
+  lengthPercentile: null,
+  headCircumferencePercentile: null,
+  weightZScore: null,
+  lengthZScore: null,
+  headCircumferenceZScore: null,
+} as const;
+
+/** The Phase 7.2 milestone columns, blank on any row that is not a milestone. */
+const EMPTY_MILESTONE_COLUMNS = {
+  milestoneTemplateKey: null,
+  milestoneTitle: null,
+  milestoneCategory: null,
+  milestonePhotoCount: null,
+} as const;
 
 /**
  * Read-only raw-data export for a single household's child (Feeding/Sleep/
@@ -130,9 +181,20 @@ export class ExportService {
       orderBy: { measuredAt: 'asc' },
     });
 
+    // Milestones, same treatment — their `achievedAt` is the milestone
+    // equivalent of `occurredAt`. Only the photo *count* is exported: the
+    // files themselves are out of scope for a raw-data dump, and their paths
+    // never leave the server (M-8).
+    const milestones = await this.prisma.milestone.findMany({
+      where: { childId, ...(hasRange ? { achievedAt: rangeFilter } : {}) },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
+    });
+
     return [
       ...events.map((event) => toRawExportRow(event)),
       ...measurements.map((measurement) => toGrowthExportRow(measurement, child)),
+      ...milestones.map((milestone) => toMilestoneExportRow(milestone)),
     ].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   }
 
@@ -176,16 +238,8 @@ function toRawExportRow(event: EventWithDetails): RawExportRow {
     createdAt: event.createdAt.toISOString(),
     updatedAt: event.updatedAt.toISOString(),
     recordKind: RECORD_KIND_EVENT,
-    weightGrams: null,
-    lengthMillimeters: null,
-    headCircumferenceMillimeters: null,
-    lengthMeasurementPosition: null,
-    weightPercentile: null,
-    lengthPercentile: null,
-    headCircumferencePercentile: null,
-    weightZScore: null,
-    lengthZScore: null,
-    headCircumferenceZScore: null,
+    ...EMPTY_GROWTH_COLUMNS,
+    ...EMPTY_MILESTONE_COLUMNS,
   };
 }
 
@@ -316,5 +370,41 @@ function toGrowthExportRow(measurement: GrowthMeasurement, child: Child): RawExp
     headCircumferenceMillimeters: measurement.headCircumferenceMillimeters,
     lengthMeasurementPosition: positionOverride,
     ...classification,
+    ...EMPTY_MILESTONE_COLUMNS,
+  };
+}
+
+/**
+ * Flattens a milestone into the same row shape as an event.
+ *
+ * `achievedAt` fills the shared `occurredAt` column so the merged list can be
+ * sorted on one key, and every event- and growth-specific column stays null.
+ * The milestone's own `title` is used verbatim — it is the frozen label stored
+ * at creation time (see `schema.prisma`), so the export never depends on the
+ * exporting user's current language.
+ */
+function toMilestoneExportRow(milestone: Milestone & { _count: { photos: number } }): RawExportRow {
+  return {
+    id: milestone.id,
+    childId: milestone.childId,
+    userId: milestone.userId,
+    type: MILESTONE_EXPORT_TYPE,
+    occurredAt: milestone.achievedAt.toISOString(),
+    startedAt: null,
+    endedAt: null,
+    durationSeconds: null,
+    feedingType: null,
+    side: null,
+    amountMl: null,
+    diaperType: null,
+    note: milestone.note,
+    createdAt: milestone.createdAt.toISOString(),
+    updatedAt: milestone.updatedAt.toISOString(),
+    recordKind: RECORD_KIND_MILESTONE,
+    ...EMPTY_GROWTH_COLUMNS,
+    milestoneTemplateKey: milestone.templateKey,
+    milestoneTitle: milestone.title,
+    milestoneCategory: milestone.category,
+    milestonePhotoCount: milestone._count.photos,
   };
 }

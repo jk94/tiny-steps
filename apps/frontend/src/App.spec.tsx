@@ -7,6 +7,7 @@ import * as useAuthModule from './auth/useAuth';
 import * as oidcApi from './api/oidc-api';
 import * as childApi from './api/child-api';
 import * as growthApi from './api/growth-api';
+import * as milestoneApi from './api/milestone-api';
 import * as householdApi from './api/household-api';
 import * as inviteApi from './api/invite-api';
 import { queryClient } from './lib/query-client';
@@ -16,6 +17,12 @@ vi.mock('./auth/useAuth');
 vi.mock('./api/oidc-api');
 vi.mock('./api/child-api');
 vi.mock('./api/growth-api');
+// Partial mock: the query-key factories must stay real, since an
+// auto-mocked one returns `undefined` and React Query rejects that.
+vi.mock('./api/milestone-api', async () => {
+  const actual = await vi.importActual<typeof milestoneApi>('./api/milestone-api');
+  return { ...actual, listMilestones: vi.fn() };
+});
 vi.mock('./api/household-api');
 vi.mock('./api/invite-api');
 vi.mock('./realtime/useRealtimeConnection');
@@ -25,6 +32,7 @@ const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedOidcApi = vi.mocked(oidcApi);
 const mockedChildApi = vi.mocked(childApi);
 const mockedGrowthApi = vi.mocked(growthApi);
+const mockedMilestoneApi = vi.mocked(milestoneApi);
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedInviteApi = vi.mocked(inviteApi);
 const mockedUseRealtimeConnection = vi.mocked(useRealtimeConnectionModule.useRealtimeConnection);
@@ -251,5 +259,38 @@ describe('App', () => {
     renderAppAt('/households/h1/children/c1/growth');
 
     expect(await screen.findByRole('heading', { name: 'Growth — Mia' })).toBeInTheDocument();
+  });
+
+  it('renders the milestone page at the child milestones route', async () => {
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      updateName: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedChildApi.fetchChild.mockResolvedValue({
+      id: 'c1',
+      householdId: 'h1',
+      name: 'Mia',
+      birthDate: '2025-01-01T00:00:00.000Z',
+      hasPhoto: false,
+      sex: 'FEMALE',
+      createdAt: '2025-01-02T00:00:00.000Z',
+    });
+    mockedMilestoneApi.listMilestones.mockResolvedValue([]);
+    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([]);
+
+    renderAppAt('/households/h1/children/c1/milestones');
+
+    expect(await screen.findByRole('heading', { name: 'Milestones — Mia' })).toBeInTheDocument();
   });
 });

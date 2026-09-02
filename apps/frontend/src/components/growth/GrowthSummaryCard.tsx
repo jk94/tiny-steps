@@ -7,7 +7,7 @@ import {
   type GrowthMeasurementSummary,
 } from '../../api/growth-api';
 import { ageInMonths } from '../../lib/childAge';
-import { formatCalendarDate, parseCalendarDate } from '../../lib/growthFormat';
+import { formatCalendarDate, parseCalendarDate } from '../../lib/calendarDate';
 import { GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
 import { Card, EmptyState, Skeleton } from '../ui';
 import { GrowthMeasureValueRow } from './GrowthMeasureValueRow';

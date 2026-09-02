@@ -36,6 +36,13 @@ const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'weightZScore',
   'lengthZScore',
   'headCircumferenceZScore',
+  // Appended in Phase 7.2, again strictly after everything before it — same
+  // positional-stability rule as the Phase 7.1 block. Blank on every event and
+  // growth row.
+  'milestoneTemplateKey',
+  'milestoneTitle',
+  'milestoneCategory',
+  'milestonePhotoCount',
 ];
 
 /**

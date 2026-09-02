@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildChildFormData, CLEAR_CHILD_SEX } from '../api/child-api';
-import { ALLOWED_PHOTO_MIME_TYPES, MAX_PHOTO_BYTES } from '../child/childPhotoConstraints';
+import { ALLOWED_PHOTO_MIME_TYPES, MAX_PHOTO_BYTES } from '../lib/photoConstraints';
 import { mapChildError, type ChildErrorKey } from '../child/mapChildError';
 import { cn } from '../lib/cn';
 import { ChildPhoto } from './ChildPhoto';

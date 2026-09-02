@@ -10,7 +10,7 @@ import { GrowthMeasurementForm } from '../components/growth/GrowthMeasurementFor
 import type { GrowthMeasurementFormOutput } from '../components/growth/GrowthMeasurementForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Card, toast } from '../components/ui';
-import { toCalendarDateInputValue } from '../lib/growthFormat';
+import { toCalendarDateInputValue } from '../lib/calendarDate';
 import { gramsToKilograms, millimetresToCentimetres } from '../lib/growthUnits';
 
 /** Renders a stored base-unit value as the form's display-unit string. */

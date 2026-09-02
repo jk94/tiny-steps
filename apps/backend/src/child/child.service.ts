@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Child, Prisma } from '@prisma/client';
+import { toAllowedPhotoMimeType } from '../common/photo/photo-upload';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildPhotoStorageService } from './child-photo-storage.service';
 import { ChildSex, toChildSex } from './child-sex.enum';
-import { ALLOWED_PHOTO_MIME_TYPES, AllowedPhotoMimeType } from './child-photo.constants';
+import { AllowedPhotoMimeType } from './child-photo.constants';
 import { CreateChildDto } from './dto/create-child.dto';
 import { CLEAR_CHILD_SEX, UpdateChildDto } from './dto/update-child.dto';
 
@@ -34,20 +35,6 @@ function toSummary(child: Child): ChildSummary {
     sex: child.sex ? toChildSex(child.sex) : null,
     createdAt: child.createdAt,
   };
-}
-
-/**
- * Validates+narrows an uploaded file's `mimetype` into `AllowedPhotoMimeType`.
- * Should be unreachable in practice — `ChildController`'s
- * `ParseFilePipeBuilder` already rejects any other mime type before this is
- * called — but this is the defensive application-layer boundary, mirroring
- * `toHouseholdRole()` in `household-role.enum.ts`.
- */
-function toAllowedMimeType(mimeType: string): AllowedPhotoMimeType {
-  if ((ALLOWED_PHOTO_MIME_TYPES as readonly string[]).includes(mimeType)) {
-    return mimeType as AllowedPhotoMimeType;
-  }
-  throw new Error(`Unexpected photo mime type: ${mimeType}`);
 }
 
 /**
@@ -83,7 +70,7 @@ export class ChildService {
     let photoMimeType: AllowedPhotoMimeType | undefined;
 
     if (photo) {
-      photoMimeType = toAllowedMimeType(photo.mimetype);
+      photoMimeType = toAllowedPhotoMimeType(photo.mimetype);
       photoPath = await this.photoStorage.save(childId, photoMimeType, photo.buffer);
     }
 
@@ -147,7 +134,7 @@ export class ChildService {
 
     let newPhotoPath: string | undefined;
     if (photo) {
-      const mimeType = toAllowedMimeType(photo.mimetype);
+      const mimeType = toAllowedPhotoMimeType(photo.mimetype);
       // Step 1: write the new file first, under a fresh unique name. If
       // this throws, abort immediately — no DB write attempted, the
       // existing photo (if any) remains valid and unchanged.
