@@ -162,7 +162,8 @@
       "feedingLink": "Füttern",
       "sleepLink": "Schlaf",
       "diaperLink": "Windel",
-      "timelineLink": "Übersicht"
+      "timelineLink": "Übersicht",
+      "growthLink": "Wachstum"
     },
     "create": {
       "title": "Kind-Profil anlegen",
@@ -186,7 +187,12 @@
       "birthDateLabel": "Geburtsdatum",
       "photoLabel": "Foto (optional)",
       "photoPlaceholder": "Foto hinzufügen",
-      "photoHint": "JPEG, PNG oder WebP, maximal 2 MB."
+      "photoHint": "JPEG, PNG oder WebP, maximal 2 MB.",
+      "sexLabel": "Geschlecht (optional)",
+      "sexHint": "Wird ausschließlich für die WHO-Wachstumsperzentile verwendet. Ohne Angabe werden Werte und Verlauf angezeigt, aber keine Perzentile.",
+      "sexOptionNotSpecified": "Keine Angabe",
+      "sexOptionFemale": "Weiblich",
+      "sexOptionMale": "Männlich"
     },
     "validation": {
       "nameRequired": "Bitte gib einen Namen ein.",
@@ -416,6 +422,121 @@
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   },
+  "growth": {
+    "home": {
+      "title": "Wachstum — {{name}}",
+      "backLink": "Zurück zum Haushalt",
+      "addLink": "Messung hinzufügen",
+      "subtitle": "Gewicht, Länge/Größe und Kopfumfang im Verlauf."
+    },
+    "measures": {
+      "weight": "Gewicht",
+      "length": "Länge/Größe",
+      "headCircumference": "Kopfumfang"
+    },
+    "units": {
+      "kg": "kg",
+      "cm": "cm"
+    },
+    "chart": {
+      "ariaLabel": "Verlauf {{measure}}: mit den Pfeiltasten zwischen den Messpunkten wechseln",
+      "figureLabel": "Wachstumsverlauf {{measure}}",
+      "keyboardHint": "Diagramm fokussieren und mit den Pfeiltasten von Messpunkt zu Messpunkt springen. Auf dem Touchscreen lange gedrückt halten.",
+      "liveReadout": "{{date}}: {{measure}} {{value}} {{unit}}, {{percentile}}",
+      "liveReadoutNoPercentile": "{{date}}: {{measure}} {{value}} {{unit}}",
+      "valueText": "{{date}}: {{value}} {{unit}}",
+      "valueTextEmpty": "Kein Messpunkt ausgewählt",
+      "noReferenceHint": "Für diesen Bereich gibt es keine WHO-Referenzkurven, deshalb werden nur die Messwerte ohne Perzentilbänder angezeigt.",
+      "empty": "Für diesen Messwert gibt es noch keine Einträge.",
+      "band": {
+        "label": "P{{percentile}}"
+      },
+      "position": {
+        "lying": "Liegend gemessen",
+        "standing": "Stehend gemessen"
+      },
+      "axis": {
+        "months_one": "{{count}} Mon.",
+        "months_other": "{{count}} Mon.",
+        "years_one": "{{count}} Jahr",
+        "years_other": "{{count}} Jahre"
+      }
+    },
+    "list": {
+      "title": "Messungen",
+      "empty": {
+        "title": "Noch keine Messungen",
+        "description": "Trage die Werte der nächsten Vorsorgeuntersuchung ein, um den Verlauf zu sehen.",
+        "cta": "Erste Messung eintragen"
+      },
+      "recordedBy": "Erfasst von {{name}}",
+      "unknownUser": "Unbekannt",
+      "ageAtMeasurement_one": "{{count}} Monat alt",
+      "ageAtMeasurement_other": "{{count}} Monate alt",
+      "editLink": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleteDialog": {
+        "title": "Messung löschen?",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "form": {
+      "titleCreate": "Messung eintragen",
+      "titleEdit": "Messung bearbeiten",
+      "backLink": "Zurück zum Wachstum",
+      "measuredAtLabel": "Datum der Messung",
+      "weightLabel": "Gewicht (kg)",
+      "lengthLabel": "Länge/Größe (cm)",
+      "headCircumferenceLabel": "Kopfumfang (cm)",
+      "valuesHint": "Mindestens einer der drei Werte muss ausgefüllt sein.",
+      "position": {
+        "label": "Messmethode Länge/Größe",
+        "auto": "Automatisch (nach Alter)",
+        "lying": "Liegend gemessen",
+        "standing": "Stehend gemessen",
+        "explanation": "Die WHO-Referenz unterscheidet liegend gemessene Länge (bis 24 Monate) von stehend gemessener Größe (ab 24 Monaten). Normalerweise wird das aus dem Alter abgeleitet — stelle es nur um, wenn tatsächlich anders gemessen wurde."
+      },
+      "noteLabel": "Notiz (optional)",
+      "submit": {
+        "create": "Speichern",
+        "createPending": "Wird gespeichert…",
+        "edit": "Änderungen speichern",
+        "editPending": "Wird gespeichert…"
+      }
+    },
+    "validation": {
+      "atLeastOneValue": "Bitte trage mindestens einen Wert ein.",
+      "weightRange": "Das Gewicht muss zwischen {{min}} und {{max}} kg liegen.",
+      "lengthRange": "Die Länge/Größe muss zwischen {{min}} und {{max}} cm liegen.",
+      "headCircumferenceRange": "Der Kopfumfang muss zwischen {{min}} und {{max}} cm liegen.",
+      "measuredAtRequired": "Bitte gib ein Datum an.",
+      "measuredAtFuture": "Das Datum darf nicht in der Zukunft liegen.",
+      "measuredAtBeforeBirth": "Das Datum darf nicht vor dem Geburtsdatum liegen.",
+      "noteTooLong": "Die Notiz darf höchstens 500 Zeichen lang sein.",
+      "saveFailed": "Die Messung konnte nicht gespeichert werden. Bitte prüfe deine Verbindung und versuche es erneut.",
+      "deleteFailed": "Die Messung konnte nicht gelöscht werden. Bitte versuche es erneut.",
+      "loadFailed": "Die Messungen konnten nicht geladen werden. Bitte versuche es erneut."
+    },
+    "percentile": {
+      "value": "{{value}}. Perzentile",
+      "zScore": "Z-Wert {{value}}",
+      "unavailable": {
+        "sexUnknown": "Perzentile brauchen das Geschlecht des Kindes.",
+        "sexUnknownLink": "Im Kind-Profil ergänzen",
+        "ageBelowRange": "Vor dem Geburtsdatum — außerhalb des WHO-Referenzbereichs.",
+        "ageOutOfRange": "Außerhalb des WHO-Referenzbereichs (0–5 Jahre)."
+      }
+    },
+    "card": {
+      "title": "Wachstum",
+      "link": "Verlauf ansehen",
+      "empty": "Noch keine Messung erfasst.",
+      "cta": "Messung eintragen",
+      "measuredOn": "Gemessen am {{date}}"
+    }
+  },
   "timeline": {
     "title": "Tagesübersicht — {{name}}",
     "backLink": "Zurück zur Übersicht",
@@ -461,7 +582,8 @@
     "toLabel": "Bis (optional)",
     "downloadButton": "Herunterladen",
     "downloadButtonPending": "Wird vorbereitet…",
-    "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut."
+    "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "includesGrowthNote": "Der Export enthält neben den Einträgen auch alle Wachstumsmessungen."
   },
   "profile": {
     "title": "Profil",

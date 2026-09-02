@@ -50,6 +50,10 @@
   --rt-color-diaper-stool-foreground: #ffffff;
   --rt-color-diaper-both: #0d9488;
   --rt-color-diaper-both-foreground: #000000;
+  --rt-color-growth-weight: #4338ca;
+  --rt-color-growth-length: #047857;
+  --rt-color-growth-head-circumference: #a21caf;
+  --rt-color-growth-band: #4338ca;
 
   /* Breakpoints */
   --breakpoint-sm: 480px;
@@ -145,6 +149,10 @@
     --rt-color-diaper-stool-foreground: #1f2933;
     --rt-color-diaper-both: #2dd4bf;
     --rt-color-diaper-both-foreground: #1f2933;
+    --rt-color-growth-weight: #818cf8;
+    --rt-color-growth-length: #34d399;
+    --rt-color-growth-head-circumference: #e879f9;
+    --rt-color-growth-band: #818cf8;
   }
 }
 
@@ -191,6 +199,10 @@
   --rt-color-diaper-stool-foreground: #1f2933;
   --rt-color-diaper-both: #2dd4bf;
   --rt-color-diaper-both-foreground: #1f2933;
+  --rt-color-growth-weight: #818cf8;
+  --rt-color-growth-length: #34d399;
+  --rt-color-growth-head-circumference: #e879f9;
+  --rt-color-growth-band: #818cf8;
 }
 
 @theme inline {
@@ -236,6 +248,10 @@
   --color-diaper-stool-foreground: var(--rt-color-diaper-stool-foreground);
   --color-diaper-both: var(--rt-color-diaper-both);
   --color-diaper-both-foreground: var(--rt-color-diaper-both-foreground);
+  --color-growth-weight: var(--rt-color-growth-weight);
+  --color-growth-length: var(--rt-color-growth-length);
+  --color-growth-head-circumference: var(--rt-color-growth-head-circumference);
+  --color-growth-band: var(--rt-color-growth-band);
   /* Breakpoints (literal — media queries cannot read a CSS variable) */
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;

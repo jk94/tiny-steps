@@ -85,6 +85,7 @@ export function Export() {
       <Card>
         <Card.Body className="flex flex-col gap-4">
           <h1 className="text-xl font-bold text-foreground">{t('export.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('export.includesGrowthNote')}</p>
 
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-foreground">{t('export.formatLabel')}</span>

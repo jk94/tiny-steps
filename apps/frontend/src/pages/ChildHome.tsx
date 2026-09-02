@@ -8,6 +8,7 @@ import { type EventStatsSummary, fetchEventStats } from '../api/event-api';
 import { mapChildError } from '../child/mapChildError';
 import { ChildPhoto } from '../components/ChildPhoto';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { GrowthSummaryCard } from '../components/growth/GrowthSummaryCard';
 import { TimeSinceBadgeCard } from '../components/TimeSinceBadgeCard';
 import { Card, Skeleton } from '../components/ui';
 import { ageInMonths } from '../lib/childAge';
@@ -192,6 +193,12 @@ export function ChildHome() {
       <TimeSinceSection
         isLoading={statsQuery.isLoading}
         lastEventAt={statsQuery.data?.lastEventAt}
+      />
+
+      <GrowthSummaryCard
+        householdId={householdId!}
+        childId={childId!}
+        birthDate={child.birthDate}
       />
 
       <Link

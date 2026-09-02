@@ -162,7 +162,8 @@
       "feedingLink": "Feeding",
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
-      "timelineLink": "Overview"
+      "timelineLink": "Overview",
+      "growthLink": "Growth"
     },
     "create": {
       "title": "Create child profile",
@@ -186,7 +187,12 @@
       "birthDateLabel": "Birth date",
       "photoLabel": "Photo (optional)",
       "photoPlaceholder": "Add photo",
-      "photoHint": "JPEG, PNG, or WebP, maximum 2 MB."
+      "photoHint": "JPEG, PNG, or WebP, maximum 2 MB.",
+      "sexLabel": "Sex (optional)",
+      "sexHint": "Used only for the WHO growth percentiles. Without it, values and trends are shown but percentiles are not.",
+      "sexOptionNotSpecified": "Not specified",
+      "sexOptionFemale": "Female",
+      "sexOptionMale": "Male"
     },
     "validation": {
       "nameRequired": "Please enter a name.",
@@ -416,6 +422,121 @@
       "generic": "Something went wrong. Please try again later."
     }
   },
+  "growth": {
+    "home": {
+      "title": "Growth — {{name}}",
+      "backLink": "Back to household",
+      "addLink": "Add measurement",
+      "subtitle": "Weight, length/height and head circumference over time."
+    },
+    "measures": {
+      "weight": "Weight",
+      "length": "Length/height",
+      "headCircumference": "Head circumference"
+    },
+    "units": {
+      "kg": "kg",
+      "cm": "cm"
+    },
+    "chart": {
+      "ariaLabel": "{{measure}} trend: use the arrow keys to move between measurement points",
+      "figureLabel": "{{measure}} growth trend",
+      "keyboardHint": "Focus the chart and use the arrow keys to move from point to point. On a touchscreen, press and hold.",
+      "liveReadout": "{{date}}: {{measure}} {{value}} {{unit}}, {{percentile}}",
+      "liveReadoutNoPercentile": "{{date}}: {{measure}} {{value}} {{unit}}",
+      "valueText": "{{date}}: {{value}} {{unit}}",
+      "valueTextEmpty": "No measurement point selected",
+      "noReferenceHint": "No WHO reference curves exist for this range, so only the measured values are shown, without percentile bands.",
+      "empty": "No entries for this measure yet.",
+      "band": {
+        "label": "P{{percentile}}"
+      },
+      "position": {
+        "lying": "Measured lying down",
+        "standing": "Measured standing"
+      },
+      "axis": {
+        "months_one": "{{count}} mo",
+        "months_other": "{{count}} mo",
+        "years_one": "{{count}} yr",
+        "years_other": "{{count}} yrs"
+      }
+    },
+    "list": {
+      "title": "Measurements",
+      "empty": {
+        "title": "No measurements yet",
+        "description": "Enter the values from the next check-up to see the trend.",
+        "cta": "Record the first measurement"
+      },
+      "recordedBy": "Recorded by {{name}}",
+      "unknownUser": "Unknown",
+      "ageAtMeasurement_one": "{{count}} month old",
+      "ageAtMeasurement_other": "{{count}} months old",
+      "editLink": "Edit",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete measurement?",
+        "description": "This action cannot be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "form": {
+      "titleCreate": "Record measurement",
+      "titleEdit": "Edit measurement",
+      "backLink": "Back to growth",
+      "measuredAtLabel": "Measurement date",
+      "weightLabel": "Weight (kg)",
+      "lengthLabel": "Length/height (cm)",
+      "headCircumferenceLabel": "Head circumference (cm)",
+      "valuesHint": "At least one of the three values must be filled in.",
+      "position": {
+        "label": "Length/height measurement method",
+        "auto": "Automatic (by age)",
+        "lying": "Measured lying down",
+        "standing": "Measured standing",
+        "explanation": "The WHO reference distinguishes recumbent length (up to 24 months) from standing height (from 24 months). This is normally derived from the age — only change it if the child was actually measured the other way."
+      },
+      "noteLabel": "Note (optional)",
+      "submit": {
+        "create": "Save",
+        "createPending": "Saving…",
+        "edit": "Save changes",
+        "editPending": "Saving…"
+      }
+    },
+    "validation": {
+      "atLeastOneValue": "Please enter at least one value.",
+      "weightRange": "The weight must be between {{min}} and {{max}} kg.",
+      "lengthRange": "The length/height must be between {{min}} and {{max}} cm.",
+      "headCircumferenceRange": "The head circumference must be between {{min}} and {{max}} cm.",
+      "measuredAtRequired": "Please enter a date.",
+      "measuredAtFuture": "The date must not be in the future.",
+      "measuredAtBeforeBirth": "The date must not be before the birth date.",
+      "noteTooLong": "The note must be at most 500 characters long.",
+      "saveFailed": "The measurement could not be saved. Please check your connection and try again.",
+      "deleteFailed": "The measurement could not be deleted. Please try again.",
+      "loadFailed": "The measurements could not be loaded. Please try again."
+    },
+    "percentile": {
+      "value": "{{value}}th percentile",
+      "zScore": "z-score {{value}}",
+      "unavailable": {
+        "sexUnknown": "Percentiles need the child's sex.",
+        "sexUnknownLink": "Add it in the child profile",
+        "ageBelowRange": "Before the birth date — outside the WHO reference range.",
+        "ageOutOfRange": "Outside the WHO reference range (0–5 years)."
+      }
+    },
+    "card": {
+      "title": "Growth",
+      "link": "View trend",
+      "empty": "No measurement recorded yet.",
+      "cta": "Record a measurement",
+      "measuredOn": "Measured on {{date}}"
+    }
+  },
   "timeline": {
     "title": "Daily timeline — {{name}}",
     "backLink": "Back to overview",
@@ -461,7 +582,8 @@
     "toLabel": "To (optional)",
     "downloadButton": "Download",
     "downloadButtonPending": "Preparing…",
-    "error": "The export couldn't be generated. Please try again."
+    "error": "The export couldn't be generated. Please try again.",
+    "includesGrowthNote": "Besides the logged entries, the export also contains all growth measurements."
   },
   "profile": {
     "title": "Profile",

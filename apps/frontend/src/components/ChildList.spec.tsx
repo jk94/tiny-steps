@@ -57,6 +57,7 @@ describe('ChildList', () => {
         name: 'Alex',
         birthDate: '2020-01-01',
         hasPhoto: false,
+        sex: null,
         createdAt: '2020-01-01T00:00:00.000Z',
       },
     ]);
@@ -75,6 +76,7 @@ describe('ChildList', () => {
         name: 'Alex',
         birthDate: '2020-01-01',
         hasPhoto: false,
+        sex: null,
         createdAt: '2020-01-01T00:00:00.000Z',
       },
     ]);
@@ -93,6 +95,7 @@ describe('ChildList', () => {
         name: 'Alex',
         birthDate: '2020-01-01',
         hasPhoto: false,
+        sex: null,
         createdAt: '2020-01-01T00:00:00.000Z',
       },
     ]);
@@ -111,6 +114,7 @@ describe('ChildList', () => {
         name: 'Alex',
         birthDate: '2020-01-01',
         hasPhoto: false,
+        sex: null,
         createdAt: '2020-01-01T00:00:00.000Z',
       },
     ]);
@@ -129,6 +133,7 @@ describe('ChildList', () => {
         name: 'Alex',
         birthDate: '2020-01-01',
         hasPhoto: false,
+        sex: null,
         createdAt: '2020-01-01T00:00:00.000Z',
       },
     ]);
@@ -164,6 +169,7 @@ describe('ChildList', () => {
         name: 'Alex',
         birthDate: '2020-01-01',
         hasPhoto: false,
+        sex: null,
         createdAt: '2020-01-01T00:00:00.000Z',
       },
     ]);

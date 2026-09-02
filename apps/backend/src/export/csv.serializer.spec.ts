@@ -1,13 +1,77 @@
 import { parse } from 'csv-parse/sync';
 import { toCsv } from './csv.serializer';
-import { RawExportRow } from './export.service';
+import {
+  RECORD_KIND_EVENT,
+  RECORD_KIND_GROWTH_MEASUREMENT,
+  type RawExportRow,
+} from './export.service';
 
-const HEADER =
-  'id,childId,userId,type,occurredAt,startedAt,endedAt,durationSeconds,feedingType,side,amountMl,diaperType,note,createdAt,updatedAt';
+/**
+ * The expected column order, in one place. The exact-string assertions below
+ * are built from it rather than from a hand-counted comma sequence, so a
+ * column added to `RawExportRow` shows up as one readable diff instead of an
+ * off-by-one in a wall of commas.
+ */
+const COLUMNS = [
+  'id',
+  'childId',
+  'userId',
+  'type',
+  'occurredAt',
+  'startedAt',
+  'endedAt',
+  'durationSeconds',
+  'feedingType',
+  'side',
+  'amountMl',
+  'diaperType',
+  'note',
+  'createdAt',
+  'updatedAt',
+  // Appended in Phase 7.1 — everything above keeps its original position.
+  'recordKind',
+  'weightGrams',
+  'lengthMillimeters',
+  'headCircumferenceMillimeters',
+  'lengthMeasurementPosition',
+  'weightPercentile',
+  'lengthPercentile',
+  'headCircumferencePercentile',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
+] as const;
+
+/** The column order this export had before Phase 7.1 appended to it. */
+const PRE_GROWTH_COLUMNS = [
+  'id',
+  'childId',
+  'userId',
+  'type',
+  'occurredAt',
+  'startedAt',
+  'endedAt',
+  'durationSeconds',
+  'feedingType',
+  'side',
+  'amountMl',
+  'diaperType',
+  'note',
+  'createdAt',
+  'updatedAt',
+];
+
+const HEADER = COLUMNS.join(',');
+
+/** Renders one expected CSV line from a partial column -> raw-field map. */
+function csvLine(fields: Partial<Record<(typeof COLUMNS)[number], string>>): string {
+  return COLUMNS.map((column) => fields[column] ?? '').join(',');
+}
 
 function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
   return {
     id: 'e1',
+    recordKind: RECORD_KIND_EVENT,
     childId: 'c1',
     userId: 'u1',
     type: 'DIAPER',
@@ -19,6 +83,16 @@ function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
     side: null,
     amountMl: null,
     diaperType: 'BOTH',
+    weightGrams: null,
+    lengthMillimeters: null,
+    headCircumferenceMillimeters: null,
+    lengthMeasurementPosition: null,
+    weightPercentile: null,
+    lengthPercentile: null,
+    headCircumferencePercentile: null,
+    weightZScore: null,
+    lengthZScore: null,
+    headCircumferenceZScore: null,
     note: null,
     createdAt: '2026-01-01T07:00:00.000Z',
     updatedAt: '2026-01-01T07:00:00.000Z',
@@ -29,6 +103,12 @@ function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
 describe('toCsv', () => {
   it('emits only the header row for an empty export', () => {
     expect(toCsv([])).toBe(`${HEADER}\n`);
+  });
+
+  it('keeps the pre-Phase-7.1 columns in their original positions', () => {
+    // Positional CSV consumers of the existing export must not break: the
+    // growth columns are appended, never interleaved.
+    expect(HEADER.split(',').slice(0, PRE_GROWTH_COLUMNS.length)).toEqual(PRE_GROWTH_COLUMNS);
   });
 
   it('renders null columns as empty fields and derived values verbatim', () => {
@@ -45,9 +125,59 @@ describe('toCsv', () => {
 
     expect(csv).toBe(
       `${HEADER}\n` +
-        'sleep-1,c1,u1,SLEEP,2026-01-01T07:00:00.000Z,2026-01-01T09:00:00.000Z,' +
-        '2026-01-01T10:00:00.000Z,3600,,,,,,2026-01-01T07:00:00.000Z,2026-01-01T07:00:00.000Z\n',
+        csvLine({
+          id: 'sleep-1',
+          recordKind: RECORD_KIND_EVENT,
+          childId: 'c1',
+          userId: 'u1',
+          type: 'SLEEP',
+          occurredAt: '2026-01-01T07:00:00.000Z',
+          startedAt: '2026-01-01T09:00:00.000Z',
+          endedAt: '2026-01-01T10:00:00.000Z',
+          durationSeconds: '3600',
+          createdAt: '2026-01-01T07:00:00.000Z',
+          updatedAt: '2026-01-01T07:00:00.000Z',
+        }) +
+        '\n',
     );
+  });
+
+  it('fills the growth columns for a measurement row and leaves the event columns blank', () => {
+    const csv = toCsv([
+      makeRow({
+        id: 'growth-1',
+        recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
+        type: 'GROWTH',
+        diaperType: null,
+        weightGrams: 12000,
+        lengthMillimeters: 870,
+        headCircumferenceMillimeters: 480,
+        lengthMeasurementPosition: 'LYING',
+        weightPercentile: 42,
+        lengthPercentile: 55,
+        headCircumferencePercentile: 61,
+        weightZScore: -0.21,
+        lengthZScore: 0.13,
+        headCircumferenceZScore: 0.28,
+      }),
+    ]);
+
+    const records = parse(csv, { columns: true }) as Record<string, string>[];
+    expect(records[0]).toMatchObject({
+      recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
+      type: 'GROWTH',
+      weightGrams: '12000',
+      lengthMillimeters: '870',
+      headCircumferenceMillimeters: '480',
+      lengthMeasurementPosition: 'LYING',
+      weightPercentile: '42',
+      weightZScore: '-0.21',
+      // Event-only columns stay blank rather than being omitted, so the header
+      // keeps matching every row.
+      feedingType: '',
+      diaperType: '',
+      durationSeconds: '',
+    });
   });
 
   // This is the entire reason a CSV library is used rather than hand-rolling
@@ -59,11 +189,21 @@ describe('toCsv', () => {
 
     const csv = toCsv([makeRow({ note })]);
 
-    const expectedField = '"spat up, a ""lot""\nthen slept"';
     expect(csv).toBe(
       `${HEADER}\n` +
-        `e1,c1,u1,DIAPER,2026-01-01T07:00:00.000Z,,,,,,,BOTH,${expectedField},` +
-        '2026-01-01T07:00:00.000Z,2026-01-01T07:00:00.000Z\n',
+        csvLine({
+          id: 'e1',
+          recordKind: RECORD_KIND_EVENT,
+          childId: 'c1',
+          userId: 'u1',
+          type: 'DIAPER',
+          occurredAt: '2026-01-01T07:00:00.000Z',
+          diaperType: 'BOTH',
+          note: '"spat up, a ""lot""\nthen slept"',
+          createdAt: '2026-01-01T07:00:00.000Z',
+          updatedAt: '2026-01-01T07:00:00.000Z',
+        }) +
+        '\n',
     );
 
     // And it round-trips back to the original value through a CSV parser.

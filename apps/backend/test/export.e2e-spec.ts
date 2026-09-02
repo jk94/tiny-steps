@@ -9,6 +9,12 @@ import { AppModule } from '../src/app.module';
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '../src/auth/guards/csrf.guard';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { EventType } from '../src/event/event-type.enum';
+import { ChildSex } from '../src/child/child-sex.enum';
+import {
+  GROWTH_EXPORT_TYPE,
+  RECORD_KIND_EVENT,
+  RECORD_KIND_GROWTH_MEASUREMENT,
+} from '../src/export/export.service';
 import { FeedingType } from '../src/feeding/feeding-type.enum';
 import { FeedingSide } from '../src/feeding/feeding-side.enum';
 import { DiaperType } from '../src/diaper/diaper-type.enum';
@@ -102,6 +108,7 @@ describe('Data export (e2e)', () => {
 
     // FK order: detail rows -> Event -> Child, then household graph, then user.
     await prisma.event.deleteMany({ where: { childId: { in: childIds } } });
+    await prisma.growthMeasurement.deleteMany({ where: { childId: { in: childIds } } });
     await prisma.invite.deleteMany({ where: { householdId: { in: householdIds } } });
     await prisma.child.deleteMany({ where: { householdId: { in: householdIds } } });
     await prisma.membership.deleteMany({ where: { householdId: { in: householdIds } } });
@@ -140,9 +147,32 @@ describe('Data export (e2e)', () => {
 
   async function createChild(householdId: string): Promise<string> {
     const child = await prisma.child.create({
-      data: { householdId, name: 'Mia', birthDate: new Date('2024-01-01T00:00:00.000Z') },
+      data: {
+        householdId,
+        name: 'Mia',
+        birthDate: new Date('2024-01-01T00:00:00.000Z'),
+        // A known sex, so the export's percentile columns are actually filled
+        // rather than blank for the W-10 reason.
+        sex: ChildSex.FEMALE,
+      },
     });
     return child.id;
+  }
+
+  /** Seeds one growth measurement, sorting between the diaper and the feeding. */
+  async function seedGrowthMeasurement(childId: string, userId: string): Promise<string> {
+    const measurement = await prisma.growthMeasurement.create({
+      data: {
+        childId,
+        userId,
+        measuredAt: new Date('2026-01-01T07:30:00.000Z'),
+        weightGrams: 12000,
+        lengthMillimeters: 870,
+        headCircumferenceMillimeters: 480,
+        note: 'U7 check-up',
+      },
+    });
+    return measurement.id;
   }
 
   /** Seeds one of each event type for the child, returning their ids. */
@@ -301,5 +331,85 @@ describe('Data export (e2e)', () => {
       .get(`/api/households/${householdB.id}/children/${childId}/export/csv`)
       .set('Cookie', ownerB.cookies)
       .expect(404);
+  });
+
+  describe('growth measurements in the raw-data export', () => {
+    it('includes the measurement in the JSON export, merged chronologically', async () => {
+      const owner = await registerUser('growth-json-owner');
+      const household = await createHousehold(owner, 'Growth JSON Household');
+      const childId = await createChild(household.id);
+      const { feedingId, sleepId, diaperId } = await seedOneOfEachEvent(childId, owner.userId);
+      const growthId = await seedGrowthMeasurement(childId, owner.userId);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/json`)
+        .set('Cookie', owner.cookies)
+        .expect(200);
+
+      const rows = JSON.parse(response.text) as Array<Record<string, unknown>>;
+      // Diaper 07:00, growth 07:30, feeding 08:00, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual([diaperId, growthId, feedingId, sleepId]);
+
+      const growthRow = rows.find((row) => row.id === growthId)!;
+      expect(growthRow).toMatchObject({
+        recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
+        type: GROWTH_EXPORT_TYPE,
+        occurredAt: '2026-01-01T07:30:00.000Z',
+        weightGrams: 12000,
+        lengthMillimeters: 870,
+        headCircumferenceMillimeters: 480,
+        note: 'U7 check-up',
+        feedingType: null,
+        diaperType: null,
+        durationSeconds: null,
+      });
+      expect(typeof growthRow.weightPercentile).toBe('number');
+
+      // Existing event rows keep working and are labelled as events.
+      expect(rows.find((row) => row.id === feedingId)).toMatchObject({
+        recordKind: RECORD_KIND_EVENT,
+        weightGrams: null,
+        weightPercentile: null,
+      });
+    });
+
+    it('includes the measurement in the CSV export with the new columns filled', async () => {
+      const owner = await registerUser('growth-csv-owner');
+      const household = await createHousehold(owner, 'Growth CSV Household');
+      const childId = await createChild(household.id);
+      await seedOneOfEachEvent(childId, owner.userId);
+      const growthId = await seedGrowthMeasurement(childId, owner.userId);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/csv`)
+        .set('Cookie', owner.cookies)
+        .expect(200);
+
+      const records = parse(response.text, { columns: true }) as Record<string, string>[];
+      expect(records).toHaveLength(4);
+
+      const growthRecord = records.find((record) => record.id === growthId)!;
+      expect(growthRecord.recordKind).toBe(RECORD_KIND_GROWTH_MEASUREMENT);
+      expect(growthRecord.type).toBe(GROWTH_EXPORT_TYPE);
+      expect(growthRecord.weightGrams).toBe('12000');
+      expect(growthRecord.lengthMillimeters).toBe('870');
+      expect(Number(growthRecord.weightPercentile)).toBeGreaterThan(0);
+      expect(growthRecord.feedingType).toBe('');
+    });
+
+    it('applies the date filter to measurements as well', async () => {
+      const owner = await registerUser('growth-filter-owner');
+      const household = await createHousehold(owner, 'Growth Filter Household');
+      const childId = await createChild(household.id);
+      await seedGrowthMeasurement(childId, owner.userId);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/json`)
+        .query({ from: '2026-01-01T08:00:00.000Z', to: '2026-01-02T00:00:00.000Z' })
+        .set('Cookie', owner.cookies)
+        .expect(200);
+
+      expect(JSON.parse(response.text)).toEqual([]);
+    });
   });
 });

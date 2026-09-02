@@ -53,6 +53,23 @@ function cssVars(prefix: string, record: ScaleTokens): string[] {
   return Object.entries(record).map(([key, value]) => `  --${prefix}-${key}: ${value};`);
 }
 
+/**
+ * Prettier's print width. The generated CSS is committed and must pass
+ * `bun run format:check`, so any line the mapping below would push past this
+ * is pre-wrapped exactly the way Prettier would wrap it — otherwise a
+ * long-named token (e.g. `growth-head-circumference`) silently breaks the
+ * format check after every token rebuild.
+ */
+const CSS_PRINT_WIDTH = 100;
+
+/** One `@theme inline` color mapping, wrapped if it exceeds the print width. */
+function themeColorLines(singleLine: string, runtimeVar: string, name: string): string[] {
+  if (singleLine.length <= CSS_PRINT_WIDTH) {
+    return [singleLine];
+  }
+  return [`  --color-${name}: var(`, `    ${runtimeVar}`, '  );'];
+}
+
 function buildCss(): string {
   const rootLines: string[] = [
     '  /* Color (light / default). Declared under an `--rt-color-*` (runtime',
@@ -102,7 +119,9 @@ function buildCss(): string {
   // exception: media-query conditions can't read a CSS variable anyway.
   const themeLines: string[] = [
     '  /* Colors */',
-    ...colorNames.map((name) => `  --color-${name}: var(--rt-color-${name});`),
+    ...colorNames.flatMap((name) =>
+      themeColorLines(`  --color-${name}: var(--rt-color-${name});`, `--rt-color-${name}`, name),
+    ),
     '  /* Breakpoints (literal — media queries cannot read a CSS variable) */',
     ...Object.entries(breakpoints).map(([key, value]) => `  --breakpoint-${key}: ${value};`),
     '  /* Spacing (literal — no runtime override exists to reference) */',

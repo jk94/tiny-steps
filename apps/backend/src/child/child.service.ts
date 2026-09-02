@@ -3,9 +3,10 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Child, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildPhotoStorageService } from './child-photo-storage.service';
+import { ChildSex, toChildSex } from './child-sex.enum';
 import { ALLOWED_PHOTO_MIME_TYPES, AllowedPhotoMimeType } from './child-photo.constants';
 import { CreateChildDto } from './dto/create-child.dto';
-import { UpdateChildDto } from './dto/update-child.dto';
+import { CLEAR_CHILD_SEX, UpdateChildDto } from './dto/update-child.dto';
 
 export interface ChildSummary {
   id: string;
@@ -13,6 +14,8 @@ export interface ChildSummary {
   name: string;
   birthDate: Date;
   hasPhoto: boolean;
+  /** `null` means "not specified" — see `ChildSex` and W-10. */
+  sex: ChildSex | null;
   createdAt: Date;
 }
 
@@ -28,6 +31,7 @@ function toSummary(child: Child): ChildSummary {
     name: child.name,
     birthDate: child.birthDate,
     hasPhoto: child.photoPath !== null,
+    sex: child.sex ? toChildSex(child.sex) : null,
     createdAt: child.createdAt,
   };
 }
@@ -90,6 +94,10 @@ export class ChildService {
           householdId,
           name: dto.name,
           birthDate: new Date(dto.birthDate),
+          // The empty string is the multipart wire form of "not specified";
+          // normalised to a NULL column so nothing downstream has to know
+          // about the sentinel (see `CLEAR_CHILD_SEX`).
+          sex: dto.sex ? dto.sex : null,
           photoPath,
           photoMimeType,
         },
@@ -132,6 +140,9 @@ export class ChildService {
     }
     if (dto.birthDate !== undefined) {
       data.birthDate = new Date(dto.birthDate);
+    }
+    if (dto.sex !== undefined) {
+      data.sex = dto.sex === CLEAR_CHILD_SEX ? null : dto.sex;
     }
 
     let newPhotoPath: string | undefined;

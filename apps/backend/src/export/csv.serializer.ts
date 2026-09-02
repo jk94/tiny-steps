@@ -22,6 +22,20 @@ const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'note',
   'createdAt',
   'updatedAt',
+  // Appended in Phase 7.1, strictly after the original columns: a consumer
+  // that reads this CSV positionally keeps working, since nothing before this
+  // point moved. Blank on every event row.
+  'recordKind',
+  'weightGrams',
+  'lengthMillimeters',
+  'headCircumferenceMillimeters',
+  'lengthMeasurementPosition',
+  'weightPercentile',
+  'lengthPercentile',
+  'headCircumferencePercentile',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
 ];
 
 /**

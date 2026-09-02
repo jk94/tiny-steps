@@ -1,11 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Child, DiaperDetail, Event, FeedingDetail } from '@prisma/client';
+import { Child, DiaperDetail, Event, FeedingDetail, GrowthMeasurement } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { toChildSex } from '../child/child-sex.enum';
+import { MEASUREMENT_VALUE_FIELDS } from '../growth/growth-measurement.constants';
+import { toLengthMeasurementPosition } from '../growth/length-measurement-position.enum';
+import { ageInDaysAt } from '../growth/percentiles/age-in-days';
+import {
+  computeGrowthPercentile,
+  type GrowthIndicator,
+} from '../growth/percentiles/growth-percentiles';
 
 type EventWithDetails = Event & {
   feedingDetail: FeedingDetail | null;
   diaperDetail: DiaperDetail | null;
 };
+
+/**
+ * Discriminates the two kinds of record the export contains. Added when
+ * growth measurements joined the export (roadmap Phase 7.1): they live in
+ * their own table beside `Event` (see ADR-0006's addendum), but the export
+ * stays a single flat array, so a reader needs an explicit column to tell the
+ * two apart rather than inferring it from which columns happen to be null.
+ * Every pre-existing row is an `EVENT`.
+ */
+export const RECORD_KIND_EVENT = 'EVENT';
+export const RECORD_KIND_GROWTH_MEASUREMENT = 'GROWTH_MEASUREMENT';
+
+/** `type` value carried by growth rows, alongside the event types. */
+export const GROWTH_EXPORT_TYPE = 'GROWTH';
 
 /**
  * One flattened raw-data row per `Event`, joining the type-specific
@@ -37,6 +59,27 @@ export interface RawExportRow {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  // --- Appended in roadmap Phase 7.1 -------------------------------------
+  // Deliberately at the END of the row, after the original columns: the CSV
+  // header is positional for consumers that already parse this export, so new
+  // columns are additive only if nothing before them shifts.
+  //
+  // `recordKind` discriminates the two kinds of record the flat array now
+  // holds; the rest are null on every event row. Values are in the stored base
+  // units (grams / millimetres, W-3). The percentiles come from the very same
+  // pure function the API uses, so an exported number always matches what the
+  // app displayed.
+  recordKind: typeof RECORD_KIND_EVENT | typeof RECORD_KIND_GROWTH_MEASUREMENT;
+  weightGrams: number | null;
+  lengthMillimeters: number | null;
+  headCircumferenceMillimeters: number | null;
+  lengthMeasurementPosition: string | null;
+  weightPercentile: number | null;
+  lengthPercentile: number | null;
+  headCircumferencePercentile: number | null;
+  weightZScore: number | null;
+  lengthZScore: number | null;
+  headCircumferenceZScore: number | null;
 }
 
 const MS_PER_SECOND = 1000;
@@ -62,24 +105,35 @@ export class ExportService {
     from?: Date,
     to?: Date,
   ): Promise<RawExportRow[]> {
-    await this.findChildOrThrow(householdId, childId);
+    const child = await this.findChildOrThrow(householdId, childId);
 
     // Build the range from whichever bound(s) are present so a lone `from`
     // (open-ended upper) or lone `to` (open-ended lower) still filters, rather
     // than only both-or-neither.
-    const occurredAtFilter: { gte?: Date; lt?: Date } = {};
-    if (from) occurredAtFilter.gte = from;
-    if (to) occurredAtFilter.lt = to;
-    const dateFilter =
-      Object.keys(occurredAtFilter).length > 0 ? { occurredAt: occurredAtFilter } : {};
+    const rangeFilter: { gte?: Date; lt?: Date } = {};
+    if (from) rangeFilter.gte = from;
+    if (to) rangeFilter.lt = to;
+    const hasRange = Object.keys(rangeFilter).length > 0;
 
     const events = await this.prisma.event.findMany({
-      where: { childId, ...dateFilter },
+      where: { childId, ...(hasRange ? { occurredAt: rangeFilter } : {}) },
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
     });
 
-    return events.map((event) => toRawExportRow(event));
+    // Growth measurements live in their own table (ADR-0006 addendum) but
+    // belong in the same flat export, so they are fetched with the same child
+    // scoping and the same window — applied to `measuredAt`, which is the
+    // growth equivalent of `occurredAt`.
+    const measurements = await this.prisma.growthMeasurement.findMany({
+      where: { childId, ...(hasRange ? { measuredAt: rangeFilter } : {}) },
+      orderBy: { measuredAt: 'asc' },
+    });
+
+    return [
+      ...events.map((event) => toRawExportRow(event)),
+      ...measurements.map((measurement) => toGrowthExportRow(measurement, child)),
+    ].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   }
 
   private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
@@ -121,5 +175,146 @@ function toRawExportRow(event: EventWithDetails): RawExportRow {
     note,
     createdAt: event.createdAt.toISOString(),
     updatedAt: event.updatedAt.toISOString(),
+    recordKind: RECORD_KIND_EVENT,
+    weightGrams: null,
+    lengthMillimeters: null,
+    headCircumferenceMillimeters: null,
+    lengthMeasurementPosition: null,
+    weightPercentile: null,
+    lengthPercentile: null,
+    headCircumferencePercentile: null,
+    weightZScore: null,
+    lengthZScore: null,
+    headCircumferenceZScore: null,
+  };
+}
+
+/**
+ * Precision of the derived classification columns.
+ *
+ * The percentile is rounded to a whole number, matching what the UI shows —
+ * an export reading `41.8` next to a screen reading `42` would look like two
+ * different numbers. The z-score keeps two decimals, the precision it is
+ * quoted with clinically and the reason it is exported alongside the
+ * percentile at all (they diverge sharply at the tails).
+ */
+const EXPORTED_PERCENTILE_DECIMALS = 0;
+const EXPORTED_Z_SCORE_DECIMALS = 2;
+
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+/** The derived columns each stored measurement value feeds. */
+const GROWTH_CLASSIFICATION_COLUMNS: Record<
+  (typeof MEASUREMENT_VALUE_FIELDS)[number],
+  {
+    indicator: GrowthIndicator;
+    percentileColumn: keyof RawExportRow;
+    zScoreColumn: keyof RawExportRow;
+  }
+> = {
+  weightGrams: {
+    indicator: 'WEIGHT_FOR_AGE',
+    percentileColumn: 'weightPercentile',
+    zScoreColumn: 'weightZScore',
+  },
+  lengthMillimeters: {
+    indicator: 'LENGTH_OR_HEIGHT_FOR_AGE',
+    percentileColumn: 'lengthPercentile',
+    zScoreColumn: 'lengthZScore',
+  },
+  headCircumferenceMillimeters: {
+    indicator: 'HEAD_CIRCUMFERENCE_FOR_AGE',
+    percentileColumn: 'headCircumferencePercentile',
+    zScoreColumn: 'headCircumferenceZScore',
+  },
+};
+
+/**
+ * Flattens a growth measurement into the same row shape as an event.
+ *
+ * `measuredAt` fills the shared `occurredAt` column so the merged list can be
+ * sorted on one key, and the event-only columns stay null. Percentiles are
+ * computed through the same pure function the API uses, so an exported value
+ * is identical to the one the app displayed (and to the one the later PDF
+ * report will show) rather than a second, subtly different derivation.
+ */
+function toGrowthExportRow(measurement: GrowthMeasurement, child: Child): RawExportRow {
+  const ageInDays = ageInDaysAt(child.birthDate, measurement.measuredAt);
+  const sex = child.sex ? toChildSex(child.sex) : null;
+  const positionOverride = measurement.lengthMeasurementPosition
+    ? toLengthMeasurementPosition(measurement.lengthMeasurementPosition)
+    : null;
+
+  type ClassificationColumns = Pick<
+    RawExportRow,
+    | 'weightPercentile'
+    | 'lengthPercentile'
+    | 'headCircumferencePercentile'
+    | 'weightZScore'
+    | 'lengthZScore'
+    | 'headCircumferenceZScore'
+  >;
+  const classification: ClassificationColumns = {
+    weightPercentile: null,
+    lengthPercentile: null,
+    headCircumferencePercentile: null,
+    weightZScore: null,
+    lengthZScore: null,
+    headCircumferenceZScore: null,
+  };
+
+  for (const field of MEASUREMENT_VALUE_FIELDS) {
+    const value = measurement[field];
+    if (value === null) {
+      continue;
+    }
+    const { indicator, percentileColumn, zScoreColumn } = GROWTH_CLASSIFICATION_COLUMNS[field];
+    const outcome = computeGrowthPercentile({
+      indicator,
+      sex,
+      ageInDays,
+      valueInBaseUnit: value,
+      bodyMeasurePositionOverride: positionOverride,
+    });
+    if (outcome.status === 'COMPUTED') {
+      // An UNAVAILABLE classification (no sex on the profile, age outside the
+      // reference range) stays an empty cell rather than a sentinel number —
+      // the raw values next to it are what the export is really about.
+      classification[percentileColumn as keyof ClassificationColumns] = roundTo(
+        outcome.percentile,
+        EXPORTED_PERCENTILE_DECIMALS,
+      );
+      classification[zScoreColumn as keyof ClassificationColumns] = roundTo(
+        outcome.zScore,
+        EXPORTED_Z_SCORE_DECIMALS,
+      );
+    }
+  }
+
+  return {
+    id: measurement.id,
+    childId: measurement.childId,
+    userId: measurement.userId,
+    type: GROWTH_EXPORT_TYPE,
+    occurredAt: measurement.measuredAt.toISOString(),
+    startedAt: null,
+    endedAt: null,
+    durationSeconds: null,
+    feedingType: null,
+    side: null,
+    amountMl: null,
+    diaperType: null,
+    note: measurement.note,
+    createdAt: measurement.createdAt.toISOString(),
+    updatedAt: measurement.updatedAt.toISOString(),
+    recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
+    weightGrams: measurement.weightGrams,
+    lengthMillimeters: measurement.lengthMillimeters,
+    headCircumferenceMillimeters: measurement.headCircumferenceMillimeters,
+    lengthMeasurementPosition: positionOverride,
+    ...classification,
   };
 }

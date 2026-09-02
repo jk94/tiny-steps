@@ -4,7 +4,14 @@ import { FeedingType } from '../feeding/feeding-type.enum';
 import { FeedingSide } from '../feeding/feeding-side.enum';
 import { DiaperType } from '../diaper/diaper-type.enum';
 import { EventType } from '../event/event-type.enum';
-import { ExportService } from './export.service';
+import { ChildSex } from '../child/child-sex.enum';
+import { LengthMeasurementPosition } from '../growth/length-measurement-position.enum';
+import {
+  ExportService,
+  GROWTH_EXPORT_TYPE,
+  RECORD_KIND_EVENT,
+  RECORD_KIND_GROWTH_MEASUREMENT,
+} from './export.service';
 
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
@@ -20,7 +27,41 @@ function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
     birthDate: new Date('2024-01-01T00:00:00.000Z'),
     photoPath: null,
     photoMimeType: null,
+    sex: ChildSex.MALE as string | null,
     createdAt: new Date('2024-01-02T00:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+/** Empty growth columns, spread into every expected event row. */
+const NO_GROWTH_COLUMNS = {
+  recordKind: RECORD_KIND_EVENT,
+  weightGrams: null,
+  lengthMillimeters: null,
+  headCircumferenceMillimeters: null,
+  lengthMeasurementPosition: null,
+  weightPercentile: null,
+  lengthPercentile: null,
+  headCircumferencePercentile: null,
+  weightZScore: null,
+  lengthZScore: null,
+  headCircumferenceZScore: null,
+};
+
+function makeGrowthMeasurement(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'growth-1',
+    childId: CHILD_ID,
+    userId: USER_ID,
+    // 731 completed days after the 2024-01-01 birth date.
+    measuredAt: new Date('2026-01-01T08:30:00.000Z'),
+    weightGrams: 12000,
+    lengthMillimeters: 870,
+    headCircumferenceMillimeters: 480,
+    lengthMeasurementPosition: null as string | null,
+    note: 'U7 check-up',
+    createdAt: new Date('2026-01-01T08:30:00.000Z'),
+    updatedAt: new Date('2026-01-01T08:30:00.000Z'),
     ...overrides,
   };
 }
@@ -80,6 +121,7 @@ function makeDiaperEvent(overrides: Partial<Record<string, unknown>> = {}) {
     diaperDetail: {
       eventId: 'diaper-1',
       diaperType: DiaperType.BOTH,
+      ...NO_GROWTH_COLUMNS,
       note: 'soft',
     },
     ...overrides,
@@ -90,13 +132,15 @@ describe('ExportService', () => {
   let prisma: {
     child: { findUnique: jest.Mock };
     event: { findMany: jest.Mock };
+    growthMeasurement: { findMany: jest.Mock };
   };
   let service: ExportService;
 
   beforeEach(() => {
     prisma = {
       child: { findUnique: jest.fn() },
-      event: { findMany: jest.fn() },
+      event: { findMany: jest.fn().mockResolvedValue([]) },
+      growthMeasurement: { findMany: jest.fn().mockResolvedValue([]) },
     };
     service = new ExportService(prisma as unknown as PrismaService);
   });
@@ -128,6 +172,10 @@ describe('ExportService', () => {
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
     });
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID },
+      orderBy: { measuredAt: 'asc' },
+    });
   });
 
   it('applies the [from, to) filter when both from and to are given', async () => {
@@ -140,6 +188,12 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID, occurredAt: { gte: FROM, lt: TO } },
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
+    });
+    // The same window applies to `measuredAt`, the growth equivalent of
+    // `occurredAt`.
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, measuredAt: { gte: FROM, lt: TO } },
+      orderBy: { measuredAt: 'asc' },
     });
   });
 
@@ -154,6 +208,10 @@ describe('ExportService', () => {
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
     });
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, measuredAt: { gte: FROM } },
+      orderBy: { measuredAt: 'asc' },
+    });
   });
 
   it('applies an open-ended lower bound when only to is given', async () => {
@@ -166,6 +224,10 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID, occurredAt: { lt: TO } },
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
+    });
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, measuredAt: { lt: TO } },
+      orderBy: { measuredAt: 'asc' },
     });
   });
 
@@ -191,6 +253,7 @@ describe('ExportService', () => {
       note: 'good latch',
       createdAt: '2026-01-01T08:00:00.000Z',
       updatedAt: '2026-01-01T08:16:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -216,6 +279,7 @@ describe('ExportService', () => {
       note: null,
       createdAt: '2026-01-01T09:00:00.000Z',
       updatedAt: '2026-01-01T10:00:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -241,10 +305,11 @@ describe('ExportService', () => {
       note: 'soft',
       createdAt: '2026-01-01T07:00:00.000Z',
       updatedAt: '2026-01-01T07:00:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
-  it('flattens a mixed result preserving Prisma order, each row mapped to its type', async () => {
+  it('flattens a mixed result in chronological order, each row mapped to its type', async () => {
     prisma.child.findUnique.mockResolvedValue(makeChild());
     prisma.event.findMany.mockResolvedValue([
       makeDiaperEvent(),
@@ -262,5 +327,119 @@ describe('ExportService', () => {
     expect(rows[0].diaperType).toBe(DiaperType.BOTH);
     expect(rows[1].feedingType).toBe(FeedingType.BREAST);
     expect(rows[2].durationSeconds).toBe(3600);
+  });
+
+  describe('growth measurements', () => {
+    it('flattens a measurement with its values, method and computed percentiles', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toMatchObject({
+        id: 'growth-1',
+        recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
+        childId: CHILD_ID,
+        userId: USER_ID,
+        type: GROWTH_EXPORT_TYPE,
+        // `measuredAt` fills the shared occurredAt column.
+        occurredAt: '2026-01-01T08:30:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        durationSeconds: null,
+        feedingType: null,
+        side: null,
+        amountMl: null,
+        diaperType: null,
+        weightGrams: 12000,
+        lengthMillimeters: 870,
+        headCircumferenceMillimeters: 480,
+        lengthMeasurementPosition: null,
+        note: 'U7 check-up',
+      });
+      expect(row.weightPercentile).toBeGreaterThan(0);
+      expect(row.weightPercentile).toBeLessThan(100);
+      expect(row.lengthPercentile).not.toBeNull();
+      expect(row.headCircumferencePercentile).not.toBeNull();
+    });
+
+    it('rounds the percentile to whole numbers and the z-score to two decimals', () => {
+      // The exported percentile must read the same as the one on screen, and
+      // the z-score is only useful at the precision it is quoted with.
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      return service.getRawEvents(HOUSEHOLD_ID, CHILD_ID).then(([row]) => {
+        expect(row.weightPercentile).toBe(Math.round(row.weightPercentile as number));
+        expect(row.weightZScore).toBeCloseTo(
+          Math.round((row.weightZScore as number) * 100) / 100,
+          10,
+        );
+      });
+    });
+
+    it('exports the z-score alongside the percentile (W-9)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(typeof row.weightZScore).toBe('number');
+      expect(typeof row.lengthZScore).toBe('number');
+      expect(typeof row.headCircumferenceZScore).toBe('number');
+    });
+
+    it('carries the stored measurement-method override', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([
+        makeGrowthMeasurement({ lengthMeasurementPosition: LengthMeasurementPosition.LYING }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row.lengthMeasurementPosition).toBe(LengthMeasurementPosition.LYING);
+    });
+
+    it('leaves the percentile columns empty when the child has no sex (W-10)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild({ sex: null }));
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row.weightGrams).toBe(12000);
+      expect(row.weightPercentile).toBeNull();
+      expect(row.lengthPercentile).toBeNull();
+      expect(row.headCircumferencePercentile).toBeNull();
+      expect(row.weightZScore).toBeNull();
+    });
+
+    it('leaves the percentile column of an absent value empty', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([
+        makeGrowthMeasurement({ lengthMillimeters: null, headCircumferenceMillimeters: null }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row.lengthPercentile).toBeNull();
+      expect(row.headCircumferencePercentile).toBeNull();
+      expect(row.weightPercentile).not.toBeNull();
+    });
+
+    it('merges events and measurements into one chronologically sorted list', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findMany.mockResolvedValue([makeDiaperEvent(), makeSleepEvent()]);
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // Diaper 07:00, growth 08:30, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual(['diaper-1', 'growth-1', 'sleep-1']);
+      expect(rows.map((row) => row.recordKind)).toEqual([
+        RECORD_KIND_EVENT,
+        RECORD_KIND_GROWTH_MEASUREMENT,
+        RECORD_KIND_EVENT,
+      ]);
+    });
   });
 });

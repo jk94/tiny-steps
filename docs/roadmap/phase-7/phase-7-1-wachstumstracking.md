@@ -2,6 +2,11 @@
 
 **Bezug im PRD:** Abschnitt 4.2 (Wachstumstracking inkl. Perzentilen-Kurven)
 **Übergeordnet:** [Phase 7 – Übersicht](README.md)
+**Status:** Umgesetzt (2026-09-02). Alle Aufgaben und die Definition of Done sind erfüllt.
+Einzige offene Nachverfolgung: die manuelle Real-Device-Verifikation der Touch-Long-Press- und
+Tastaturbedienung des Diagramms — die automatisierten Tests laufen in jsdom (ohne echtes
+`touch-action`/Layout). Als aufgeschobener manueller Punkt in
+[`docs/known-issues.md`](../../known-issues.md) geführt, analog zu den Geräte-Checks aus Phase 4/5.
 
 ## Ziel
 
@@ -191,35 +196,38 @@ schreibenden Zugriffen):
 
 ## Aufgaben
 
-- [ ] Datenmodell `GrowthMeasurement` und `Child.sex` inkl. Prisma-Migration und `toChildSex()`-Guard
-- [ ] Backend-Modul `growth` (Controller, Service, DTOs mit Validierung nach W-1 bis W-6)
-- [ ] WHO-Referenzdaten recherchieren, Lizenz klären, als statische Datendateien einpflegen, Herkunft dokumentieren
-- [ ] Perzentilen-/z-Score-Berechnung als reine Funktion inkl. Tests gegen veröffentlichte WHO-Beispielwerte
-- [ ] Automatische Länge-/Größe-Referenzwahl über das Alter samt manueller Überschreibung (W-17 bis W-19), inkl. Grenzfalltests um 24 Monate
-- [ ] Lesepfad für Perzentilbänder (`GET .../growth/reference`)
-- [ ] ADR: Chart-Bibliothek (visx) und Domänen-Modellierung neben `Event`
-- [ ] Chart-Komponente mit visx (Perzentilbänder, Messreihe, Tooltip, Long-Press-Cursor)
-- [ ] Tastatur-/Screenreader-Äquivalent des Cursors (W-14) inkl. Test
-- [ ] Erfassungs-/Bearbeitungs-UI und Messwertliste auf Basis der Design-System-Primitives
-- [ ] Geschlechtsfeld in der Kind-Profil-Verwaltung ergänzen
-- [ ] Übersichtskarte „Wachstum" auf `ChildHome` (W-15)
-- [ ] Farb-Tokens für die Messgrößen ergänzen und `design-tokens:build` ausführen
-- [ ] i18n-Texte (de/en) für alle neuen Oberflächen
-- [ ] Rohdaten-Export um Wachstumsmessungen erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
-- [ ] Unit-/Komponententests: Validierung, Perzentilen, Chart-Interaktion, Empty-/Fehlerzustände
+- [x] Datenmodell `GrowthMeasurement` und `Child.sex` inkl. Prisma-Migration und `toChildSex()`-Guard
+- [x] Backend-Modul `growth` (Controller, Service, DTOs mit Validierung nach W-1 bis W-6)
+- [x] WHO-Referenzdaten recherchieren, Lizenz klären, als statische Datendateien einpflegen, Herkunft dokumentieren
+- [x] Perzentilen-/z-Score-Berechnung als reine Funktion inkl. Tests gegen veröffentlichte WHO-Beispielwerte
+- [x] Automatische Länge-/Größe-Referenzwahl über das Alter samt manueller Überschreibung (W-17 bis W-19), inkl. Grenzfalltests um 24 Monate
+- [x] Lesepfad für Perzentilbänder (`GET .../growth/reference`)
+- [x] ADR: Chart-Bibliothek (visx) und Domänen-Modellierung neben `Event`
+- [x] Chart-Komponente mit visx (Perzentilbänder, Messreihe, Tooltip, Long-Press-Cursor)
+- [x] Tastatur-/Screenreader-Äquivalent des Cursors (W-14) inkl. Test
+- [x] Erfassungs-/Bearbeitungs-UI und Messwertliste auf Basis der Design-System-Primitives
+- [x] Geschlechtsfeld in der Kind-Profil-Verwaltung ergänzen
+- [x] Übersichtskarte „Wachstum" auf `ChildHome` (W-15)
+- [x] Farb-Tokens für die Messgrößen ergänzen und `design-tokens:build` ausführen
+- [x] i18n-Texte (de/en) für alle neuen Oberflächen
+- [x] Rohdaten-Export um Wachstumsmessungen erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
+- [x] Unit-/Komponententests: Validierung, Perzentilen, Chart-Interaktion, Empty-/Fehlerzustände
 
 ## Definition of Done
 
-- Messungen können erfasst, geändert, gelöscht und chronologisch eingesehen werden; Validierung
+- [x] Messungen können erfasst, geändert, gelöscht und chronologisch eingesehen werden; Validierung
   greift server- und clientseitig.
-- Perzentilen stimmen nachweisbar mit den veröffentlichten WHO-Referenzwerten überein (Testfälle
+- [x] Perzentilen stimmen nachweisbar mit den veröffentlichten WHO-Referenzwerten überein (Testfälle
   im Repo).
-- Fehlt die Geschlechtsangabe oder liegt das Alter außerhalb des Referenzbereichs, verhält sich die
+- [x] Fehlt die Geschlechtsangabe oder liegt das Alter außerhalb des Referenzbereichs, verhält sich die
   UI wie in W-10/W-11 beschrieben — ohne stillschweigende Annahmen.
-- Die Körpermaß-Referenz wird altersabhängig automatisch gewählt und lässt sich pro Messung
+- [x] Die Körpermaß-Referenz wird altersabhängig automatisch gewählt und lässt sich pro Messung
   überschreiben; die 24-Monats-Grenze ist durch Tests abgesichert.
-- Das Diagramm ist per Maus, Touch **und** Tastatur bedienbar; Kontraste und Fokus-Sichtbarkeit
-  entsprechen dem in Phase 6 M4 etablierten Standard.
-- Alle neuen Texte liegen in Deutsch und Englisch vor.
-- Wachstumsmessungen sind im Rohdaten-Export enthalten.
-- Keine Regression in der bestehenden Testsuite.
+- [x] Das Diagramm ist per Maus, Touch **und** Tastatur bedienbar; Kontraste und Fokus-Sichtbarkeit
+  entsprechen dem in Phase 6 M4 etablierten Standard. (Automatisiert in jsdom abgedeckt; die
+  Real-Device-Verifikation von Touch-Long-Press-Scrub und Tastaturnavigation ist als manueller
+  Punkt in `docs/known-issues.md` geführt.)
+- [x] Alle neuen Texte liegen in Deutsch und Englisch vor.
+- [x] Wachstumsmessungen sind im Rohdaten-Export enthalten.
+- [x] Keine Regression in der bestehenden Testsuite. (Voll grün: Backend 653 Unit + 101 e2e,
+  Frontend 861 — Stand 2026-09-02.)

@@ -95,6 +95,7 @@ describe('ChildCreate', () => {
       name: 'Alex',
       birthDate: '2020-01-01',
       hasPhoto: false,
+      sex: null,
       createdAt: '2020-01-01T00:00:00.000Z',
     });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');

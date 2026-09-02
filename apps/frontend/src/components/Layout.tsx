@@ -1,7 +1,17 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, Droplet, Home, LogOut, Menu, Milk, Moon, Settings } from 'lucide-react';
+import {
+  ClipboardList,
+  Droplet,
+  Home,
+  LogOut,
+  Menu,
+  Milk,
+  Moon,
+  Settings,
+  TrendingUp,
+} from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { useRealtimeConnection } from '../realtime/useRealtimeConnection';
 import { ConnectionStatusDot } from './ConnectionStatusDot';
@@ -137,6 +147,14 @@ export function Layout() {
           Icon: Droplet,
           isActive: location.pathname.startsWith(
             `/households/${householdId}/children/${childId}/diaper`,
+          ),
+        },
+        {
+          to: `/households/${householdId}/children/${childId}/growth`,
+          label: t('child.list.growthLink'),
+          Icon: TrendingUp,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/growth`,
           ),
         },
         {
