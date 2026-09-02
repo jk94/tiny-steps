@@ -85,11 +85,19 @@ output. Commit the regenerated `*.data.ts` files together with any change to
 ## Deliberate simplification: no length/height cross-adjustment
 
 WHO's own algorithm adds/subtracts 0.7 cm when a child is measured in a
-position that does not match the position the reference table assumes (lying
-down after 24 months, or standing before 24 months). This app deliberately
-**does not** apply that adjustment: the manual position override (requirement
-W-18) simply selects the other reference table and compares the raw measured
-value against it. Applying a silent ±0.7 cm correction on top of a value the
-parent explicitly typed in would make the displayed percentile impossible to
-reconcile with the entered number. See the comment in
-`../percentiles/growth-percentiles.ts`.
+position that does not match the position the reference assumes (lying down
+after 24 months, or standing before 24 months). This app deliberately **does
+not** apply that adjustment: the raw measured value is compared to the
+reference as entered. Applying a silent ±0.7 cm correction on top of a value
+the parent explicitly typed in would make the displayed percentile impossible
+to reconcile with the entered number.
+
+A consequence worth spelling out: `lenanthro.txt` is **one** table whose age
+axis is partitioned by the `loh` flag — there is no published "height at 400
+days" or "length at 1200 days" row. So a manual position override (W-18) that
+contradicts the age changes the *reported measurement method* (W-19) but not
+the LMS row used, which is always the one covering the child's actual age.
+Without the ±0.7 cm adjustment there is nothing else the override could
+legitimately change; the alternative — reusing the last in-range row of the
+other half — would score a three-year-old against a two-year-old reference.
+See `bodyMeasurePoints` in `../percentiles/growth-percentiles.ts`.
