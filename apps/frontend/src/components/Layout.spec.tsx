@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { Layout } from './Layout';
 import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
@@ -53,6 +53,19 @@ function renderLayout() {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <Layout />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+/** Renders the layout on a route that carries a household + child context. */
+function renderLayoutAt(path: string) {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/households/:householdId/children/:childId/*" element={<Layout />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -361,5 +374,37 @@ describe('Layout', () => {
 
       expect(screen.queryByText('What should we call you?')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('Layout child navigation', () => {
+  beforeEach(() => {
+    mockAuthenticated();
+    mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
+  });
+
+  it('offers a growth link inside a child context', () => {
+    renderLayoutAt('/households/h1/children/c1');
+
+    for (const link of screen.getAllByRole('link', { name: 'Growth' })) {
+      expect(link).toHaveAttribute('href', '/households/h1/children/c1/growth');
+    }
+  });
+
+  it('highlights the growth link while on a growth sub-route', () => {
+    renderLayoutAt('/households/h1/children/c1/growth/new');
+
+    // The active item is styled via the `text-primary` token class (there is
+    // no aria-current in this nav); asserting the class is what pins the
+    // `startsWith` matcher that makes sub-routes count as active.
+    for (const link of screen.getAllByRole('link', { name: 'Growth' })) {
+      expect(link.className).toContain('text-primary');
+    }
+  });
+
+  it('renders no child navigation outside a child context', () => {
+    renderLayout();
+
+    expect(screen.queryByRole('link', { name: 'Growth' })).not.toBeInTheDocument();
   });
 });

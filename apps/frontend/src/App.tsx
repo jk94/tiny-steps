@@ -20,6 +20,9 @@ import { SleepEventEdit } from './pages/SleepEventEdit';
 import { DiaperHome } from './pages/DiaperHome';
 import { DiaperBackfillCreate } from './pages/DiaperBackfillCreate';
 import { DiaperEventEdit } from './pages/DiaperEventEdit';
+import { GrowthHome } from './pages/GrowthHome';
+import { GrowthMeasurementCreate } from './pages/GrowthMeasurementCreate';
+import { GrowthMeasurementEdit } from './pages/GrowthMeasurementEdit';
 import { DailyTimeline } from './pages/DailyTimeline';
 import { Export } from './pages/Export';
 import { InviteAccept } from './pages/InviteAccept';
@@ -69,6 +72,15 @@ function App() {
           <Route
             path="households/:householdId/children/:childId/diaper/:eventId/edit"
             element={<DiaperEventEdit />}
+          />
+          <Route path="households/:householdId/children/:childId/growth" element={<GrowthHome />} />
+          <Route
+            path="households/:householdId/children/:childId/growth/new"
+            element={<GrowthMeasurementCreate />}
+          />
+          <Route
+            path="households/:householdId/children/:childId/growth/:measurementId/edit"
+            element={<GrowthMeasurementEdit />}
           />
           <Route
             path="households/:householdId/children/:childId/timeline"
