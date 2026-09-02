@@ -1,4 +1,8 @@
-import { MilestoneTemplate, isMilestoneTemplate, toMilestoneTemplate } from './milestone-template.enum';
+import {
+  MilestoneTemplate,
+  isMilestoneTemplate,
+  toMilestoneTemplate,
+} from './milestone-template.enum';
 
 describe('toMilestoneTemplate', () => {
   it.each(Object.values(MilestoneTemplate))('passes through the valid key %s unchanged', (key) => {

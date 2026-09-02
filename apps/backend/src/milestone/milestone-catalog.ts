@@ -33,34 +33,82 @@ export interface MilestoneCatalogEntry {
  * feel bad — anyone who wants to record it can create a free entry.
  */
 export const MILESTONE_CATALOG: readonly MilestoneCatalogEntry[] = [
-  { key: MilestoneTemplate.FIRST_SMILE, category: MilestoneCategory.SOCIAL, typicalAgeMonths: [1, 3] },
-  { key: MilestoneTemplate.HOLDS_HEAD_UP, category: MilestoneCategory.MOTOR, typicalAgeMonths: [2, 4] },
-  { key: MilestoneTemplate.FIRST_LAUGH, category: MilestoneCategory.SOCIAL, typicalAgeMonths: [3, 5] },
-  { key: MilestoneTemplate.GRASPS_OBJECT, category: MilestoneCategory.MOTOR, typicalAgeMonths: [3, 6] },
-  { key: MilestoneTemplate.ROLLS_OVER, category: MilestoneCategory.MOTOR, typicalAgeMonths: [4, 7] },
+  {
+    key: MilestoneTemplate.FIRST_SMILE,
+    category: MilestoneCategory.SOCIAL,
+    typicalAgeMonths: [1, 3],
+  },
+  {
+    key: MilestoneTemplate.HOLDS_HEAD_UP,
+    category: MilestoneCategory.MOTOR,
+    typicalAgeMonths: [2, 4],
+  },
+  {
+    key: MilestoneTemplate.FIRST_LAUGH,
+    category: MilestoneCategory.SOCIAL,
+    typicalAgeMonths: [3, 5],
+  },
+  {
+    key: MilestoneTemplate.GRASPS_OBJECT,
+    category: MilestoneCategory.MOTOR,
+    typicalAgeMonths: [3, 6],
+  },
+  {
+    key: MilestoneTemplate.ROLLS_OVER,
+    category: MilestoneCategory.MOTOR,
+    typicalAgeMonths: [4, 7],
+  },
   {
     key: MilestoneTemplate.FIRST_SOLID_FOOD,
     category: MilestoneCategory.PHYSICAL,
     typicalAgeMonths: [5, 8],
   },
-  { key: MilestoneTemplate.BABBLES, category: MilestoneCategory.LANGUAGE, typicalAgeMonths: [5, 9] },
-  { key: MilestoneTemplate.FIRST_TOOTH, category: MilestoneCategory.PHYSICAL, typicalAgeMonths: [4, 10] },
+  {
+    key: MilestoneTemplate.BABBLES,
+    category: MilestoneCategory.LANGUAGE,
+    typicalAgeMonths: [5, 9],
+  },
+  {
+    key: MilestoneTemplate.FIRST_TOOTH,
+    category: MilestoneCategory.PHYSICAL,
+    typicalAgeMonths: [4, 10],
+  },
   {
     key: MilestoneTemplate.SITS_UNSUPPORTED,
     category: MilestoneCategory.MOTOR,
     typicalAgeMonths: [6, 9],
   },
   { key: MilestoneTemplate.CRAWLS, category: MilestoneCategory.MOTOR, typicalAgeMonths: [7, 11] },
-  { key: MilestoneTemplate.PULLS_TO_STAND, category: MilestoneCategory.MOTOR, typicalAgeMonths: [8, 12] },
-  { key: MilestoneTemplate.WAVES_BYE, category: MilestoneCategory.SOCIAL, typicalAgeMonths: [9, 13] },
-  { key: MilestoneTemplate.FIRST_WORD, category: MilestoneCategory.LANGUAGE, typicalAgeMonths: [10, 15] },
-  { key: MilestoneTemplate.FIRST_STEPS, category: MilestoneCategory.MOTOR, typicalAgeMonths: [11, 16] },
+  {
+    key: MilestoneTemplate.PULLS_TO_STAND,
+    category: MilestoneCategory.MOTOR,
+    typicalAgeMonths: [8, 12],
+  },
+  {
+    key: MilestoneTemplate.WAVES_BYE,
+    category: MilestoneCategory.SOCIAL,
+    typicalAgeMonths: [9, 13],
+  },
+  {
+    key: MilestoneTemplate.FIRST_WORD,
+    category: MilestoneCategory.LANGUAGE,
+    typicalAgeMonths: [10, 15],
+  },
+  {
+    key: MilestoneTemplate.FIRST_STEPS,
+    category: MilestoneCategory.MOTOR,
+    typicalAgeMonths: [11, 16],
+  },
   {
     key: MilestoneTemplate.DRINKS_FROM_CUP,
     category: MilestoneCategory.PHYSICAL,
     typicalAgeMonths: [12, 18],
   },
-  { key: MilestoneTemplate.CLIMBS_STAIRS, category: MilestoneCategory.MOTOR, typicalAgeMonths: [14, 22] },
+  {
+    key: MilestoneTemplate.CLIMBS_STAIRS,
+    category: MilestoneCategory.MOTOR,
+    typicalAgeMonths: [14, 22],
+  },
   { key: MilestoneTemplate.RUNS, category: MilestoneCategory.MOTOR, typicalAgeMonths: [18, 24] },
   {
     key: MilestoneTemplate.TWO_WORD_SENTENCE,
