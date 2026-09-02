@@ -1,0 +1,5 @@
+# The vendored WHO igrowup tables are kept byte-for-byte identical to
+# upstream (including their CRLF line endings) so a future re-download can be
+# diffed against them directly. `-text` disables Git's end-of-line
+# normalisation, which `core.autocrlf=input` would otherwise apply.
+source/*.txt -text
