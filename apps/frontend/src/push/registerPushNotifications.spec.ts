@@ -20,8 +20,24 @@ async function loadModule() {
   const { Capacitor } = await import('@capacitor/core');
   const { PushNotifications } = await import('@capacitor/push-notifications');
   const pushApi = await import('../api/push-api');
+  const deepLinkStore = await import('./deepLinkStore');
   const { registerPushNotifications } = await import('./registerPushNotifications');
-  return { Capacitor, PushNotifications, pushApi, registerPushNotifications };
+  return { Capacitor, PushNotifications, pushApi, deepLinkStore, registerPushNotifications };
+}
+
+/**
+ * Grabs the callback the SUT registered for one native event. `addListener`'s
+ * real type is overloaded per event name and `Parameters<>` only sees the last
+ * overload, so this routes through `unknown` rather than fighting the
+ * inference — same approach as the registration tests below.
+ */
+function listenerFor<T>(
+  addListener: { mock: { calls: unknown[][] } },
+  event: string,
+): (payload: T) => void {
+  const call = addListener.mock.calls.find(([name]) => (name as string) === event);
+  expect(call).toBeDefined();
+  return call![1] as (payload: T) => void;
 }
 
 describe('registerPushNotifications', () => {
@@ -88,6 +104,77 @@ describe('registerPushNotifications', () => {
     registrationCallback({ value: 'apns-token' });
 
     expect(pushApi.registerPushToken).toHaveBeenCalledWith('apns-token', 'IOS');
+  });
+
+  describe('tapped notification (MED-11)', () => {
+    async function registerAndTap(data: Record<string, string> | undefined) {
+      const { Capacitor, PushNotifications, deepLinkStore, registerPushNotifications } =
+        await loadModule();
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+      vi.mocked(PushNotifications.requestPermissions).mockResolvedValue({ receive: 'granted' });
+      vi.mocked(PushNotifications.register).mockResolvedValue(undefined);
+
+      await registerPushNotifications();
+      deepLinkStore.resetDeepLinkStore();
+
+      const onTap = listenerFor<{ notification: { data?: Record<string, string> } }>(
+        vi.mocked(PushNotifications.addListener),
+        'pushNotificationActionPerformed',
+      );
+      onTap({ notification: { data } });
+
+      return deepLinkStore;
+    }
+
+    it('records the resolved deep link for the navigator to drain', async () => {
+      const deepLinkStore = await registerAndTap({
+        type: 'MEDICAL_REMINDER',
+        householdId: 'h1',
+        childId: 'c1',
+        healthRecordId: 'r1',
+      });
+
+      expect(deepLinkStore.consumePendingDeepLink()).toBe(
+        '/households/h1/children/c1/health/r1/edit',
+      );
+    });
+
+    it('records nothing for a payload it cannot map', async () => {
+      // Better to leave the user where they are than to navigate somewhere
+      // invented from an unknown payload.
+      const deepLinkStore = await registerAndTap({ type: 'SOMETHING_NEW' });
+
+      expect(deepLinkStore.consumePendingDeepLink()).toBeNull();
+    });
+
+    it('survives a notification with no data at all', async () => {
+      const deepLinkStore = await registerAndTap(undefined);
+
+      expect(deepLinkStore.consumePendingDeepLink()).toBeNull();
+    });
+
+    it('leaves a foreground-received notification alone', async () => {
+      const { Capacitor, PushNotifications, deepLinkStore, registerPushNotifications } =
+        await loadModule();
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+      vi.mocked(PushNotifications.requestPermissions).mockResolvedValue({ receive: 'granted' });
+      vi.mocked(PushNotifications.register).mockResolvedValue(undefined);
+
+      await registerPushNotifications();
+      deepLinkStore.resetDeepLinkStore();
+
+      // Receiving is not tapping: yanking the user off their current screen
+      // because a push arrived would be hostile.
+      const onReceive = listenerFor<{ data?: Record<string, string> }>(
+        vi.mocked(PushNotifications.addListener),
+        'pushNotificationReceived',
+      );
+      onReceive({ data: { type: 'MEDICAL_REMINDER', householdId: 'h1', childId: 'c1' } });
+
+      expect(deepLinkStore.consumePendingDeepLink()).toBeNull();
+    });
   });
 
   it('does not register when permission is denied', async () => {
