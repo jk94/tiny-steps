@@ -24,7 +24,7 @@ export interface MedicalReminderInput {
  * Decides which reminder trigger — if any — fires for ONE household member on
  * this cron run.
  *
- * There are two trigger instants per record, both at local midnight:
+ * There are two trigger instants per record, both at UTC midnight:
  *   DUE  instant = start of the due day                        (member-independent)
  *   LEAD instant = start of (due day − this member's leadDays)  (member-specific)
  *
@@ -57,9 +57,9 @@ export function resolveMedicalReminderTrigger({
     return null;
   }
 
-  const today = startOfLocalDay(now).getTime();
-  const dueInstant = startOfLocalDay(dueAt).getTime();
-  const leadInstant = startOfLocalDay(addDays(dueAt, -leadDays)).getTime();
+  const today = startOfUtcDay(now).getTime();
+  const dueInstant = startOfUtcDay(dueAt).getTime();
+  const leadInstant = startOfUtcDay(addDays(dueAt, -leadDays)).getTime();
   const sent = reminderLastSentAt?.getTime() ?? null;
 
   // On or past the due day. Also covers an entry created when it was already
@@ -77,19 +77,30 @@ export function resolveMedicalReminderTrigger({
 }
 
 /**
- * Start of `date`'s day in the SERVER's local timezone — the same MVP
- * simplification the daily summary already makes (see
- * `NotificationSchedulerService`'s doc comment and `docs/known-issues.md`).
+ * Start of `date`'s UTC day.
+ *
+ * UTC and not the server's local timezone, because `dueAt` is a *calendar day*
+ * stored as UTC midnight (like `Child.birthDate`). Reading it back through the
+ * local getters would land on the previous day on every server west of UTC —
+ * a plain off-by-one that would fire the due-day push a day early and then
+ * suppress it on the real due day, regardless of where the user is. See
+ * `parseCalendarDate` in the frontend's `lib/calendarDate.ts` for the same trap
+ * on the other side of the wire.
+ *
+ * `now` is a real instant, so its UTC day is what the record's UTC due day is
+ * compared against; the remaining server/user timezone skew is documented in
+ * `docs/known-issues.md`.
  */
-export function startOfLocalDay(date: Date): Date {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  return start;
+export function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
-/** `date` shifted by whole days, DST-safe via the local date getters. */
+/**
+ * `date` shifted by whole days. DST-safe: the shift is applied through the UTC
+ * date getters, which have no DST to skip over.
+ */
 export function addDays(date: Date, days: number): Date {
   const shifted = new Date(date);
-  shifted.setDate(shifted.getDate() + days);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
   return shifted;
 }

@@ -9,7 +9,7 @@ import type { PushNotificationPayload } from '../push/push-sender.service';
 import {
   addDays,
   resolveMedicalReminderTrigger,
-  startOfLocalDay,
+  startOfUtcDay,
   type MedicalReminderTrigger,
 } from './medical-reminder-trigger';
 import {
@@ -43,9 +43,12 @@ interface DueHealthRecord {
  * wall-clock time (the `@Cron` wiring itself is asserted separately via Nest's
  * `SchedulerRegistry`).
  *
- * All timezone reasoning here uses the SERVER's local time (`Date` local
- * getters) — an MVP simplification, matching `NotificationSettings`'
- * `dailySummaryHourLocal` doc comment. Per-user timezones are out of scope.
+ * Timezone reasoning is split by what the value actually is. Wall-clock
+ * scheduling (`dailySummaryHourLocal`, the daily-summary day bounds) uses the
+ * SERVER's local time — an MVP simplification, matching `NotificationSettings`'
+ * `dailySummaryHourLocal` doc comment. `HealthRecord.dueAt` is a *calendar day*
+ * stored as UTC midnight, so it is reasoned about in UTC days instead (see
+ * `startOfUtcDay`). Per-user timezones are out of scope either way.
  */
 @Injectable()
 export class NotificationSchedulerService {
@@ -381,8 +384,11 @@ function medicalReminderPayload(
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    // `dueAt` is a calendar day stored as UTC midnight, so formatting it in the
+    // server's local zone would print the previous day west of UTC.
+    timeZone: 'UTC',
   }).format(dueAt);
-  const isOverdue = startOfLocalDay(dueAt).getTime() < startOfLocalDay(now).getTime();
+  const isOverdue = startOfUtcDay(dueAt).getTime() < startOfUtcDay(now).getTime();
 
   const { title, body } =
     trigger === 'LEAD'

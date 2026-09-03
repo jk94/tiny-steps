@@ -294,11 +294,12 @@ describe('NotificationSchedulerService', () => {
   });
 
   describe('checkMedicalReminders', () => {
-    // Local-component dates so the suite is timezone-independent: the rule
-    // works in server-local days (see medical-reminder-trigger.ts).
-    const DUE_AT = new Date(2026, 2, 20); // Fri, 20 Mar 2026
+    // `dueAt` is a calendar day stored as UTC midnight, so the fixtures are UTC
+    // instants — local-component dates would hide the day-shift the rule has to
+    // get right (see medical-reminder-trigger.ts).
+    const DUE_AT = new Date('2026-03-20T00:00:00.000Z'); // Fri, 20 Mar 2026
     const RECORD_ID = 'health-record-1';
-    const at = (day: number, hour = 8) => new Date(2026, 2, day, hour, 0, 0);
+    const at = (day: number, hour = 8) => new Date(Date.UTC(2026, 2, day, hour, 0, 0));
 
     function makeRecord(overrides: Partial<Record<string, unknown>> = {}) {
       return {
@@ -348,10 +349,8 @@ describe('NotificationSchedulerService', () => {
       // MED-10: a record marked as done drops out of the scan entirely.
       expect(where.administeredAt).toBeNull();
       expect(where.dueAt.not).toBeNull();
-      expect(where.dueAt.lte).toEqual(new Date(2026, 2, 17 + MEDICAL_REMINDER_MAX_LEAD_DAYS, 8));
-      expect(where.dueAt.gte).toEqual(
-        new Date(2026, 2, 17 - MEDICAL_REMINDER_OVERDUE_GRACE_DAYS, 8),
-      );
+      expect(where.dueAt.lte).toEqual(at(17 + MEDICAL_REMINDER_MAX_LEAD_DAYS));
+      expect(where.dueAt.gte).toEqual(at(17 - MEDICAL_REMINDER_OVERDUE_GRACE_DAYS));
       // The household is what the deep link and the member fan-out need.
       expect(select.child).toEqual({ select: { householdId: true } });
     });

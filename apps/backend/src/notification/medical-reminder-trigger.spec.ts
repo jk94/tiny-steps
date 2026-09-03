@@ -1,11 +1,13 @@
 import { resolveMedicalReminderTrigger } from './medical-reminder-trigger';
 
-// Local-component dates throughout, so the whole suite is timezone-independent
-// (the rule itself works in server-local days — see the module doc comment).
-const DUE_AT = new Date(2026, 2, 20); // Fri, 20 Mar 2026
-const at = (day: number, hour = 8) => new Date(2026, 2, day, hour, 0, 0);
+// `dueAt` fixtures are UTC-midnight instants, exactly as Prisma hands back a
+// stored calendar day — local-component dates would hide the very off-by-one
+// this rule has to get right (see the module doc comment). `now` fixtures are
+// real instants at 08:00 UTC, the hour the cron runs.
+const DUE_AT = new Date('2026-03-20T00:00:00.000Z'); // Fri, 20 Mar 2026
+const at = (day: number, hour = 8) => new Date(Date.UTC(2026, 2, day, hour, 0, 0));
 
-const LEAD_DAYS = 3; // lead instant = 17 Mar 2026, 00:00 local
+const LEAD_DAYS = 3; // lead instant = 17 Mar 2026, 00:00 UTC
 
 function trigger(overrides: {
   now: Date;
@@ -42,6 +44,15 @@ describe('resolveMedicalReminderTrigger', () => {
   it('fires LEAD again on a later lead-window day if nothing was sent yet', () => {
     // The daily cron could have been down on day D-3; the reminder is still due.
     expect(trigger({ now: at(18) })).toBe('LEAD');
+  });
+
+  it('still calls the day before the due day LEAD, not DUE', () => {
+    // The off-by-one regression: `dueAt` is a calendar day stored as UTC
+    // midnight, so reading it through local getters turns it into D-1 on every
+    // server west of UTC — which would fire DUE here and then swallow it on the
+    // real due day, since the shared stamp has already passed the due instant.
+    expect(trigger({ now: at(19) })).toBe('LEAD');
+    expect(trigger({ now: at(19, 23) })).toBe('LEAD');
   });
 
   it('suppresses LEAD once the shared stamp reached the lead instant (MED-9)', () => {
@@ -94,11 +105,11 @@ describe('resolveMedicalReminderTrigger', () => {
   it('fires LEAD again for a due date moved further out past the old stamp', () => {
     // The service clears `reminderLastSentAt` on a due-date change, but even a
     // surviving stamp predates the new, later lead instant.
-    const movedDue = new Date(2026, 3, 20); // 20 Apr 2026, lead instant 17 Apr
+    const movedDue = new Date('2026-04-20T00:00:00.000Z'); // lead instant 17 Apr
     expect(trigger({ now: at(17), dueAt: movedDue, reminderLastSentAt: at(13, 8) })).toBeNull();
     expect(
       resolveMedicalReminderTrigger({
-        now: new Date(2026, 3, 17, 8),
+        now: new Date(Date.UTC(2026, 3, 17, 8)),
         dueAt: movedDue,
         reminderLastSentAt: at(13, 8),
         leadDays: LEAD_DAYS,
