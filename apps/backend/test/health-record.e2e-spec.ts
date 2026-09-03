@@ -256,8 +256,10 @@ describe('Health records (e2e)', () => {
       code: 'HEALTH_RECORD_FIELD_NOT_ALLOWED_FOR_KIND',
     });
 
+    // A full day before the birth day, so it is rejected no matter which
+    // timezone the entry could plausibly have come from (MED-6).
     const beforeBirth = await post(owner, householdId, childId)
-      .send({ kind: 'MEDICATION', name: 'Zu früh', administeredAt: '2025-01-19T10:00:00.000Z' })
+      .send({ kind: 'MEDICATION', name: 'Zu früh', administeredAt: '2025-01-19T00:00:00.000Z' })
       .expect(400);
     expect(beforeBirth.body).toMatchObject({
       code: 'HEALTH_RECORD_ADMINISTERED_AT_BEFORE_BIRTH',
