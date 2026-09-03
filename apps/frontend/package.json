@@ -18,6 +18,7 @@
     "cap:ios": "bun run cap:sync && cap open ios"
   },
   "dependencies": {
+    "@baby-tracker/growth-chart-static": "workspace:*",
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",

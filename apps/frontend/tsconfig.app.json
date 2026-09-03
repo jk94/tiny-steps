@@ -9,6 +9,21 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
 
+    /* The shared growth chart is consumed as TypeScript source, not as its
+       built `dist/` output (which only the backend uses): Vite compiles it
+       directly, so editing the chart hot-reloads instead of requiring a
+       package rebuild first. The matching runtime resolution lives in
+       `vite.config.ts` / `vitest.config.ts`. */
+    "paths": {
+      "@baby-tracker/growth-chart-static": ["../../packages/growth-chart-static/src/index.ts"],
+      "@baby-tracker/growth-chart-static/geometry": [
+        "../../packages/growth-chart-static/src/growthChartGeometry.ts"
+      ],
+      "@baby-tracker/growth-chart-static/server": [
+        "../../packages/growth-chart-static/src/server.ts"
+      ]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -25,5 +40,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../../packages/growth-chart-static/src"]
 }

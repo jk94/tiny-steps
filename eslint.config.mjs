@@ -33,9 +33,10 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
 
-  // Backend (NestJS, Node runtime)
+  // Backend (NestJS, Node runtime). `.tsx` is included because the PDF report
+  // renderer builds a @react-pdf/renderer document tree in JSX (see ADR-0015).
   {
-    files: ['apps/backend/**/*.ts'],
+    files: ['apps/backend/**/*.{ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -64,6 +65,20 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
+  },
+
+  // Shared workspace packages (React libraries consumed by both apps). The
+  // hooks rules apply the same as in the frontend; `react-refresh` does not —
+  // a library is not a Fast Refresh boundary, and its modules deliberately mix
+  // component and non-component exports.
+  {
+    files: ['packages/**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
     },
   },
 );

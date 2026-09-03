@@ -23,6 +23,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/growth-chart-static/package.json packages/growth-chart-static/package.json
 
 # `bun install` also runs postinstall scripts for every package listed in
 # root `package.json`'s `trustedDependencies` (incl. `prisma`'s own postinstall
@@ -31,7 +32,9 @@ COPY apps/frontend/package.json apps/frontend/package.json
 # shebang unless `--bun` is passed (never is, here or anywhere else in this
 # project). Only manifests are copied at this point, so `prisma`'s postinstall
 # can't run `prisma generate` against the real schema yet — that happens
-# explicitly below, once the full source is present.
+# explicitly below, once the full source is present. For the same reason the
+# growth-chart package's `prepare` script (which compiles it) is a no-op here
+# and has to be re-run explicitly below.
 RUN bun install --frozen-lockfile
 
 # Now copy the rest of the source and build both apps.
@@ -39,6 +42,10 @@ COPY . .
 
 # Explicit `prisma generate` against the real schema (see comment above).
 RUN bun run --cwd apps/backend prisma:generate
+
+# The shared growth chart compiles to a dual ESM/CJS build that the backend
+# imports as a normal package (see ADR-0015) — must precede the app builds.
+RUN bun run --cwd packages/growth-chart-static build
 
 RUN bun run --cwd apps/frontend build
 RUN bun run --cwd apps/backend build
@@ -64,6 +71,11 @@ RUN groupadd --system app && useradd --system --gid app --create-home app
 # docker-entrypoint.sh below — see docker-compose.yml for how it's wired up).
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/backend/node_modules /app/apps/backend/node_modules
+# The workspace symlink in apps/backend/node_modules/@baby-tracker points here,
+# so the package's manifest (for the `exports` map) and its compiled CJS output
+# have to travel with it. Its source is deliberately left behind.
+COPY --from=build /app/packages/growth-chart-static/package.json /app/packages/growth-chart-static/package.json
+COPY --from=build /app/packages/growth-chart-static/dist /app/packages/growth-chart-static/dist
 COPY --from=build /app/apps/backend/dist ./dist
 COPY --from=build /app/apps/backend/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=build /app/apps/backend/prisma/migrations ./prisma/migrations
