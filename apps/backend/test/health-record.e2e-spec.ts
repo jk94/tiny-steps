@@ -340,6 +340,36 @@ describe('Health records (e2e)', () => {
     ]);
   });
 
+  // Against real SQLite, because that is where the ordering used to be wrong:
+  // a bare `dueAt: 'asc'` sorts NULLs FIRST there, which put the history above
+  // the planned entries — the opposite of the MED-12 layout, and the opposite
+  // of what the same query does on PostgreSQL.
+  it('lists planned entries by due date before the history (MED-12)', async () => {
+    const owner = await registerUser('ordering');
+    const { householdId, childId } = await createHouseholdWithChild(owner);
+
+    await post(owner, householdId, childId)
+      .send({ kind: 'MEDICATION', name: 'Paracetamol', administeredAt: ADMINISTERED_AT })
+      .expect(201);
+    await post(owner, householdId, childId)
+      .send({ kind: 'VACCINATION', name: 'Später', dueAt: '2026-12-01' })
+      .expect(201);
+    await post(owner, householdId, childId)
+      .send({ kind: 'VACCINATION', name: 'Zuerst', dueAt: '2026-01-15' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .get(recordUrl(householdId, childId))
+      .set('Cookie', owner.cookies)
+      .expect(200);
+
+    expect((response.body as HealthRecordBody[]).map((record) => record.name)).toEqual([
+      'Zuerst',
+      'Später',
+      'Paracetamol',
+    ]);
+  });
+
   it("hides another household's records behind a 404", async () => {
     const owner = await registerUser('owner');
     const outsider = await registerUser('outsider');

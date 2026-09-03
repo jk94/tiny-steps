@@ -102,8 +102,12 @@ export class HealthRecordService {
    * Ordered so both of MED-12's sections come out of one query already in
    * their display order: planned entries first, by ascending due date (the
    * next appointment on top), then the history by descending administration
-   * date. `dueAt: 'asc'` puts the non-null due dates before the `null`s of the
-   * pure history entries on both SQLite and PostgreSQL.
+   * date.
+   *
+   * `nulls: 'last'` is what actually puts the pure history entries (`dueAt`
+   * null) after the planned ones — a bare `'asc'` would sort them first on
+   * SQLite and last on PostgreSQL, so the two would disagree about the whole
+   * page's order.
    */
   async list(
     householdId: string,
@@ -118,7 +122,7 @@ export class HealthRecordService {
         ...(query.kind ? { kind: query.kind } : {}),
         ...statusFilter(query.status),
       },
-      orderBy: [{ dueAt: 'asc' }, { administeredAt: 'desc' }],
+      orderBy: [{ dueAt: { sort: 'asc', nulls: 'last' } }, { administeredAt: 'desc' }],
     });
 
     return records.map(toHealthRecordSummary);

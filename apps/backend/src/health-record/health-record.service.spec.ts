@@ -263,7 +263,9 @@ describe('HealthRecordService', () => {
 
       expect(prisma.healthRecord.findMany).toHaveBeenCalledWith({
         where: { childId: CHILD_ID },
-        orderBy: [{ dueAt: 'asc' }, { administeredAt: 'desc' }],
+        // `nulls: 'last'` is not cosmetic: without it the pure history entries
+        // sort first on SQLite and last on PostgreSQL.
+        orderBy: [{ dueAt: { sort: 'asc', nulls: 'last' } }, { administeredAt: 'desc' }],
       });
     });
 
