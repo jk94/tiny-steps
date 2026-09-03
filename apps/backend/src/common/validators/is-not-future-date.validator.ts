@@ -36,8 +36,12 @@ const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  *
  * The cost is at most one day of slack for users west of UTC+14, which the
  * clients' own `max` attribute on the date input already prevents.
+ *
+ * Exported because the same skew exists wherever a real instant is compared
+ * against a column that stores a bare calendar day as UTC midnight — see
+ * `HealthRecordService`'s `administeredAt` vs. `Child.birthDate` check.
  */
-const MAX_UTC_OFFSET_MS = 14 * 60 * 60 * 1000;
+export const MAX_UTC_OFFSET_MS = 14 * 60 * 60 * 1000;
 
 @ValidatorConstraint({ name: 'isNotFutureDate', async: false })
 export class IsNotFutureDateConstraint implements ValidatorConstraintInterface {

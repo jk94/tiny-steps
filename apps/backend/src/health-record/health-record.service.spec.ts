@@ -198,11 +198,11 @@ describe('HealthRecordService', () => {
       await expect(failure.catch(codeOf)).resolves.toBe('HEALTH_RECORD_FIELD_NOT_ALLOWED_FOR_KIND');
     });
 
-    it('rejects an administration before the birth date (MED-6)', async () => {
+    it('rejects an administration on the day before the birth date (MED-6)', async () => {
       const failure = service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
         kind: HealthRecordKind.MEDICATION,
         name: 'Paracetamol',
-        administeredAt: '2025-01-19T23:00:00.000Z',
+        administeredAt: '2025-01-19T00:00:00.000Z',
       });
 
       await expect(failure.catch(codeOf)).resolves.toBe(
@@ -218,6 +218,28 @@ describe('HealthRecordService', () => {
           kind: HealthRecordKind.VACCINATION,
           name: 'Vitamin-K-Prophylaxe',
           administeredAt: BIRTH_DATE.toISOString(),
+        }),
+      ).resolves.toBeDefined();
+    });
+
+    // `birthDate` is a calendar day stored as UTC midnight while
+    // `administeredAt` is a real instant, so anything logged early on the birth
+    // day east of UTC lands on an *earlier* UTC instant than that midnight.
+    // Vitamin-K prophylaxis is given within an hour of birth, so this is the
+    // normal case, not an edge case — and the client only ever pre-checks the
+    // local calendar day, so a rejection here would be unexplainable to a user.
+    it.each([
+      ['Berlin, UTC+1, 00:30 on the birth day', '2025-01-19T23:30:00.000Z'],
+      ['Auckland, UTC+13, 08:00 on the birth day', '2025-01-19T19:00:00.000Z'],
+      ['Honolulu, UTC-10, 23:00 on the birth day', '2025-01-21T09:00:00.000Z'],
+    ])('accepts an administration on the birth day in %s', async (_label, administeredAt) => {
+      prisma.healthRecord.create.mockResolvedValue(makeRecord());
+
+      await expect(
+        service.create(HOUSEHOLD_ID, CHILD_ID, USER_ID, {
+          kind: HealthRecordKind.VACCINATION,
+          name: 'Vitamin-K-Prophylaxe',
+          administeredAt,
         }),
       ).resolves.toBeDefined();
     });

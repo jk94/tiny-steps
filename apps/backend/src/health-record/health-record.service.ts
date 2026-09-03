@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Child, HealthRecord, Prisma } from '@prisma/client';
+import { MAX_UTC_OFFSET_MS } from '../common/validators/is-not-future-date.validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHealthRecordDto } from './dto/create-health-record.dto';
 import { HealthRecordQueryDto } from './dto/health-record-query.dto';
@@ -300,13 +301,26 @@ function assertKindFieldRules(kind: HealthRecordKind, state: HealthRecordState):
 /**
  * MED-6: a dose can never have been given before the child existed.
  *
- * Compared as instants, not calendar days (unlike `Milestone.achievedAt`):
- * `administeredAt` genuinely carries a time of day, so truncating it to a day
- * would be throwing away the very precision this column exists for. `birthDate`
- * is stored as UTC midnight, so anything on the birth day itself passes.
+ * Compared on calendar days like `MilestoneService`'s `assertNotBeforeBirth`,
+ * but with a tolerance the milestone check does not need: `achievedAt` is a
+ * bare calendar day, whereas `administeredAt` is a real instant. `birthDate` is
+ * stored as UTC midnight, so a plain instant (or plain UTC-day) comparison
+ * rejects a legitimate administration made early on the birth day itself by
+ * anyone east of UTC — 2 h of that day in Berlin, 13 h in Auckland — while the
+ * client only ever pre-checks the *local* calendar day, so the two disagree.
+ *
+ * Shifting the instant forward by `MAX_UTC_OFFSET_MS` (the same slack
+ * `IsNotFutureDate` applies to date-only values) makes the rule "reject only
+ * once this instant precedes the birth day everywhere on Earth". The cost is up
+ * to that much slack on the day before birth, which is the harmless direction
+ * and which the form's own calendar-day check already covers.
  */
 function assertAdministeredNotBeforeBirth(administeredAt: Date | null, child: Child): void {
-  if (administeredAt !== null && administeredAt.getTime() < child.birthDate.getTime()) {
+  if (
+    administeredAt !== null &&
+    toCalendarDay(new Date(administeredAt.getTime() + MAX_UTC_OFFSET_MS)) <
+      toCalendarDay(child.birthDate)
+  ) {
     // Reachable whenever the client's cached `birthDate` is stale (e.g.
     // corrected on another device), so the form's own pre-check can miss.
     throw badRequest(
@@ -314,6 +328,11 @@ function assertAdministeredNotBeforeBirth(administeredAt: Date | null, child: Ch
       'administeredAt must not be before the child birth date',
     );
   }
+}
+
+/** The UTC calendar day a date falls on, as `YYYY-MM-DD`. */
+function toCalendarDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 /** Maps a stored row onto the API shape, dropping the internal reminder stamp. */
