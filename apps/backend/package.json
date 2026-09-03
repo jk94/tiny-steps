@@ -34,6 +34,7 @@
     "@nestjs/websockets": "^11.1.28",
     "@prisma/adapter-better-sqlite3": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@react-pdf/renderer": "^4.9.0",
     "argon2": "^0.45.1",
     "better-sqlite3": "^12.6.0",
     "class-transformer": "^0.5.1",
@@ -48,6 +49,8 @@
     "openid-client": "^6",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3"
@@ -62,6 +65,8 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "@types/supertest": "^7.0.0",
     "csv-parse": "^7.0.2",
     "jest": "^30.0.0",
@@ -79,16 +84,18 @@
   "jest": {
     "moduleFileExtensions": [
       "js",
+      "jsx",
       "json",
-      "ts"
+      "ts",
+      "tsx"
     ],
     "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
+    "testRegex": ".*\\.spec\\.tsx?$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)sx?$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s?(x)"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
