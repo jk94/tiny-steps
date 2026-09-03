@@ -15,7 +15,6 @@ import {
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   MEDICAL_REMINDER_MAX_LEAD_DAYS,
-  MEDICAL_REMINDER_OVERDUE_GRACE_DAYS,
 } from './notification-settings.service';
 
 const MS_PER_HOUR = 1000 * 60 * 60;
@@ -216,11 +215,11 @@ export class NotificationSchedulerService {
         dueAt: {
           not: null,
           // Nobody can configure a longer lead time, so nothing further out can
-          // be due for a reminder today.
+          // be due for a reminder today. Deliberately no lower bound: a record
+          // entered today for an appointment that was already missed months ago
+          // still deserves its one DUE push, and `administeredAt: null` plus
+          // `reminderEnabled: true` already keep this scan tiny.
           lte: addDays(now, MEDICAL_REMINDER_MAX_LEAD_DAYS),
-          // Only bounds how much of the table is walked — an overdue record
-          // that was already nudged is inert regardless of this window.
-          gte: addDays(now, -MEDICAL_REMINDER_OVERDUE_GRACE_DAYS),
         },
       },
       select: {

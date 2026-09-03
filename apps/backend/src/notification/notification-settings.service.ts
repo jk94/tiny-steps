@@ -21,14 +21,6 @@ export const MEDICAL_REMINDER_DEFAULT_LEAD_DAYS = 3;
 export const MEDICAL_REMINDER_MAX_LEAD_DAYS = 30;
 
 /**
- * How far back the daily scan still picks up an untouched overdue record.
- * Purely a bound on how much of the table the query walks — a record already
- * reminded about is inert regardless, and one still un-actioned after a month
- * is not going to be fixed by another push.
- */
-export const MEDICAL_REMINDER_OVERDUE_GRACE_DAYS = 30;
-
-/**
  * The client-facing subset of a `NotificationSettings` row — the editable
  * fields, without the internal `feedingReminderLastSentAt` bookkeeping or DB
  * ids/timestamps.

@@ -14,7 +14,6 @@ import {
 import {
   MEDICAL_REMINDER_DEFAULT_LEAD_DAYS,
   MEDICAL_REMINDER_MAX_LEAD_DAYS,
-  MEDICAL_REMINDER_OVERDUE_GRACE_DAYS,
 } from './notification-settings.service';
 
 const USER_ID = 'user-1';
@@ -350,7 +349,9 @@ describe('NotificationSchedulerService', () => {
       expect(where.administeredAt).toBeNull();
       expect(where.dueAt.not).toBeNull();
       expect(where.dueAt.lte).toEqual(at(17 + MEDICAL_REMINDER_MAX_LEAD_DAYS));
-      expect(where.dueAt.gte).toEqual(at(17 - MEDICAL_REMINDER_OVERDUE_GRACE_DAYS));
+      // No lower bound: an entry created today for a long-missed appointment
+      // must still reach the trigger rule (see the overdue test below).
+      expect(where.dueAt.gte).toBeUndefined();
       // The household is what the deep link and the member fan-out need.
       expect(select.child).toEqual({ select: { householdId: true } });
     });
@@ -567,6 +568,24 @@ describe('NotificationSchedulerService', () => {
       prisma.healthRecord.findMany.mockResolvedValue([makeRecord({ reminderLastSentAt: stamp })]);
       await service.checkMedicalReminders();
       expect(pushSender.sendToTokens).toHaveBeenCalledTimes(1);
+    });
+
+    it('still nudges an entry created for an appointment missed months ago', async () => {
+      // Backdating a long-forgotten vaccination is exactly when the reminder is
+      // worth most, so the scan must not bound how far into the past it looks.
+      clock.now.mockReturnValue(at(20));
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeRecord({ dueAt: new Date('2025-01-05T00:00:00.000Z') }),
+      ]);
+      withMembers(USER_ID);
+      prisma.notificationSettings.findMany.mockResolvedValue([makeMedicalSettings()]);
+
+      await service.checkMedicalReminders();
+
+      expect(pushSender.sendToTokens).toHaveBeenCalledTimes(1);
+      const [, payload] = pushSender.sendToTokens.mock.calls[0];
+      expect(payload.title).toBe('Überfälliger Termin');
+      expect(payload.body).toContain('05.01.2025');
     });
   });
 });
