@@ -24,9 +24,12 @@ export default defineConfig({
     // than a second Vitest project: they are React component tests needing the
     // exact same jsdom environment, and one `bun run --cwd apps/frontend test`
     // should not silently skip them.
+    // The design-system token codegen's specs run here too, for the same
+    // reason: it has no runner of its own, and its output feeds this app.
     include: [
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../../packages/*/src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      '../../design-system/scripts/**/*.{test,spec}.?(c|m)[jt]s?(x)',
     ],
   },
 });

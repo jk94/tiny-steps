@@ -1,7 +1,8 @@
 /**
  * Token codegen: reads `design-system/tokens/*.json` (the single source of
- * truth) and writes the three generated artifacts consumed by the frontend and
- * the Markdown styleguide. Deliberately a small hand-rolled script rather than
+ * truth) and writes the four generated artifacts consumed by the frontend, the
+ * backend's PDF report and the Markdown styleguide. Deliberately a small
+ * hand-rolled script rather than
  * Style Dictionary — see ADR-0013's "Consequences" note on why that trade-off
  * is right for this repo's fixed token set and bespoke Markdown-table output.
  *
@@ -11,6 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { buildReportTokensModule } from './report-tokens.ts';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const tokensDir = resolve(scriptDir, '../tokens');
@@ -279,6 +281,26 @@ function buildMarkdown(): string {
     '',
     eventTypeTable,
     '',
+    '## react-pdf StyleSheet (PDF report)',
+    '',
+    'The same tokens are emitted a third time, for the backend PDF report, as',
+    '`apps/backend/src/export/report/renderers/react-pdf/report-tokens.generated.ts`.',
+    'It is the same source of truth expressed in the units `@react-pdf/renderer`',
+    'understands, so a token change reaches the report without a hand-maintained',
+    'copy (see [ADR-0015](../adr/0015-pdf-report-generation.md)):',
+    '',
+    '- **Colors:** the **light** values only. A printed page has no',
+    '  `prefers-color-scheme`, so there is no dark variant to choose between.',
+    '- **Lengths:** converted from CSS to PostScript points — `1rem` = `12`,',
+    '  `1px` = `0.75` — and emitted as bare numbers, because react-pdf rejects',
+    '  CSS units.',
+    '- **`fontFamily.report`:** backend-only. It names the font *file* embedded in',
+    '  the PDF (`Inter`), not a CSS stack: react-pdf has no system fonts, so the',
+    "  `sans` stack's fallbacks are meaningless there. Nothing in the frontend uses",
+    '  this family.',
+    '- The generated module exports a **plain object**, not a `StyleSheet.create()`',
+    '  call, so no generated design-system artifact imports the renderer.',
+    '',
   ].join('\n');
 }
 
@@ -316,5 +338,14 @@ writeFileSync(
   resolve(repoRoot, 'apps/frontend/src/lib/eventTypeTokens.generated.ts'),
   buildEventTypeTs(),
 );
+writeFileSync(
+  resolve(
+    repoRoot,
+    'apps/backend/src/export/report/renderers/react-pdf/report-tokens.generated.ts',
+  ),
+  buildReportTokensModule({ color, typography, spacing, radii }, TS_HEADER),
+);
 
-console.log('Design tokens built: tokens.generated.css, tokens.md, eventTypeTokens.generated.ts');
+console.log(
+  'Design tokens built: tokens.generated.css, tokens.md, eventTypeTokens.generated.ts, report-tokens.generated.ts',
+);
