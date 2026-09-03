@@ -540,4 +540,103 @@ describe('Data export (e2e)', () => {
       expect(JSON.parse(outside.text)).toEqual([]);
     });
   });
+
+  describe('PDF report', () => {
+    const PERIOD = { from: '2026-01-01T00:00:00.000Z', to: '2026-02-01T00:00:00.000Z' };
+
+    it('returns a downloadable PDF containing the seeded data', async () => {
+      const owner = await registerUser('report-owner');
+      const household = await createHousehold(owner, 'Report Household');
+      const childId = await createChild(household.id);
+      await seedOneOfEachEvent(childId, owner.userId);
+      await seedGrowthMeasurement(childId, owner.userId);
+      await seedHealthRecord(childId, owner.userId);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/report.pdf`)
+        .query({ ...PERIOD, locale: 'de' })
+        .set('Cookie', owner.cookies)
+        .buffer()
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => callback(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+
+      expect(response.headers['content-type']).toContain('application/pdf');
+      expect(response.headers['content-disposition']).toBe(
+        `attachment; filename="report-${childId}.pdf"`,
+      );
+      const body = response.body as Buffer;
+      expect(body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      // A real report with a chart and three tables is comfortably past this;
+      // a header-only stub would not be.
+      expect(body.length).toBeGreaterThan(10_000);
+    });
+
+    it('renders an English report as readily as a German one', async () => {
+      const owner = await registerUser('report-en-owner');
+      const household = await createHousehold(owner, 'Report EN Household');
+      const childId = await createChild(household.id);
+      await seedOneOfEachEvent(childId, owner.userId);
+
+      await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/report.pdf`)
+        .query({ ...PERIOD, locale: 'en', sections: 'CORE,TRACKING' })
+        .set('Cookie', owner.cookies)
+        .expect(200)
+        .expect('Content-Type', /application\/pdf/);
+    });
+
+    it('answers 422 REPORT_EMPTY_PERIOD rather than shipping an empty document', async () => {
+      const owner = await registerUser('report-empty-owner');
+      const household = await createHousehold(owner, 'Report Empty Household');
+      const childId = await createChild(household.id);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/report.pdf`)
+        .query({ ...PERIOD, locale: 'de' })
+        .set('Cookie', owner.cookies)
+        .expect(422);
+
+      expect(response.body.code).toBe('REPORT_EMPTY_PERIOD');
+    });
+
+    it('rejects a missing locale, a missing period and an over-long period', async () => {
+      const owner = await registerUser('report-validation-owner');
+      const household = await createHousehold(owner, 'Report Validation Household');
+      const childId = await createChild(household.id);
+      const url = `/api/households/${household.id}/children/${childId}/export/report.pdf`;
+
+      await request(app.getHttpServer())
+        .get(url)
+        .query(PERIOD)
+        .set('Cookie', owner.cookies)
+        .expect(400);
+      await request(app.getHttpServer())
+        .get(url)
+        .query({ locale: 'de' })
+        .set('Cookie', owner.cookies)
+        .expect(400);
+      await request(app.getHttpServer())
+        .get(url)
+        .query({ from: '2020-01-01T00:00:00.000Z', to: '2026-01-01T00:00:00.000Z', locale: 'de' })
+        .set('Cookie', owner.cookies)
+        .expect(400);
+    });
+
+    it('returns 404 for a user with no membership in the household (EXP-14)', async () => {
+      const owner = await registerUser('report-nomember-owner');
+      const household = await createHousehold(owner, 'Report No Member Household');
+      const childId = await createChild(household.id);
+      const outsider = await registerUser('report-nomember-outsider');
+
+      await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/report.pdf`)
+        .query({ ...PERIOD, locale: 'de' })
+        .set('Cookie', outsider.cookies)
+        .expect(404);
+    });
+  });
 });

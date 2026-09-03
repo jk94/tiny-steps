@@ -1,10 +1,14 @@
 import { StreamableFile } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
 import type { Response } from 'express';
 import { EventType } from '../event/event-type.enum';
 import { DiaperType } from '../diaper/diaper-type.enum';
 import { ExportController } from './export.controller';
 import { ExportQueryDto } from './dto/export-query.dto';
+import { ReportQueryDto } from './dto/report-query.dto';
 import { ExportService, RawExportRow } from './export.service';
+import { ReportService } from './report/report.service';
 import { toCsv } from './csv.serializer';
 
 const HOUSEHOLD_ID = 'household-1';
@@ -46,11 +50,18 @@ async function readStreamable(file: StreamableFile): Promise<string> {
 
 describe('ExportController', () => {
   let exportService: jest.Mocked<Pick<ExportService, 'getRawEvents'>>;
+  let reportService: jest.Mocked<Pick<ReportService, 'generatePdf'>>;
   let controller: ExportController;
 
   beforeEach(() => {
     exportService = { getRawEvents: jest.fn().mockResolvedValue(rows) };
-    controller = new ExportController(exportService as unknown as ExportService);
+    reportService = {
+      generatePdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.7 stub', 'latin1')),
+    };
+    controller = new ExportController(
+      exportService as unknown as ExportService,
+      reportService as unknown as ReportService,
+    );
   });
 
   describe('exportJson', () => {
@@ -109,5 +120,82 @@ describe('ExportController', () => {
       });
       expect(await readStreamable(result)).toBe(toCsv(rows));
     });
+  });
+
+  describe('exportReportPdf', () => {
+    it('delegates to the report service and sets PDF download headers', async () => {
+      const { res, set } = makeResponse();
+      const query = plainToInstance(ReportQueryDto, {
+        from: '2026-06-01T00:00:00.000Z',
+        to: '2026-09-01T00:00:00.000Z',
+        locale: 'de',
+      });
+
+      const result = await controller.exportReportPdf(HOUSEHOLD_ID, CHILD_ID, query, res);
+
+      expect(reportService.generatePdf).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, query);
+      expect(set).toHaveBeenCalledWith({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="report-${CHILD_ID}.pdf"`,
+      });
+      expect(result).toBeInstanceOf(StreamableFile);
+    });
+  });
+});
+
+/** Runs the DTO through the same transform+validate the global pipe applies. */
+function validateReportQuery(raw: Record<string, unknown>): {
+  dto: ReportQueryDto;
+  errors: string[];
+} {
+  const dto = plainToInstance(ReportQueryDto, raw);
+  const errors = validateSync(dto, { whitelist: true, forbidNonWhitelisted: true }).map(
+    (error) => error.property,
+  );
+  return { dto, errors };
+}
+
+describe('ReportQueryDto', () => {
+  const VALID = {
+    from: '2026-06-01T00:00:00.000Z',
+    to: '2026-09-01T00:00:00.000Z',
+    locale: 'de',
+  };
+
+  it('accepts a minimal valid query and defaults to every section', () => {
+    const { dto, errors } = validateReportQuery(VALID);
+
+    expect(errors).toEqual([]);
+    expect(dto.sections).toEqual(['CORE', 'GROWTH', 'MILESTONES', 'MEDICAL', 'TRACKING']);
+  });
+
+  it('requires the period — a report is always for a chosen span (EXP-1)', () => {
+    expect(validateReportQuery({ locale: 'de' }).errors).toEqual(
+      expect.arrayContaining(['from', 'to']),
+    );
+  });
+
+  it('requires the language and never guesses it (EXP-8)', () => {
+    expect(validateReportQuery({ ...VALID, locale: undefined }).errors).toContain('locale');
+    expect(validateReportQuery({ ...VALID, locale: 'fr' }).errors).toContain('locale');
+  });
+
+  it('parses a comma-separated section list', () => {
+    const { dto, errors } = validateReportQuery({ ...VALID, sections: 'CORE,GROWTH' });
+
+    expect(errors).toEqual([]);
+    expect(dto.sections).toEqual(['CORE', 'GROWTH']);
+  });
+
+  it('parses repeated section params', () => {
+    const { dto, errors } = validateReportQuery({ ...VALID, sections: ['CORE', 'MEDICAL'] });
+
+    expect(errors).toEqual([]);
+    expect(dto.sections).toEqual(['CORE', 'MEDICAL']);
+  });
+
+  it('rejects an unknown section and an empty selection', () => {
+    expect(validateReportQuery({ ...VALID, sections: 'CORE,PHOTOS' }).errors).toContain('sections');
+    expect(validateReportQuery({ ...VALID, sections: '' }).errors).toContain('sections');
   });
 });
