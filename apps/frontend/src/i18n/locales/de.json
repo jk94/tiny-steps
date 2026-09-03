@@ -731,6 +731,12 @@
       "doseAmountLabel": "Dosis (optional)",
       "doseUnitLabel": "Einheit",
       "doseUnitPlaceholder": "z. B. ml",
+      "doseUnitSuggestions": {
+        "milliliters": "ml",
+        "milligrams": "mg",
+        "drops": "Tropfen",
+        "pieces": "Stück"
+      },
       "vaccineBatchLabel": "Impfstoff / Charge (optional)",
       "vaccineBatchPlaceholder": "z. B. Infanrix hexa, Charge AB1234",
       "noteLabel": "Notiz (optional)",

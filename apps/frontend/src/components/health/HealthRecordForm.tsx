@@ -10,8 +10,19 @@ import {
 import { HEALTH_RECORD_KINDS, healthRecordVisuals } from '../../lib/healthRecordVisuals';
 import { Badge, Button, Input, Tabs, Textarea } from '../ui';
 
-/** Common dose units, offered as suggestions rather than a closed list (MED-3). */
-const DOSE_UNIT_SUGGESTIONS = ['ml', 'mg', 'Tropfen', 'Stück'];
+/**
+ * Common dose units, offered as suggestions rather than a closed list (MED-3).
+ *
+ * Translated rather than hardcoded (phase-7 Festlegung 8): "Tropfen"/"Stück"
+ * are words, and even the symbols go through i18n so a locale that abbreviates
+ * differently has somewhere to say so.
+ */
+const DOSE_UNIT_SUGGESTION_KEYS = [
+  'health.form.doseUnitSuggestions.milliliters',
+  'health.form.doseUnitSuggestions.milligrams',
+  'health.form.doseUnitSuggestions.drops',
+  'health.form.doseUnitSuggestions.pieces',
+] as const;
 
 type HealthRecordFieldErrorKey =
   | 'health.validation.nameRequired'
@@ -336,8 +347,8 @@ export function HealthRecordForm({
               disabled={isSubmitting}
             />
             <datalist id="health-record-dose-units">
-              {DOSE_UNIT_SUGGESTIONS.map((unit) => (
-                <option key={unit} value={unit} />
+              {DOSE_UNIT_SUGGESTION_KEYS.map((key) => (
+                <option key={key} value={t(key)} />
               ))}
             </datalist>
           </div>

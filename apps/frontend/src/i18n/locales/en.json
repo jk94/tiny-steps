@@ -731,6 +731,12 @@
       "doseAmountLabel": "Dose (optional)",
       "doseUnitLabel": "Unit",
       "doseUnitPlaceholder": "e.g. ml",
+      "doseUnitSuggestions": {
+        "milliliters": "ml",
+        "milligrams": "mg",
+        "drops": "drops",
+        "pieces": "pieces"
+      },
       "vaccineBatchLabel": "Vaccine / batch (optional)",
       "vaccineBatchPlaceholder": "e.g. Infanrix hexa, batch AB1234",
       "noteLabel": "Note (optional)",
