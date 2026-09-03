@@ -129,10 +129,14 @@ gehört als Kommentar ans Modell.
   Vorlauffensters oder überfällig, und der zuständige `NotificationSettings`-Eintrag aktiv.
 - Wie im Bestand wird „jetzt" aus dem injizierten `ClockService` gelesen, damit Tests mit fixierter
   Zeit direkt gegen die Methode laufen können statt gegen die Wanduhr.
-- **Zeitzonen:** Es gilt weiterhin die MVP-Vereinfachung „Server-Lokalzeit" aus Phase 5. Das ist
-  hier spürbarer als bei der Tageszusammenfassung (ein Fälligkeitstag kann sich um einen Tag
-  verschieben, wenn Server und Nutzer weit auseinanderliegen) und wird deshalb ausdrücklich als
-  bekannte Einschränkung dokumentiert, nicht stillschweigend übernommen.
+- **Zeitzonen:** `dueAt` wird als Kalendertag (UTC-Mitternacht, wie `Child.birthDate`) gespeichert,
+  daher rechnet die Fälligkeits-/Vorlauf-Logik den Tag in **UTC** aus — nicht in Server-Lokalzeit.
+  Die Rest-Einschränkung: der Cron feuert um 08:00 **Server-Lokalzeit**, während die Tagesmathematik
+  UTC ist (ein Server weit östlich von UTC stellt den Fälligkeits-Push am folgenden lokalen Morgen
+  zu), und ein Nutzer in einer deutlich anderen Zeitzone als der Server kann eine Erinnerung um bis
+  zu einen Tag versetzt sehen. Beides ist als bekannte Einschränkung in
+  [`docs/known-issues.md`](../../known-issues.md) dokumentiert; echte Pro-Nutzer-Zeitzonen bleiben
+  bis Phase 7.6 außerhalb des Scope.
 
 ## API
 
