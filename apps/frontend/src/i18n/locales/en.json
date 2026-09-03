@@ -787,9 +787,7 @@
       "fieldNotAllowedForKind": "This field belongs to the other type of entry.",
       "administeredAtBeforeBirth": "The time must not be before the birth date.",
       "administeredAtInFuture": "The time must not be in the future.",
-      "loadFailed": "The entries could not be loaded.",
-      "deleteFailed": "The entry could not be deleted. Please try again.",
-      "markDoneFailed": "The entry could not be marked as done."
+      "deleteFailed": "The entry could not be deleted. Please try again."
     },
     "errors": {
       "forbidden": "You do not have permission to do that.",

@@ -787,9 +787,7 @@
       "fieldNotAllowedForKind": "Dieses Feld gehört zur jeweils anderen Art von Eintrag.",
       "administeredAtBeforeBirth": "Der Zeitpunkt darf nicht vor dem Geburtsdatum liegen.",
       "administeredAtInFuture": "Der Zeitpunkt darf nicht in der Zukunft liegen.",
-      "loadFailed": "Die Einträge konnten nicht geladen werden.",
-      "deleteFailed": "Der Eintrag konnte nicht gelöscht werden. Bitte versuche es erneut.",
-      "markDoneFailed": "Der Eintrag konnte nicht als erledigt markiert werden."
+      "deleteFailed": "Der Eintrag konnte nicht gelöscht werden. Bitte versuche es erneut."
     },
     "errors": {
       "forbidden": "Dafür fehlen dir die Berechtigungen.",
