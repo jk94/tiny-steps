@@ -12,9 +12,12 @@ import { EventType } from '../src/event/event-type.enum';
 import { ChildSex } from '../src/child/child-sex.enum';
 import {
   GROWTH_EXPORT_TYPE,
+  HEALTH_RECORD_EXPORT_TYPE,
   RECORD_KIND_EVENT,
   RECORD_KIND_GROWTH_MEASUREMENT,
+  RECORD_KIND_HEALTH_RECORD,
 } from '../src/export/export.service';
+import { HealthRecordKind } from '../src/health-record/health-record-kind.enum';
 import { FeedingType } from '../src/feeding/feeding-type.enum';
 import { FeedingSide } from '../src/feeding/feeding-side.enum';
 import { DiaperType } from '../src/diaper/diaper-type.enum';
@@ -109,6 +112,7 @@ describe('Data export (e2e)', () => {
     // FK order: detail rows -> Event -> Child, then household graph, then user.
     await prisma.event.deleteMany({ where: { childId: { in: childIds } } });
     await prisma.growthMeasurement.deleteMany({ where: { childId: { in: childIds } } });
+    await prisma.healthRecord.deleteMany({ where: { childId: { in: childIds } } });
     await prisma.invite.deleteMany({ where: { householdId: { in: householdIds } } });
     await prisma.child.deleteMany({ where: { householdId: { in: householdIds } } });
     await prisma.membership.deleteMany({ where: { householdId: { in: householdIds } } });
@@ -173,6 +177,23 @@ describe('Data export (e2e)', () => {
       },
     });
     return measurement.id;
+  }
+
+  /** An administered medication, dated between the seeded diaper and feeding. */
+  async function seedHealthRecord(childId: string, userId: string): Promise<string> {
+    const record = await prisma.healthRecord.create({
+      data: {
+        childId,
+        userId,
+        kind: HealthRecordKind.MEDICATION,
+        name: 'Paracetamol',
+        administeredAt: new Date('2026-01-01T07:45:00.000Z'),
+        doseAmount: 5,
+        doseUnit: 'ml',
+        note: 'Bei Fieber',
+      },
+    });
+    return record.id;
   }
 
   /** Seeds one of each event type for the child, returning their ids. */
@@ -410,6 +431,113 @@ describe('Data export (e2e)', () => {
         .expect(200);
 
       expect(JSON.parse(response.text)).toEqual([]);
+    });
+  });
+
+  describe('health records in the raw-data export', () => {
+    it('includes the record in the JSON export, merged chronologically', async () => {
+      const owner = await registerUser('health-json-owner');
+      const household = await createHousehold(owner, 'Health JSON Household');
+      const childId = await createChild(household.id);
+      const { feedingId, sleepId, diaperId } = await seedOneOfEachEvent(childId, owner.userId);
+      const recordId = await seedHealthRecord(childId, owner.userId);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/json`)
+        .set('Cookie', owner.cookies)
+        .expect(200);
+
+      const rows = JSON.parse(response.text) as Array<Record<string, unknown>>;
+      // Diaper 07:00, health 07:45, feeding 08:00, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual([diaperId, recordId, feedingId, sleepId]);
+
+      expect(rows.find((row) => row.id === recordId)).toMatchObject({
+        recordKind: RECORD_KIND_HEALTH_RECORD,
+        type: HEALTH_RECORD_EXPORT_TYPE,
+        occurredAt: '2026-01-01T07:45:00.000Z',
+        healthRecordKind: HealthRecordKind.MEDICATION,
+        healthRecordName: 'Paracetamol',
+        healthRecordDoseAmount: 5,
+        healthRecordDoseUnit: 'ml',
+        healthRecordDueAt: null,
+        // The free-text note reuses the shared column.
+        note: 'Bei Fieber',
+        feedingType: null,
+        weightGrams: null,
+        milestoneTitle: null,
+      });
+
+      // Existing event rows keep working and carry blank health columns.
+      expect(rows.find((row) => row.id === feedingId)).toMatchObject({
+        recordKind: RECORD_KIND_EVENT,
+        healthRecordKind: null,
+        healthRecordName: null,
+      });
+    });
+
+    it('appends the new columns at the very end of the CSV header', async () => {
+      const owner = await registerUser('health-csv-owner');
+      const household = await createHousehold(owner, 'Health CSV Household');
+      const childId = await createChild(household.id);
+      await seedOneOfEachEvent(childId, owner.userId);
+      const recordId = await seedHealthRecord(childId, owner.userId);
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/csv`)
+        .set('Cookie', owner.cookies)
+        .expect(200);
+
+      // Positional stability: a consumer reading the pre-7.3 columns by index
+      // is unaffected, because the seven new ones sit strictly last.
+      const header = response.text.split('\n')[0].trim().split(',');
+      expect(header.slice(-7)).toEqual([
+        'healthRecordKind',
+        'healthRecordName',
+        'healthRecordAdministeredAt',
+        'healthRecordDueAt',
+        'healthRecordDoseAmount',
+        'healthRecordDoseUnit',
+        'healthRecordVaccineBatch',
+      ]);
+
+      const records = parse(response.text, { columns: true }) as Record<string, string>[];
+      expect(records).toHaveLength(4);
+      const healthRecord = records.find((record) => record.id === recordId)!;
+      expect(healthRecord.recordKind).toBe(RECORD_KIND_HEALTH_RECORD);
+      expect(healthRecord.healthRecordName).toBe('Paracetamol');
+      expect(healthRecord.healthRecordDoseAmount).toBe('5');
+      expect(healthRecord.healthRecordVaccineBatch).toBe('');
+    });
+
+    it('windows a purely planned entry by its due date', async () => {
+      const owner = await registerUser('health-filter-owner');
+      const household = await createHousehold(owner, 'Health Filter Household');
+      const childId = await createChild(household.id);
+      const planned = await prisma.healthRecord.create({
+        data: {
+          childId,
+          userId: owner.userId,
+          kind: HealthRecordKind.VACCINATION,
+          name: '6-fach-Impfung',
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      });
+
+      const inside = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/json`)
+        .query({ from: '2026-01-01T00:00:00.000Z', to: '2026-01-02T00:00:00.000Z' })
+        .set('Cookie', owner.cookies)
+        .expect(200);
+      expect((JSON.parse(inside.text) as { id: string }[]).map((row) => row.id)).toEqual([
+        planned.id,
+      ]);
+
+      const outside = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${childId}/export/json`)
+        .query({ from: '2026-01-02T00:00:00.000Z' })
+        .set('Cookie', owner.cookies)
+        .expect(200);
+      expect(JSON.parse(outside.text)).toEqual([]);
     });
   });
 });

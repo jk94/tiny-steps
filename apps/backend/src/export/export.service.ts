@@ -5,6 +5,7 @@ import {
   Event,
   FeedingDetail,
   GrowthMeasurement,
+  HealthRecord,
   Milestone,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,12 +34,16 @@ type EventWithDetails = Event & {
 export const RECORD_KIND_EVENT = 'EVENT';
 export const RECORD_KIND_GROWTH_MEASUREMENT = 'GROWTH_MEASUREMENT';
 export const RECORD_KIND_MILESTONE = 'MILESTONE';
+export const RECORD_KIND_HEALTH_RECORD = 'HEALTH_RECORD';
 
 /** `type` value carried by growth rows, alongside the event types. */
 export const GROWTH_EXPORT_TYPE = 'GROWTH';
 
 /** `type` value carried by milestone rows, alongside the event types. */
 export const MILESTONE_EXPORT_TYPE = 'MILESTONE';
+
+/** `type` value carried by medication/vaccination rows. */
+export const HEALTH_RECORD_EXPORT_TYPE = 'HEALTH_RECORD';
 
 /**
  * One flattened raw-data row per `Event`, joining the type-specific
@@ -81,7 +86,10 @@ export interface RawExportRow {
   // pure function the API uses, so an exported number always matches what the
   // app displayed.
   recordKind:
-    typeof RECORD_KIND_EVENT | typeof RECORD_KIND_GROWTH_MEASUREMENT | typeof RECORD_KIND_MILESTONE;
+    | typeof RECORD_KIND_EVENT
+    | typeof RECORD_KIND_GROWTH_MEASUREMENT
+    | typeof RECORD_KIND_MILESTONE
+    | typeof RECORD_KIND_HEALTH_RECORD;
   weightGrams: number | null;
   lengthMillimeters: number | null;
   headCircumferenceMillimeters: number | null;
@@ -109,6 +117,25 @@ export interface RawExportRow {
   milestoneTitle: string | null;
   milestoneCategory: string | null;
   milestonePhotoCount: number | null;
+  // --- Appended in roadmap Phase 7.3 -------------------------------------
+  // Same rule as the two blocks above: strictly at the END, after every
+  // pre-existing column, so a positional consumer keeps working. Null on every
+  // event, growth and milestone row.
+  //
+  // Medications/vaccinations join the same flat array rather than getting
+  // their own export file — deliberately following what 7.1 and 7.2 actually
+  // did instead of the phase-7 README's Festlegung 5, for the reason stated in
+  // the Phase 7.2 block above.
+  //
+  // There is no `healthRecordNote` column: the free-text note reuses the shared
+  // `note` column every other record kind already writes to.
+  healthRecordKind: string | null;
+  healthRecordName: string | null;
+  healthRecordAdministeredAt: string | null;
+  healthRecordDueAt: string | null;
+  healthRecordDoseAmount: number | null;
+  healthRecordDoseUnit: string | null;
+  healthRecordVaccineBatch: string | null;
 }
 
 const MS_PER_SECOND = 1000;
@@ -133,6 +160,17 @@ const EMPTY_MILESTONE_COLUMNS = {
   milestoneTitle: null,
   milestoneCategory: null,
   milestonePhotoCount: null,
+} as const;
+
+/** The Phase 7.3 health-record columns, blank on any other row. */
+const EMPTY_HEALTH_RECORD_COLUMNS = {
+  healthRecordKind: null,
+  healthRecordName: null,
+  healthRecordAdministeredAt: null,
+  healthRecordDueAt: null,
+  healthRecordDoseAmount: null,
+  healthRecordDoseUnit: null,
+  healthRecordVaccineBatch: null,
 } as const;
 
 /**
@@ -191,10 +229,27 @@ export class ExportService {
       orderBy: { achievedAt: 'asc' },
     });
 
+    // Medications/vaccinations, with no DB-level range filter: their date is
+    // `administeredAt ?? dueAt` depending on state, so there is no single
+    // column to window on. Filtered in memory below instead — acceptable
+    // because this table holds a handful of rows per child, not one per feed.
+    const healthRecords = await this.prisma.healthRecord.findMany({
+      where: { childId },
+      orderBy: { createdAt: 'asc' },
+    });
+    const healthRecordRows = healthRecords
+      .map(toHealthRecordExportRow)
+      .filter(
+        (row) =>
+          (!from || row.occurredAt >= from.toISOString()) &&
+          (!to || row.occurredAt < to.toISOString()),
+      );
+
     return [
       ...events.map((event) => toRawExportRow(event)),
       ...measurements.map((measurement) => toGrowthExportRow(measurement, child)),
       ...milestones.map((milestone) => toMilestoneExportRow(milestone)),
+      ...healthRecordRows,
     ].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   }
 
@@ -240,6 +295,7 @@ function toRawExportRow(event: EventWithDetails): RawExportRow {
     recordKind: RECORD_KIND_EVENT,
     ...EMPTY_GROWTH_COLUMNS,
     ...EMPTY_MILESTONE_COLUMNS,
+    ...EMPTY_HEALTH_RECORD_COLUMNS,
   };
 }
 
@@ -371,6 +427,7 @@ function toGrowthExportRow(measurement: GrowthMeasurement, child: Child): RawExp
     lengthMeasurementPosition: positionOverride,
     ...classification,
     ...EMPTY_MILESTONE_COLUMNS,
+    ...EMPTY_HEALTH_RECORD_COLUMNS,
   };
 }
 
@@ -406,5 +463,50 @@ function toMilestoneExportRow(milestone: Milestone & { _count: { photos: number 
     milestoneTitle: milestone.title,
     milestoneCategory: milestone.category,
     milestonePhotoCount: milestone._count.photos,
+    ...EMPTY_HEALTH_RECORD_COLUMNS,
+  };
+}
+
+/**
+ * Flattens a medication/vaccination into the same row shape as an event.
+ *
+ * The sort key is `administeredAt ?? dueAt` — what actually happened wins over
+ * what was planned, so a completed appointment sorts by when the dose was
+ * given, not by when it had been scheduled. MED-2 guarantees at least one of
+ * the two is set, so this can never be null. Both original columns are exported
+ * alongside it, so the plan/reality pair is not lost to the merge.
+ *
+ * `reminderEnabled`/`reminderLastSentAt` are deliberately not exported: they
+ * are notification bookkeeping, not part of the child's health history.
+ */
+function toHealthRecordExportRow(record: HealthRecord): RawExportRow {
+  const occurredAt = record.administeredAt ?? record.dueAt;
+
+  return {
+    id: record.id,
+    childId: record.childId,
+    userId: record.userId,
+    type: HEALTH_RECORD_EXPORT_TYPE,
+    occurredAt: occurredAt!.toISOString(),
+    startedAt: null,
+    endedAt: null,
+    durationSeconds: null,
+    feedingType: null,
+    side: null,
+    amountMl: null,
+    diaperType: null,
+    note: record.note,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+    recordKind: RECORD_KIND_HEALTH_RECORD,
+    ...EMPTY_GROWTH_COLUMNS,
+    ...EMPTY_MILESTONE_COLUMNS,
+    healthRecordKind: record.kind,
+    healthRecordName: record.name,
+    healthRecordAdministeredAt: record.administeredAt?.toISOString() ?? null,
+    healthRecordDueAt: record.dueAt?.toISOString() ?? null,
+    healthRecordDoseAmount: record.doseAmount,
+    healthRecordDoseUnit: record.doseUnit,
+    healthRecordVaccineBatch: record.vaccineBatch,
   };
 }
