@@ -23,7 +23,13 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
-COPY packages/growth-chart-static/package.json packages/growth-chart-static/package.json
+# `packages/growth-chart-static` is copied in FULL, not just its manifest:
+# `bun install` runs a workspace package's `prepare` script, and this one
+# compiles the package (see ADR-0015 — the backend consumes its build, because
+# tsc cannot emit files from outside its own rootDir). With only the manifest
+# present that script would fail and abort the install. The package is small
+# and rarely edited, so the cost to layer caching is negligible.
+COPY packages packages
 
 # `bun install` also runs postinstall scripts for every package listed in
 # root `package.json`'s `trustedDependencies` (incl. `prisma`'s own postinstall
@@ -32,9 +38,7 @@ COPY packages/growth-chart-static/package.json packages/growth-chart-static/pack
 # shebang unless `--bun` is passed (never is, here or anywhere else in this
 # project). Only manifests are copied at this point, so `prisma`'s postinstall
 # can't run `prisma generate` against the real schema yet — that happens
-# explicitly below, once the full source is present. For the same reason the
-# growth-chart package's `prepare` script (which compiles it) is a no-op here
-# and has to be re-run explicitly below.
+# explicitly below, once the full source is present.
 RUN bun install --frozen-lockfile
 
 # Now copy the rest of the source and build both apps.
@@ -43,8 +47,9 @@ COPY . .
 # Explicit `prisma generate` against the real schema (see comment above).
 RUN bun run --cwd apps/backend prisma:generate
 
-# The shared growth chart compiles to a dual ESM/CJS build that the backend
-# imports as a normal package (see ADR-0015) — must precede the app builds.
+# `COPY . .` above may have overwritten the package's dist/ with whatever the
+# build context carried (or nothing, since dist/ is gitignored), so the shared
+# growth chart is rebuilt here rather than trusting the `prepare` run.
 RUN bun run --cwd packages/growth-chart-static build
 
 RUN bun run --cwd apps/frontend build
