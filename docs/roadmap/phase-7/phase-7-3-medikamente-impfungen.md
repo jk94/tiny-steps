@@ -179,19 +179,19 @@ wird um die zwei neuen Felder erweitert, es entsteht kein zweiter Einstellungs-E
 
 ## Aufgaben
 
-- [ ] Datenmodell `HealthRecord` und Erweiterung von `NotificationSettings` inkl. Prisma-Migration
-- [ ] Backend-Modul `health` (Controller, Service, DTOs, kind-abhängige Validierung nach MED-1 bis MED-6)
-- [ ] Cron-Methode für Fälligkeits-Erinnerungen im bestehenden `NotificationSchedulerService`, inkl. Entdoppelung (MED-9/MED-10)
-- [ ] `NotificationController`-DTO um die zwei neuen Einstellungsfelder erweitern
-- [ ] Deep-Link vom Push in den betreffenden Eintrag (MED-11)
-- [ ] Übersichtsansicht mit den zwei Abschnitten und Überfälligkeits-Kennzeichnung
-- [ ] Erfassungs-/Bearbeitungs-UI inkl. „als erfolgt markieren" (MED-5)
-- [ ] Zwei neue Icons im Stil des bestehenden Icon-Sets
-- [ ] Übersichtskarte „Medizin" auf `ChildHome` (MED-13)
-- [ ] i18n-Texte (de/en) inkl. der Push-Benachrichtigungstexte
-- [ ] Rohdaten-Export um Medikamente/Impfungen erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
-- [ ] Zeitzonen-Einschränkung in `docs/known-issues.md` dokumentieren
-- [ ] Unit-Tests: Validierung je `kind`, Scheduler-Auswahl und Entdoppelung mit fixierter Uhr, Statuswechsel geplant→erfolgt
+- [x] Datenmodell `HealthRecord` und Erweiterung von `NotificationSettings` inkl. Prisma-Migration
+- [x] Backend-Modul `health` (Controller, Service, DTOs, kind-abhängige Validierung nach MED-1 bis MED-6)
+- [x] Cron-Methode für Fälligkeits-Erinnerungen im bestehenden `NotificationSchedulerService`, inkl. Entdoppelung (MED-9/MED-10)
+- [x] `NotificationController`-DTO um die zwei neuen Einstellungsfelder erweitern
+- [x] Deep-Link vom Push in den betreffenden Eintrag (MED-11)
+- [x] Übersichtsansicht mit den zwei Abschnitten und Überfälligkeits-Kennzeichnung
+- [x] Erfassungs-/Bearbeitungs-UI inkl. „als erfolgt markieren" (MED-5)
+- [x] Zwei neue Icons im Stil des bestehenden Icon-Sets
+- [x] Übersichtskarte „Medizin" auf `ChildHome` (MED-13)
+- [x] i18n-Texte (de/en) inkl. der Push-Benachrichtigungstexte
+- [x] Rohdaten-Export um Medikamente/Impfungen erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
+- [x] Zeitzonen-Einschränkung in `docs/known-issues.md` dokumentieren
+- [x] Unit-Tests: Validierung je `kind`, Scheduler-Auswahl und Entdoppelung mit fixierter Uhr, Statuswechsel geplant→erfolgt
 
 ## Definition of Done
 
