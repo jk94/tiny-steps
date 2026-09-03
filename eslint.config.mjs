@@ -33,6 +33,15 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
 
+  // Plain CommonJS helpers (test tooling that must not be transformed).
+  {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      globals: { ...globals.node },
+      sourceType: 'commonjs',
+    },
+  },
+
   // Backend (NestJS, Node runtime). `.tsx` is included because the PDF report
   // renderer builds a @react-pdf/renderer document tree in JSX (see ADR-0015).
   {

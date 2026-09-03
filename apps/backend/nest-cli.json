@@ -8,6 +8,10 @@
       {
         "include": "export/report/renderers/react-pdf/fonts/*",
         "outDir": "dist"
+      },
+      {
+        "include": "export/report/report-i18n/*.json",
+        "outDir": "dist"
       }
     ],
     "watchAssets": true

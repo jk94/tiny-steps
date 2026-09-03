@@ -19,5 +19,10 @@ import { GrowthService } from './growth.service';
   // referenced via `@UseGuards(GuardClass)` from the module declaring the
   // controller — same pattern as ChildModule/FeedingModule.
   providers: [GrowthService, HouseholdMembershipGuard],
+  // Exported for the PDF report (roadmap Phase 7.4): ReportDocumentBuilder
+  // reads this domain through its own service rather than querying Prisma
+  // directly, so a printed report can never disagree with what the API returns
+  // — percentiles in particular are computed in exactly one place.
+  exports: [GrowthService],
 })
 export class GrowthModule {}

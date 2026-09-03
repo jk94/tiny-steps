@@ -20,5 +20,8 @@ import { HealthRecordService } from './health-record.service';
   // referenced via `@UseGuards(GuardClass)` from the module declaring the
   // controller — same pattern as ChildModule/GrowthModule/MilestoneModule.
   providers: [HealthRecordService, HouseholdMembershipGuard],
+  // Exported for the PDF report (roadmap Phase 7.4) — see GrowthModule's
+  // identical note.
+  exports: [HealthRecordService],
 })
 export class HealthRecordModule {}

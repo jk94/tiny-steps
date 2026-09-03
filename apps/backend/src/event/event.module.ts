@@ -17,5 +17,8 @@ import { EventService } from './event.service';
   // pulled in via HouseholdModule's export) — same reasoning as
   // FeedingModule/ChildModule, see their own doc comments.
   providers: [EventService, HouseholdMembershipGuard],
+  // Exported for the PDF report's tracking summary (roadmap Phase 7.4) — see
+  // GrowthModule's identical note.
+  exports: [EventService],
 })
 export class EventModule {}
