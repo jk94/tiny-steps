@@ -19,7 +19,7 @@ Aufgabenliste mehr.
 | 7.1 | [Wachstumstracking](phase-7-1-wachstumstracking.md) | Messwerte, WHO-Perzentilen, Verlaufsdiagramm | Umgesetzt (2026-09-02) |
 | 7.2 | [Meilensteine](phase-7-2-meilensteine.md) | Vorlagen + freie Einträge, Fotogalerie, Timeline | Umgesetzt (2026-09-02) |
 | 7.3 | [Medikamente & Impfungen](phase-7-3-medikamente-impfungen.md) | Erfassung, Fälligkeiten, Push-Erinnerungen | Umgesetzt (2026-09-03) |
-| 7.4 | [Erweiterter Export (PDF-Bericht)](phase-7-4-erweiterter-export-pdf.md) | Arztbericht, austauschbarer Renderer | Offen |
+| 7.4 | [Erweiterter Export (PDF-Bericht)](phase-7-4-erweiterter-export-pdf.md) | Arztbericht, austauschbarer Renderer | Teilweise umgesetzt (2026-09-03) — externer Renderer offen, siehe [Umsetzungsnotiz](phase-7-4-erweiterter-export-pdf.md#umsetzungsnotiz-reduzierter-scope) |
 | 7.5 | [Erweiterte Rollen](phase-7-5-erweiterte-rollen.md) | Betreuer/Beobachter, Mitglieder- & Rollenverwaltung | Offen |
 | 7.6 | [Nutzereinstellungen & Sprache](phase-7-6-nutzereinstellungen-sprache.md) | Settings-Bereich, persistierte Sprachwahl | Offen |
 
@@ -91,6 +91,15 @@ begründet:
    Vertrag sind, werden die neuen Domänen **nicht** in diese Spaltenliste gequetscht, sondern als
    je eigener Datensatz (eigener Endpunkt/eigene Datei) exportiert, der `toCsv` mit einer eigenen
    Spaltenliste wiederverwendet. Details in [7.4](phase-7-4-erweiterter-export-pdf.md).
+
+   > **Nachtrag (2026-09-03, mit 7.4 umgesetzt):** Diese Festlegung wurde **nicht** so umgesetzt.
+   > 7.1, 7.2 und 7.3 haben ihre Domäne jeweils an die bestehende flache Liste angehängt — ein
+   > `recordKind`-Diskriminator plus eigene Spalten strikt am Ende von `RawExportRow`/`CSV_COLUMNS`,
+   > die bestehenden Event-Spalten unverändert. Damit ist die eigentliche Anforderung (EXP-13:
+   > „neue Daten abrufbar, Event-Spaltenliste unverändert") bereits erfüllt, und 7.4 hat die drei
+   > zusätzlichen Endpunkte bewusst weggelassen: sie wären eine dritte Exportform für Daten, die
+   > schon in der ersten stehen. Die domänenweise **Aufbereitung** liegt stattdessen im PDF-Bericht.
+   > Begründung in [ADR-0015](../../adr/0015-pdf-report-generation.md#divergence-no-separate-per-domain-csv-endpoints).
 6. **Rechte bleiben haushaltsweit.** Eine Rechtevergabe auf Ebene einzelner Kindprofile wird
    **nicht** eingeführt. Die PRD-Formulierung „Co-Parent: Schreibrecht auf zugewiesene Kindprofile"
    ist damit als „alle Kinder des Haushalts" zu lesen; die Präzisierung erfolgt in 7.5.
