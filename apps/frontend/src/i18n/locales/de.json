@@ -164,7 +164,8 @@
       "diaperLink": "Windel",
       "timelineLink": "Übersicht",
       "growthLink": "Wachstum",
-      "milestonesLink": "Meilensteine"
+      "milestonesLink": "Meilensteine",
+      "healthLink": "Medizin"
     },
     "create": {
       "title": "Kind-Profil anlegen",
@@ -698,6 +699,108 @@
       "POTTY_TRAINED_DAY": "Tagsüber trocken"
     }
   },
+  "health": {
+    "overview": {
+      "title": "Medikamente & Impfungen für {{name}}",
+      "subtitle": "Anstehende Termine und die bisherige Historie.",
+      "backLink": "Zurück zur Übersicht",
+      "addLink": "Eintrag hinzufügen",
+      "upcomingSectionTitle": "Anstehend & überfällig",
+      "historySectionTitle": "Historie",
+      "upcomingEmpty": "Kein Termin geplant.",
+      "historyEmpty": "Noch nichts eingetragen.",
+      "loadFailed": "Die Einträge konnten nicht geladen werden."
+    },
+    "kinds": {
+      "medication": "Medikament",
+      "vaccination": "Impfung"
+    },
+    "form": {
+      "createTitle": "Eintrag hinzufügen",
+      "editTitle": "Eintrag bearbeiten",
+      "backLink": "Zurück zu Medikamente & Impfungen",
+      "kindLabel": "Art",
+      "kindFixedHint": "Die Art kann nachträglich nicht geändert werden.",
+      "nameLabel": "Bezeichnung",
+      "namePlaceholder": "z. B. Paracetamol 125 mg",
+      "namePlaceholderVaccination": "z. B. 6-fach-Impfung",
+      "administeredAtLabel": "Verabreicht am (optional)",
+      "administeredAtHint": "Leer lassen, solange der Termin nur geplant ist.",
+      "dueAtLabel": "Fällig am (optional)",
+      "dueAtHint": "Ein Datum in der Vergangenheit gilt als überfällig.",
+      "doseAmountLabel": "Dosis (optional)",
+      "doseUnitLabel": "Einheit",
+      "doseUnitPlaceholder": "z. B. ml",
+      "vaccineBatchLabel": "Impfstoff / Charge (optional)",
+      "vaccineBatchPlaceholder": "z. B. Infanrix hexa, Charge AB1234",
+      "noteLabel": "Notiz (optional)",
+      "reminderToggleLabel": "An diesen Termin erinnern",
+      "reminderHint": "Alle Mitglieder des Haushalts mit aktivierten Medizin-Erinnerungen werden vorab und am Fälligkeitstag benachrichtigt.",
+      "submit": {
+        "create": "Speichern",
+        "createPending": "Wird gespeichert…",
+        "edit": "Änderungen speichern",
+        "editPending": "Wird gespeichert…"
+      }
+    },
+    "row": {
+      "dueOn": "Fällig am {{date}}",
+      "administeredOn": "Verabreicht am {{date}}",
+      "doseFormat": "{{amount}} {{unit}}",
+      "batchFormat": "Charge: {{batch}}",
+      "overdueBadge": "Überfällig",
+      "reminderBadge": "Erinnerung aktiv",
+      "markDone": "Als erledigt markieren",
+      "markDonePending": "Wird gespeichert…",
+      "editLink": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleteDialog": {
+        "title": "Eintrag löschen?",
+        "description": "Der Eintrag wird dauerhaft entfernt. Das lässt sich nicht rückgängig machen.",
+        "confirmButton": "Löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "card": {
+      "title": "Medizin",
+      "link": "Alle Einträge ansehen",
+      "empty": "Noch nichts eingetragen.",
+      "cta": "Eintrag hinzufügen",
+      "nextDue": "Nächster Termin: {{name}} am {{date}}",
+      "overdue": "{{name}} war am {{date}} fällig"
+    },
+    "validation": {
+      "nameRequired": "Bitte eine Bezeichnung eingeben.",
+      "nameTooLong": "Die Bezeichnung darf höchstens {{max}} Zeichen lang sein.",
+      "missingDate": "Bitte ein Verabreichungs- oder ein Fälligkeitsdatum angeben.",
+      "doseUnitRequired": "Bitte zur Dosis auch eine Einheit angeben.",
+      "doseAmountInvalid": "Bitte eine Dosis größer als 0 eingeben.",
+      "doseUnitTooLong": "Die Einheit darf höchstens {{max}} Zeichen lang sein.",
+      "vaccineBatchTooLong": "Die Angabe darf höchstens {{max}} Zeichen lang sein.",
+      "noteTooLong": "Die Notiz darf höchstens {{max}} Zeichen lang sein.",
+      "fieldNotAllowedForKind": "Dieses Feld gehört zur jeweils anderen Art von Eintrag.",
+      "administeredAtBeforeBirth": "Der Zeitpunkt darf nicht vor dem Geburtsdatum liegen.",
+      "administeredAtInFuture": "Der Zeitpunkt darf nicht in der Zukunft liegen.",
+      "loadFailed": "Die Einträge konnten nicht geladen werden.",
+      "deleteFailed": "Der Eintrag konnte nicht gelöscht werden. Bitte versuche es erneut.",
+      "markDoneFailed": "Der Eintrag konnte nicht als erledigt markiert werden."
+    },
+    "errors": {
+      "forbidden": "Dafür fehlen dir die Berechtigungen.",
+      "notFound": "Der Eintrag wurde nicht gefunden.",
+      "invalidName": "Bitte eine gültige Bezeichnung eingeben.",
+      "invalidInput": "Bitte prüfe deine Eingaben.",
+      "generic": "Der Eintrag konnte nicht gespeichert werden. Bitte versuche es erneut."
+    },
+    "push": {
+      "reminderTitleLead": "Anstehender Termin",
+      "reminderTitleDue": "Heute fällig",
+      "reminderTitleOverdue": "Überfälliger Termin",
+      "reminderBodyLead": "{{kind}} „{{name}}“ ist am {{date}} fällig.",
+      "reminderBodyDue": "{{kind}} „{{name}}“ ist heute fällig.",
+      "reminderBodyOverdue": "{{kind}} „{{name}}“ war am {{date}} fällig."
+    }
+  },
   "timeline": {
     "title": "Tagesübersicht — {{name}}",
     "backLink": "Zurück zur Übersicht",
@@ -782,7 +885,11 @@
     "saveButtonPending": "Wird gespeichert…",
     "saved": "Einstellungen gespeichert.",
     "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
-    "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden."
+    "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden.",
+    "medicalReminderLabel": "Medizin-Erinnerungen",
+    "medicalReminderHint": "Gilt für geplante Medikamente und Impfungen mit aktivierter Erinnerung — vorab und am Fälligkeitstag.",
+    "medicalLeadDaysLabel": "Vorlauf (Tage)",
+    "medicalLeadDaysInvalid": "Bitte eine ganze Anzahl Tage zwischen 1 und 30 eingeben."
   },
   "ui": {
     "eventTypes": {

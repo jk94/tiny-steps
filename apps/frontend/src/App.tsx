@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router';
+import { DeepLinkNavigator } from './push/DeepLinkNavigator';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { GuestOnlyRoute } from './auth/GuestOnlyRoute';
@@ -26,98 +27,125 @@ import { GrowthMeasurementEdit } from './pages/GrowthMeasurementEdit';
 import { MilestoneTimeline } from './pages/MilestoneTimeline';
 import { MilestoneCreate } from './pages/MilestoneCreate';
 import { MilestoneEdit } from './pages/MilestoneEdit';
+import { HealthRecordOverview } from './pages/HealthRecordOverview';
+import { HealthRecordCreate } from './pages/HealthRecordCreate';
+import { HealthRecordEdit } from './pages/HealthRecordEdit';
 import { DailyTimeline } from './pages/DailyTimeline';
 import { Export } from './pages/Export';
 import { InviteAccept } from './pages/InviteAccept';
 
 function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route element={<ProtectedRoute />}>
-          {/* There's no global "currently selected household/child" concept
+    <>
+      {/* Renders nothing; lives here (inside the router from `main.tsx`, above
+          the routes) so a tapped push notification can navigate from any
+          screen — see DeepLinkNavigator / MED-11. */}
+      <DeepLinkNavigator />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route element={<ProtectedRoute />}>
+            {/* There's no global "currently selected household/child" concept
               (multi-household, multi-child by design), so the household list
               doubles as the landing screen instead of a global dashboard. */}
-          <Route index element={<HouseholdList />} />
-          {/* Global, not household-scoped — like the household list. */}
-          <Route path="profile" element={<Profile />} />
-          <Route path="households" element={<HouseholdList />} />
-          <Route path="households/new" element={<HouseholdCreate />} />
-          <Route path="households/:householdId" element={<HouseholdDetail />} />
-          <Route path="households/:householdId/children/new" element={<ChildCreate />} />
-          <Route path="households/:householdId/children/:childId" element={<ChildHome />} />
-          <Route
-            path="households/:householdId/children/:childId/feeding"
-            element={<FeedingHome />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/feeding/new"
-            element={<FeedingBackfillCreate />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/feeding/:eventId/edit"
-            element={<FeedingEventEdit />}
-          />
-          <Route path="households/:householdId/children/:childId/sleep" element={<SleepHome />} />
-          <Route
-            path="households/:householdId/children/:childId/sleep/new"
-            element={<SleepBackfillCreate />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/sleep/:eventId/edit"
-            element={<SleepEventEdit />}
-          />
-          <Route path="households/:householdId/children/:childId/diaper" element={<DiaperHome />} />
-          <Route
-            path="households/:householdId/children/:childId/diaper/new"
-            element={<DiaperBackfillCreate />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/diaper/:eventId/edit"
-            element={<DiaperEventEdit />}
-          />
-          <Route path="households/:householdId/children/:childId/growth" element={<GrowthHome />} />
-          <Route
-            path="households/:householdId/children/:childId/growth/new"
-            element={<GrowthMeasurementCreate />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/growth/:measurementId/edit"
-            element={<GrowthMeasurementEdit />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/milestones"
-            element={<MilestoneTimeline />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/milestones/new"
-            element={<MilestoneCreate />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/milestones/:milestoneId/edit"
-            element={<MilestoneEdit />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/timeline"
-            element={<DailyTimeline />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/settings"
-            element={<ChildSettings />}
-          />
-          <Route
-            path="households/:householdId/children/:childId/settings/export"
-            element={<Export />}
-          />
+            <Route index element={<HouseholdList />} />
+            {/* Global, not household-scoped — like the household list. */}
+            <Route path="profile" element={<Profile />} />
+            <Route path="households" element={<HouseholdList />} />
+            <Route path="households/new" element={<HouseholdCreate />} />
+            <Route path="households/:householdId" element={<HouseholdDetail />} />
+            <Route path="households/:householdId/children/new" element={<ChildCreate />} />
+            <Route path="households/:householdId/children/:childId" element={<ChildHome />} />
+            <Route
+              path="households/:householdId/children/:childId/feeding"
+              element={<FeedingHome />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/feeding/new"
+              element={<FeedingBackfillCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/feeding/:eventId/edit"
+              element={<FeedingEventEdit />}
+            />
+            <Route path="households/:householdId/children/:childId/sleep" element={<SleepHome />} />
+            <Route
+              path="households/:householdId/children/:childId/sleep/new"
+              element={<SleepBackfillCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/sleep/:eventId/edit"
+              element={<SleepEventEdit />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/diaper"
+              element={<DiaperHome />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/diaper/new"
+              element={<DiaperBackfillCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/diaper/:eventId/edit"
+              element={<DiaperEventEdit />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/growth"
+              element={<GrowthHome />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/growth/new"
+              element={<GrowthMeasurementCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/growth/:measurementId/edit"
+              element={<GrowthMeasurementEdit />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/milestones"
+              element={<MilestoneTimeline />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/milestones/new"
+              element={<MilestoneCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/milestones/:milestoneId/edit"
+              element={<MilestoneEdit />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/health"
+              element={<HealthRecordOverview />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/health/new"
+              element={<HealthRecordCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/health/:recordId/edit"
+              element={<HealthRecordEdit />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/timeline"
+              element={<DailyTimeline />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/settings"
+              element={<ChildSettings />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/settings/export"
+              element={<Export />}
+            />
+          </Route>
+          <Route element={<GuestOnlyRoute />}>
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+          </Route>
+          {/* Neither ProtectedRoute nor GuestOnlyRoute: works logged-in or not */}
+          <Route path="invites/:token" element={<InviteAccept />} />
         </Route>
-        <Route element={<GuestOnlyRoute />}>
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
-        </Route>
-        {/* Neither ProtectedRoute nor GuestOnlyRoute: works logged-in or not */}
-        <Route path="invites/:token" element={<InviteAccept />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

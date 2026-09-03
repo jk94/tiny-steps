@@ -66,6 +66,8 @@ const notificationSettings: NotificationSettings = {
   feedingReminderThresholdHours: 4,
   dailySummaryEnabled: true,
   dailySummaryHourLocal: 20,
+  medicalReminderEnabled: true,
+  medicalReminderLeadDays: 3,
 };
 
 function renderChildSettings() {
@@ -241,9 +243,56 @@ describe('ChildSettings', () => {
         feedingReminderThresholdHours: 6,
         dailySummaryEnabled: false,
         dailySummaryHourLocal: 20,
+        // Untouched fields round-trip unchanged — the form is a full PUT
+        // representation, not a patch.
+        medicalReminderEnabled: true,
+        medicalReminderLeadDays: 3,
       },
     );
     expect(await screen.findByRole('status')).toHaveTextContent('Settings saved.');
+  });
+
+  it('saves the medical reminder toggle and lead time (MED-8)', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    const user = userEvent.setup();
+
+    renderChildSettings();
+
+    const leadDays = await screen.findByLabelText('Lead time (days)');
+    await user.clear(leadDays);
+    await user.type(leadDays, '7');
+    await user.click(screen.getByRole('checkbox', { name: 'Medical reminders' }));
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+
+    expect(mockedNotificationSettingsApi.updateNotificationSettings).toHaveBeenCalledWith(
+      'h1',
+      'c1',
+      expect.objectContaining({
+        medicalReminderEnabled: false,
+        medicalReminderLeadDays: 7,
+      }),
+    );
+  });
+
+  it('rejects a lead time outside 1–30 days without calling the API', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    const user = userEvent.setup();
+
+    renderChildSettings();
+
+    const leadDays = await screen.findByLabelText('Lead time (days)');
+    await user.clear(leadDays);
+    await user.type(leadDays, '99');
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+
+    // The bound is validated in JS rather than via HTML `min`/`max`, so the
+    // user actually sees our own message instead of a silently blocked submit.
+    expect(
+      await screen.findByText('Please enter a whole number of days between 1 and 30.'),
+    ).toBeInTheDocument();
+    expect(mockedNotificationSettingsApi.updateNotificationSettings).not.toHaveBeenCalled();
   });
 
   it('rejects a non-positive threshold client-side without calling the API', async () => {

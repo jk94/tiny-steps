@@ -418,10 +418,27 @@ describe('Layout child navigation', () => {
     }
   });
 
+  it('offers a medical link inside a child context', () => {
+    renderLayoutAt('/households/h1/children/c1');
+
+    for (const link of screen.getAllByRole('link', { name: 'Medical' })) {
+      expect(link).toHaveAttribute('href', '/households/h1/children/c1/health');
+    }
+  });
+
+  it('highlights the medical link while on a health sub-route', () => {
+    renderLayoutAt('/households/h1/children/c1/health/r1/edit');
+
+    for (const link of screen.getAllByRole('link', { name: 'Medical' })) {
+      expect(link.className).toContain('text-primary');
+    }
+  });
+
   it('renders no child navigation outside a child context', () => {
     renderLayout();
 
     expect(screen.queryByRole('link', { name: 'Growth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Milestones' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Medical' })).not.toBeInTheDocument();
   });
 });
