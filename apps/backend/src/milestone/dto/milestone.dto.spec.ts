@@ -134,4 +134,11 @@ describe('UpdateMilestoneDto', () => {
       'achievedAt',
     ]);
   });
+
+  // `@IsOptional()` skips every validator for `null` too, which for these two
+  // non-nullable columns meant a `null` reached the service — silently stored
+  // as the epoch for `achievedAt`, and as an uncaught 500 for `title`.
+  it.each(['title', 'achievedAt'])('rejects an explicit null on %s', (field) => {
+    expect(failingProperties(UpdateMilestoneDto, { [field]: null })).toEqual([field]);
+  });
 });

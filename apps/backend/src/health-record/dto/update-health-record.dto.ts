@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { IsDateOnly } from '../../common/validators/is-date-only.validator';
 import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
+import { ValidateIfDefined } from '../../common/validators/validate-if-defined.decorator';
 import {
   MAX_DOSE_UNIT_LENGTH,
   MAX_HEALTH_RECORD_NAME_LENGTH,
@@ -36,7 +37,8 @@ import {
  * so ADR-0011's Last-Write-Wins handling does not apply.
  */
 export class UpdateHealthRecordDto {
-  @IsOptional()
+  // Not nullable: a record without a name is not a record.
+  @ValidateIfDefined()
   @IsString()
   @MinLength(1)
   @MaxLength(MAX_HEALTH_RECORD_NAME_LENGTH)
@@ -81,7 +83,8 @@ export class UpdateHealthRecordDto {
   @MaxLength(MAX_NOTE_LENGTH)
   note?: string | null;
 
-  @IsOptional()
+  // Not nullable either — the column has no "unset" state, only true/false.
+  @ValidateIfDefined()
   @IsBoolean()
   reminderEnabled?: boolean;
 }

@@ -174,6 +174,13 @@ describe('UpdateHealthRecordDto', () => {
     },
   );
 
+  // `@IsOptional()` skips every validator for `null` too, so a non-nullable
+  // column would take the `null` all the way to Prisma and fail there as an
+  // uncaught 500 instead of a 400 naming the field.
+  it.each(['name', 'reminderEnabled'])('rejects an explicit null on %s', (field) => {
+    expect(failingProperties(UpdateHealthRecordDto, { [field]: null })).toEqual([field]);
+  });
+
   it('still validates a non-null value on a clearable field', () => {
     expect(failingProperties(UpdateHealthRecordDto, { doseAmount: -1 })).toEqual(['doseAmount']);
     expect(failingProperties(UpdateHealthRecordDto, { dueAt: 'not-a-date' })).toEqual(['dueAt']);

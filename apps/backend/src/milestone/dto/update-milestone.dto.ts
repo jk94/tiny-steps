@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { IsDateOnly } from '../../common/validators/is-date-only.validator';
 import { IsNotFutureDate } from '../../common/validators/is-not-future-date.validator';
+import { ValidateIfDefined } from '../../common/validators/validate-if-defined.decorator';
 import { MilestoneCategory } from '../milestone-category.enum';
 import { MAX_MILESTONE_TITLE_LENGTH, MAX_NOTE_LENGTH } from '../milestone.constants';
 
@@ -30,7 +31,9 @@ import { MAX_MILESTONE_TITLE_LENGTH, MAX_NOTE_LENGTH } from '../milestone.consta
  * ADR-0011's Last-Write-Wins handling does not apply.
  */
 export class UpdateMilestoneDto {
-  @IsOptional()
+  // Not nullable: `title` is always set, and frozen at creation for a template
+  // entry (see the service).
+  @ValidateIfDefined()
   @IsString()
   @MinLength(1)
   @MaxLength(MAX_MILESTONE_TITLE_LENGTH)
@@ -42,8 +45,9 @@ export class UpdateMilestoneDto {
   @IsEnum(MilestoneCategory)
   category?: MilestoneCategory | null;
 
-  // Same bare calendar day (`YYYY-MM-DD`) as on create — see that DTO.
-  @IsOptional()
+  // Same bare calendar day (`YYYY-MM-DD`) as on create — see that DTO. Not
+  // nullable: a milestone always happened on some day.
+  @ValidateIfDefined()
   @IsDateOnly()
   @IsISO8601({ strict: true })
   @IsNotFutureDate()
