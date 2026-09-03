@@ -18,7 +18,7 @@ Aufgabenliste mehr.
 |---|---|---|---|
 | 7.1 | [Wachstumstracking](phase-7-1-wachstumstracking.md) | Messwerte, WHO-Perzentilen, Verlaufsdiagramm | Umgesetzt (2026-09-02) |
 | 7.2 | [Meilensteine](phase-7-2-meilensteine.md) | Vorlagen + freie Einträge, Fotogalerie, Timeline | Umgesetzt (2026-09-02) |
-| 7.3 | [Medikamente & Impfungen](phase-7-3-medikamente-impfungen.md) | Erfassung, Fälligkeiten, Push-Erinnerungen | Offen |
+| 7.3 | [Medikamente & Impfungen](phase-7-3-medikamente-impfungen.md) | Erfassung, Fälligkeiten, Push-Erinnerungen | Umgesetzt (2026-09-03) |
 | 7.4 | [Erweiterter Export (PDF-Bericht)](phase-7-4-erweiterter-export-pdf.md) | Arztbericht, austauschbarer Renderer | Offen |
 | 7.5 | [Erweiterte Rollen](phase-7-5-erweiterte-rollen.md) | Betreuer/Beobachter, Mitglieder- & Rollenverwaltung | Offen |
 | 7.6 | [Nutzereinstellungen & Sprache](phase-7-6-nutzereinstellungen-sprache.md) | Settings-Bereich, persistierte Sprachwahl | Offen |

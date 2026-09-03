@@ -24,6 +24,8 @@ function makeSettingsRow(overrides: Partial<Record<string, unknown>> = {}) {
     feedingReminderLastSentAt: null,
     dailySummaryEnabled: false,
     dailySummaryHourLocal: 8,
+    medicalReminderEnabled: false,
+    medicalReminderLeadDays: 5,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -80,6 +82,8 @@ describe('NotificationSettingsService', () => {
         feedingReminderThresholdHours: 3,
         dailySummaryEnabled: false,
         dailySummaryHourLocal: 8,
+        medicalReminderEnabled: false,
+        medicalReminderLeadDays: 5,
       });
     });
   });
@@ -90,6 +94,8 @@ describe('NotificationSettingsService', () => {
       feedingReminderThresholdHours: 5,
       dailySummaryEnabled: true,
       dailySummaryHourLocal: 21,
+      medicalReminderEnabled: true,
+      medicalReminderLeadDays: 7,
     };
 
     it('throws NotFoundException when the child is not in the household', async () => {

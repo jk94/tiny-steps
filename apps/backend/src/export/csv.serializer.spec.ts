@@ -3,6 +3,7 @@ import { toCsv } from './csv.serializer';
 import {
   RECORD_KIND_EVENT,
   RECORD_KIND_GROWTH_MEASUREMENT,
+  RECORD_KIND_HEALTH_RECORD,
   RECORD_KIND_MILESTONE,
   type RawExportRow,
 } from './export.service';
@@ -46,7 +47,49 @@ const COLUMNS = [
   'milestoneTitle',
   'milestoneCategory',
   'milestonePhotoCount',
+  // Appended in Phase 7.3 — everything above keeps its original position.
+  'healthRecordKind',
+  'healthRecordName',
+  'healthRecordAdministeredAt',
+  'healthRecordDueAt',
+  'healthRecordDoseAmount',
+  'healthRecordDoseUnit',
+  'healthRecordVaccineBatch',
 ] as const;
+
+/** The column order this export had before Phase 7.3 appended to it. */
+const PRE_HEALTH_RECORD_COLUMNS = [
+  'id',
+  'childId',
+  'userId',
+  'type',
+  'occurredAt',
+  'startedAt',
+  'endedAt',
+  'durationSeconds',
+  'feedingType',
+  'side',
+  'amountMl',
+  'diaperType',
+  'note',
+  'createdAt',
+  'updatedAt',
+  'recordKind',
+  'weightGrams',
+  'lengthMillimeters',
+  'headCircumferenceMillimeters',
+  'lengthMeasurementPosition',
+  'weightPercentile',
+  'lengthPercentile',
+  'headCircumferencePercentile',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
+  'milestoneTemplateKey',
+  'milestoneTitle',
+  'milestoneCategory',
+  'milestonePhotoCount',
+];
 
 /** The column order this export had before Phase 7.2 appended to it. */
 const PRE_MILESTONE_COLUMNS = [
@@ -133,6 +176,13 @@ function makeRow(overrides: Partial<RawExportRow> = {}): RawExportRow {
     milestoneTitle: null,
     milestoneCategory: null,
     milestonePhotoCount: null,
+    healthRecordKind: null,
+    healthRecordName: null,
+    healthRecordAdministeredAt: null,
+    healthRecordDueAt: null,
+    healthRecordDoseAmount: null,
+    healthRecordDoseUnit: null,
+    healthRecordVaccineBatch: null,
     note: null,
     createdAt: '2026-01-01T07:00:00.000Z',
     updatedAt: '2026-01-01T07:00:00.000Z',
@@ -155,6 +205,14 @@ describe('toCsv', () => {
     // Same rule one release later: the milestone columns are appended after
     // the growth ones, so nothing a 7.1-era consumer reads has moved.
     expect(HEADER.split(',').slice(0, PRE_MILESTONE_COLUMNS.length)).toEqual(PRE_MILESTONE_COLUMNS);
+  });
+
+  it('keeps the pre-Phase-7.3 columns in their original positions', () => {
+    // And again: the health-record columns are appended after the milestone
+    // ones, so nothing a 7.2-era consumer reads has moved.
+    expect(HEADER.split(',').slice(0, PRE_HEALTH_RECORD_COLUMNS.length)).toEqual(
+      PRE_HEALTH_RECORD_COLUMNS,
+    );
   });
 
   it('renders null columns as empty fields and derived values verbatim', () => {
@@ -273,6 +331,44 @@ describe('toCsv', () => {
       milestoneTitle: 'Erste Zugfahrt',
       // Zero is a real count and must not collapse into a blank field.
       milestonePhotoCount: '0',
+    });
+  });
+
+  it('fills the health-record columns for a medication row and leaves the others blank', () => {
+    const csv = toCsv([
+      makeRow({
+        id: 'health-record-1',
+        recordKind: RECORD_KIND_HEALTH_RECORD,
+        type: 'HEALTH_RECORD',
+        diaperType: null,
+        note: 'Bei Fieber',
+        healthRecordKind: 'MEDICATION',
+        healthRecordName: 'Paracetamol',
+        healthRecordAdministeredAt: '2026-01-01T08:50:00.000Z',
+        healthRecordDoseAmount: 5,
+        healthRecordDoseUnit: 'ml',
+      }),
+    ]);
+
+    const records = parse(csv, { columns: true }) as Record<string, string>[];
+    expect(records[0]).toMatchObject({
+      recordKind: RECORD_KIND_HEALTH_RECORD,
+      type: 'HEALTH_RECORD',
+      healthRecordKind: 'MEDICATION',
+      healthRecordName: 'Paracetamol',
+      healthRecordAdministeredAt: '2026-01-01T08:50:00.000Z',
+      healthRecordDoseAmount: '5',
+      healthRecordDoseUnit: 'ml',
+      // Planned-only and vaccination-only columns stay blank.
+      healthRecordDueAt: '',
+      healthRecordVaccineBatch: '',
+      // The free-text note reuses the shared column, not one of its own.
+      note: 'Bei Fieber',
+      // Event-, growth- and milestone-only columns stay blank rather than
+      // being omitted, so the header keeps matching every row.
+      feedingType: '',
+      weightGrams: '',
+      milestoneTitle: '',
     });
   });
 

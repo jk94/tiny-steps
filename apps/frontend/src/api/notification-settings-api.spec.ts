@@ -19,6 +19,8 @@ const settings: NotificationSettings = {
   feedingReminderThresholdHours: 4,
   dailySummaryEnabled: true,
   dailySummaryHourLocal: 20,
+  medicalReminderEnabled: true,
+  medicalReminderLeadDays: 3,
 };
 
 describe('notification-settings-api', () => {

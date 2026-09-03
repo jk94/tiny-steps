@@ -11,6 +11,7 @@ import {
   Moon,
   Settings,
   Sparkles,
+  Stethoscope,
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
@@ -164,6 +165,17 @@ export function Layout() {
           Icon: Sparkles,
           isActive: location.pathname.startsWith(
             `/households/${householdId}/children/${childId}/milestones`,
+          ),
+        },
+        {
+          to: `/households/${householdId}/children/${childId}/health`,
+          label: t('child.list.healthLink'),
+          // A generic Lucide icon like every other nav entry — the two
+          // hand-drawn health icons belong to the records themselves, where
+          // they distinguish medication from vaccination.
+          Icon: Stethoscope,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/health`,
           ),
         },
         {

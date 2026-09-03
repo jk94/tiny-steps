@@ -164,7 +164,8 @@
       "diaperLink": "Diaper",
       "timelineLink": "Overview",
       "growthLink": "Growth",
-      "milestonesLink": "Milestones"
+      "milestonesLink": "Milestones",
+      "healthLink": "Medical"
     },
     "create": {
       "title": "Create child profile",
@@ -698,6 +699,112 @@
       "POTTY_TRAINED_DAY": "Dry during the day"
     }
   },
+  "health": {
+    "overview": {
+      "title": "Medications & vaccinations for {{name}}",
+      "subtitle": "Upcoming appointments and the history so far.",
+      "backLink": "Back to the overview",
+      "addLink": "Add entry",
+      "upcomingSectionTitle": "Upcoming & overdue",
+      "historySectionTitle": "History",
+      "upcomingEmpty": "No appointment planned.",
+      "historyEmpty": "Nothing recorded yet.",
+      "loadFailed": "The entries could not be loaded."
+    },
+    "kinds": {
+      "medication": "Medication",
+      "vaccination": "Vaccination"
+    },
+    "form": {
+      "createTitle": "Add entry",
+      "editTitle": "Edit entry",
+      "backLink": "Back to medications & vaccinations",
+      "kindLabel": "Type",
+      "kindFixedHint": "The type cannot be changed afterwards.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Paracetamol 125 mg",
+      "namePlaceholderVaccination": "e.g. 6-in-1 vaccine",
+      "administeredAtLabel": "Administered at (optional)",
+      "administeredAtHint": "Leave empty while the appointment is only planned.",
+      "dueAtLabel": "Due on (optional)",
+      "dueAtHint": "A date in the past counts as overdue.",
+      "doseAmountLabel": "Dose (optional)",
+      "doseUnitLabel": "Unit",
+      "doseUnitPlaceholder": "e.g. ml",
+      "doseUnitSuggestions": {
+        "milliliters": "ml",
+        "milligrams": "mg",
+        "drops": "drops",
+        "pieces": "pieces"
+      },
+      "vaccineBatchLabel": "Vaccine / batch (optional)",
+      "vaccineBatchPlaceholder": "e.g. Infanrix hexa, batch AB1234",
+      "noteLabel": "Note (optional)",
+      "reminderToggleLabel": "Remind me about this appointment",
+      "reminderHint": "Every household member with medical reminders switched on is notified in advance and on the due day.",
+      "submit": {
+        "create": "Save",
+        "createPending": "Saving…",
+        "edit": "Save changes",
+        "editPending": "Saving…"
+      }
+    },
+    "row": {
+      "dueOn": "Due on {{date}}",
+      "administeredOn": "Administered on {{date}}",
+      "doseFormat": "{{amount}} {{unit}}",
+      "batchFormat": "Batch: {{batch}}",
+      "overdueBadge": "Overdue",
+      "reminderBadge": "Reminder on",
+      "markDone": "Mark as done",
+      "markDonePending": "Saving…",
+      "editLink": "Edit",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete entry?",
+        "description": "The entry is removed permanently. This cannot be undone.",
+        "confirmButton": "Delete",
+        "cancelButton": "Cancel"
+      }
+    },
+    "card": {
+      "title": "Medical",
+      "link": "View all entries",
+      "empty": "Nothing recorded yet.",
+      "cta": "Add entry",
+      "nextDue": "Next appointment: {{name}} on {{date}}",
+      "overdue": "{{name}} was due on {{date}}"
+    },
+    "validation": {
+      "nameRequired": "Please enter a name.",
+      "nameTooLong": "The name may be at most {{max}} characters long.",
+      "missingDate": "Please give either an administration date or a due date.",
+      "doseUnitRequired": "Please give a unit for the dose as well.",
+      "doseAmountInvalid": "Please enter a dose greater than 0.",
+      "doseUnitTooLong": "The unit may be at most {{max}} characters long.",
+      "vaccineBatchTooLong": "This value may be at most {{max}} characters long.",
+      "noteTooLong": "The note may be at most {{max}} characters long.",
+      "fieldNotAllowedForKind": "This field belongs to the other type of entry.",
+      "administeredAtBeforeBirth": "The time must not be before the birth date.",
+      "administeredAtInFuture": "The time must not be in the future.",
+      "deleteFailed": "The entry could not be deleted. Please try again."
+    },
+    "errors": {
+      "forbidden": "You do not have permission to do that.",
+      "notFound": "The entry was not found.",
+      "invalidName": "Please enter a valid name.",
+      "invalidInput": "Please check your input.",
+      "generic": "The entry could not be saved. Please try again."
+    },
+    "push": {
+      "reminderTitleLead": "Upcoming appointment",
+      "reminderTitleDue": "Due today",
+      "reminderTitleOverdue": "Overdue appointment",
+      "reminderBodyLead": "{{kind}} \"{{name}}\" is due on {{date}}.",
+      "reminderBodyDue": "{{kind}} \"{{name}}\" is due today.",
+      "reminderBodyOverdue": "{{kind}} \"{{name}}\" was due on {{date}}."
+    }
+  },
   "timeline": {
     "title": "Daily timeline — {{name}}",
     "backLink": "Back to overview",
@@ -782,7 +889,11 @@
     "saveButtonPending": "Saving…",
     "saved": "Settings saved.",
     "saveError": "Couldn't save your settings. Please try again.",
-    "loadError": "Couldn't load your notification settings."
+    "loadError": "Couldn't load your notification settings.",
+    "medicalReminderLabel": "Medical reminders",
+    "medicalReminderHint": "Applies to planned medications and vaccinations with a reminder switched on — in advance and on the due day.",
+    "medicalLeadDaysLabel": "Lead time (days)",
+    "medicalLeadDaysInvalid": "Please enter a whole number of days between 1 and 30."
   },
   "ui": {
     "eventTypes": {

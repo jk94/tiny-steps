@@ -8,12 +8,15 @@ import { ChildSex } from '../child/child-sex.enum';
 import { LengthMeasurementPosition } from '../growth/length-measurement-position.enum';
 import { MilestoneCategory } from '../milestone/milestone-category.enum';
 import { MilestoneTemplate } from '../milestone/milestone-template.enum';
+import { HealthRecordKind } from '../health-record/health-record-kind.enum';
 import {
   ExportService,
   GROWTH_EXPORT_TYPE,
+  HEALTH_RECORD_EXPORT_TYPE,
   MILESTONE_EXPORT_TYPE,
   RECORD_KIND_EVENT,
   RECORD_KIND_GROWTH_MEASUREMENT,
+  RECORD_KIND_HEALTH_RECORD,
   RECORD_KIND_MILESTONE,
 } from './export.service';
 
@@ -54,7 +57,35 @@ const NO_GROWTH_COLUMNS = {
   milestoneTitle: null,
   milestoneCategory: null,
   milestonePhotoCount: null,
+  healthRecordKind: null,
+  healthRecordName: null,
+  healthRecordAdministeredAt: null,
+  healthRecordDueAt: null,
+  healthRecordDoseAmount: null,
+  healthRecordDoseUnit: null,
+  healthRecordVaccineBatch: null,
 };
+
+function makeHealthRecord(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'health-record-1',
+    childId: CHILD_ID,
+    userId: USER_ID,
+    kind: HealthRecordKind.MEDICATION as string,
+    name: 'Paracetamol',
+    administeredAt: new Date('2026-01-01T08:50:00.000Z') as Date | null,
+    dueAt: null as Date | null,
+    doseAmount: 5 as number | null,
+    doseUnit: 'ml' as string | null,
+    vaccineBatch: null as string | null,
+    note: 'Bei Fieber',
+    reminderEnabled: false,
+    reminderLastSentAt: null as Date | null,
+    createdAt: new Date('2026-01-01T08:55:00.000Z'),
+    updatedAt: new Date('2026-01-01T08:55:00.000Z'),
+    ...overrides,
+  };
+}
 
 function makeMilestone(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -159,6 +190,7 @@ describe('ExportService', () => {
     event: { findMany: jest.Mock };
     growthMeasurement: { findMany: jest.Mock };
     milestone: { findMany: jest.Mock };
+    healthRecord: { findMany: jest.Mock };
   };
   let service: ExportService;
 
@@ -168,6 +200,7 @@ describe('ExportService', () => {
       event: { findMany: jest.fn().mockResolvedValue([]) },
       growthMeasurement: { findMany: jest.fn().mockResolvedValue([]) },
       milestone: { findMany: jest.fn().mockResolvedValue([]) },
+      healthRecord: { findMany: jest.fn().mockResolvedValue([]) },
     };
     service = new ExportService(prisma as unknown as PrismaService);
   });
@@ -530,6 +563,13 @@ describe('ExportService', () => {
         milestoneTitle: 'Erste Schritte',
         milestoneCategory: MilestoneCategory.MOTOR,
         milestonePhotoCount: 3,
+        healthRecordKind: null,
+        healthRecordName: null,
+        healthRecordAdministeredAt: null,
+        healthRecordDueAt: null,
+        healthRecordDoseAmount: null,
+        healthRecordDoseUnit: null,
+        healthRecordVaccineBatch: null,
       });
     });
 
@@ -570,6 +610,160 @@ describe('ExportService', () => {
         RECORD_KIND_MILESTONE,
         RECORD_KIND_EVENT,
       ]);
+    });
+  });
+
+  describe('health records', () => {
+    it('flattens an administered medication with its dose', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([makeHealthRecord()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toEqual({
+        id: 'health-record-1',
+        recordKind: RECORD_KIND_HEALTH_RECORD,
+        childId: CHILD_ID,
+        userId: USER_ID,
+        type: HEALTH_RECORD_EXPORT_TYPE,
+        // `administeredAt` fills the shared occurredAt column.
+        occurredAt: '2026-01-01T08:50:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        durationSeconds: null,
+        feedingType: null,
+        side: null,
+        amountMl: null,
+        diaperType: null,
+        // The free-text note reuses the shared column.
+        note: 'Bei Fieber',
+        createdAt: '2026-01-01T08:55:00.000Z',
+        updatedAt: '2026-01-01T08:55:00.000Z',
+        weightGrams: null,
+        lengthMillimeters: null,
+        headCircumferenceMillimeters: null,
+        lengthMeasurementPosition: null,
+        weightPercentile: null,
+        lengthPercentile: null,
+        headCircumferencePercentile: null,
+        weightZScore: null,
+        lengthZScore: null,
+        headCircumferenceZScore: null,
+        milestoneTemplateKey: null,
+        milestoneTitle: null,
+        milestoneCategory: null,
+        milestonePhotoCount: null,
+        healthRecordKind: HealthRecordKind.MEDICATION,
+        healthRecordName: 'Paracetamol',
+        healthRecordAdministeredAt: '2026-01-01T08:50:00.000Z',
+        healthRecordDueAt: null,
+        healthRecordDoseAmount: 5,
+        healthRecordDoseUnit: 'ml',
+        healthRecordVaccineBatch: null,
+      });
+    });
+
+    it('sorts a purely planned entry by its due date instead', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({
+          kind: HealthRecordKind.VACCINATION,
+          name: '6-fach-Impfung',
+          administeredAt: null,
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+          doseAmount: null,
+          doseUnit: null,
+          vaccineBatch: 'AB1234',
+        }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toMatchObject({
+        occurredAt: '2026-01-01T00:00:00.000Z',
+        healthRecordAdministeredAt: null,
+        healthRecordDueAt: '2026-01-01T00:00:00.000Z',
+        healthRecordVaccineBatch: 'AB1234',
+        healthRecordDoseAmount: null,
+      });
+    });
+
+    it('prefers the administration date over the due date once both are set', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({
+          administeredAt: new Date('2026-01-03T10:00:00.000Z'),
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+        }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // What actually happened wins over what had been planned, but both
+      // columns survive so the plan/reality pair is not lost to the merge.
+      expect(row.occurredAt).toBe('2026-01-03T10:00:00.000Z');
+      expect(row.healthRecordDueAt).toBe('2026-01-01T00:00:00.000Z');
+    });
+
+    it('merges health records into the one chronological list', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findMany.mockResolvedValue([makeDiaperEvent(), makeSleepEvent()]);
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+      prisma.milestone.findMany.mockResolvedValue([makeMilestone()]);
+      prisma.healthRecord.findMany.mockResolvedValue([makeHealthRecord()]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // Diaper 07:00, growth 08:30, milestone 08:45, health 08:50, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual([
+        'diaper-1',
+        'growth-1',
+        'milestone-1',
+        'health-record-1',
+        'sleep-1',
+      ]);
+    });
+
+    it('fetches the whole table and windows it in memory', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({ id: 'before', administeredAt: new Date('2025-12-31T23:59:00.000Z') }),
+        makeHealthRecord({ id: 'inside', administeredAt: new Date('2026-01-01T12:00:00.000Z') }),
+        // Planned-only, dated inside the window through `dueAt`.
+        makeHealthRecord({
+          id: 'planned-inside',
+          administeredAt: null,
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+          doseAmount: null,
+          doseUnit: null,
+        }),
+        makeHealthRecord({ id: 'after', administeredAt: new Date('2026-01-02T00:00:00.000Z') }),
+      ]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, FROM, TO);
+
+      // The range key is `administeredAt ?? dueAt`, so there is no single
+      // column for the DB to filter on — the whole (small) table is read.
+      expect(prisma.healthRecord.findMany).toHaveBeenCalledWith({
+        where: { childId: CHILD_ID },
+        orderBy: { createdAt: 'asc' },
+      });
+      // `[from, to)`: the upper bound is exclusive.
+      expect(rows.map((row) => row.id)).toEqual(['planned-inside', 'inside']);
+    });
+
+    it('applies an open-ended bound when only one of from/to is given', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({ id: 'before', administeredAt: new Date('2025-12-31T23:59:00.000Z') }),
+        makeHealthRecord({ id: 'after', administeredAt: new Date('2026-06-01T00:00:00.000Z') }),
+      ]);
+
+      const fromOnly = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, FROM);
+      expect(fromOnly.map((row) => row.id)).toEqual(['after']);
+
+      const toOnly = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, undefined, TO);
+      expect(toOnly.map((row) => row.id)).toEqual(['before']);
     });
   });
 });

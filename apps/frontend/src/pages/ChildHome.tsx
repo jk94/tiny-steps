@@ -10,6 +10,7 @@ import { ChildPhoto } from '../components/ChildPhoto';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { GrowthSummaryCard } from '../components/growth/GrowthSummaryCard';
 import { MilestoneSummaryCard } from '../components/milestone/MilestoneSummaryCard';
+import { HealthSummaryCard } from '../components/health/HealthSummaryCard';
 import { TimeSinceBadgeCard } from '../components/TimeSinceBadgeCard';
 import { Card, Skeleton } from '../components/ui';
 import { ageInMonths } from '../lib/childAge';
@@ -203,6 +204,8 @@ export function ChildHome() {
       />
 
       <MilestoneSummaryCard householdId={householdId!} childId={childId!} />
+
+      <HealthSummaryCard householdId={householdId!} childId={childId!} />
 
       <Link
         to={`/households/${householdId}/children/${childId}/timeline`}

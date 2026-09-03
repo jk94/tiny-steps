@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { registerPushToken } from '../api/push-api';
 import type { PushPlatform } from '../api/push-api';
+import { setPendingDeepLink } from './deepLinkStore';
+import { resolveDeepLinkPath, type PushData } from './resolveDeepLinkPath';
 
 /**
  * Module-level guard so registration runs at most once per app session,
@@ -53,10 +55,21 @@ export async function registerPushNotifications(): Promise<void> {
       console.error('Push registration error', error);
     });
 
-    // Present but intentionally minimal for the MVP — no in-app handling of a
-    // received/tapped notification beyond the OS default yet.
+    // A notification arriving while the app is in the foreground still needs no
+    // in-app handling beyond the OS default — the data it carries is already
+    // in whatever list the user is looking at.
     await PushNotifications.addListener('pushNotificationReceived', () => {});
-    await PushNotifications.addListener('pushNotificationActionPerformed', () => {});
+
+    // A *tapped* notification does (MED-11). The router is not reachable from
+    // here, so the resolved path goes into the module-level store that
+    // `DeepLinkNavigator` drains — which also covers a cold start, where this
+    // fires long before React has mounted.
+    await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      const path = resolveDeepLinkPath((action.notification.data ?? {}) as PushData);
+      if (path) {
+        setPendingDeepLink(path);
+      }
+    });
 
     await PushNotifications.register();
   } catch (error) {

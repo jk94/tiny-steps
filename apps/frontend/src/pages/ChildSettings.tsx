@@ -23,6 +23,11 @@ import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 const MIN_THRESHOLD_HOURS = 1;
 const MIN_HOUR = 0;
 const MAX_HOUR = 23;
+// Mirrors the backend's `@Min(1)`/`@Max(MEDICAL_REMINDER_MAX_LEAD_DAYS)` on
+// `medicalReminderLeadDays`. A 0-day lead is not a setting: it is just the
+// due-day reminder, which every enabled member gets anyway.
+const MIN_LEAD_DAYS = 1;
+const MAX_LEAD_DAYS = 30;
 
 function notificationSettingsQueryKey(
   householdId: string | undefined,
@@ -245,6 +250,7 @@ function NotificationSettingsForm({
   const [values, setValues] = useState<NotificationSettingsValues>(initialValues);
   const [thresholdError, setThresholdError] = useState<string | null>(null);
   const [summaryHourError, setSummaryHourError] = useState<string | null>(null);
+  const [medicalLeadDaysError, setMedicalLeadDaysError] = useState<string | null>(null);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -265,6 +271,15 @@ function NotificationSettingsForm({
       return;
     }
     setSummaryHourError(null);
+    if (
+      !Number.isInteger(values.medicalReminderLeadDays) ||
+      values.medicalReminderLeadDays < MIN_LEAD_DAYS ||
+      values.medicalReminderLeadDays > MAX_LEAD_DAYS
+    ) {
+      setMedicalLeadDaysError(t('notifications.medicalLeadDaysInvalid'));
+      return;
+    }
+    setMedicalLeadDaysError(null);
     onSubmit(values);
   };
 
@@ -319,6 +334,33 @@ function NotificationSettingsForm({
             }
             error={summaryHourError ?? undefined}
           />
+        </Card.Body>
+      </Card>
+
+      <Card>
+        <Card.Body className="flex flex-col gap-3">
+          <ToggleField
+            label={t('notifications.medicalReminderLabel')}
+            checked={values.medicalReminderEnabled}
+            onChange={(checked) =>
+              setValues((prev) => ({ ...prev, medicalReminderEnabled: checked }))
+            }
+          />
+          {/* Same reasoning as the two inputs above: no HTML `min`/`max`, so
+              our own i18n validation message actually gets a chance to show. */}
+          <Input
+            label={t('notifications.medicalLeadDaysLabel')}
+            type="number"
+            value={values.medicalReminderLeadDays}
+            onChange={(event) =>
+              setValues((prev) => ({
+                ...prev,
+                medicalReminderLeadDays: event.target.valueAsNumber,
+              }))
+            }
+            error={medicalLeadDaysError ?? undefined}
+          />
+          <p className="text-xs text-muted-foreground">{t('notifications.medicalReminderHint')}</p>
         </Card.Body>
       </Card>
 

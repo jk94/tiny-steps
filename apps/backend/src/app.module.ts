@@ -15,6 +15,7 @@ import { SleepModule } from './sleep/sleep.module';
 import { DiaperModule } from './diaper/diaper.module';
 import { GrowthModule } from './growth/growth.module';
 import { MilestoneModule } from './milestone/milestone.module';
+import { HealthRecordModule } from './health-record/health-record.module';
 import { PushModule } from './push/push.module';
 import { NotificationModule } from './notification/notification.module';
 import { HealthController } from './health.controller';
@@ -51,6 +52,7 @@ import loadConfiguration from './config/configuration';
     DiaperModule,
     GrowthModule,
     MilestoneModule,
+    HealthRecordModule,
     PushModule,
     NotificationModule,
   ],
