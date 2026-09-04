@@ -67,9 +67,9 @@ describe('mapHouseholdError', () => {
   });
 
   it('resolves the last-owner key to actionable English copy', () => {
-    expect(i18n.t(mapHouseholdError(new ApiError(409, { code: 'LAST_OWNER_CANNOT_BE_DEMOTED' })))).toBe(
-      "This is the household's last owner. Make someone else an owner first.",
-    );
+    expect(
+      i18n.t(mapHouseholdError(new ApiError(409, { code: 'LAST_OWNER_CANNOT_BE_DEMOTED' }))),
+    ).toBe("This is the household's last owner. Make someone else an owner first.");
   });
 
   it('resolves the generic key to the correct English copy', () => {

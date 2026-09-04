@@ -62,7 +62,7 @@ export function HouseholdDetail() {
         </div>
       </div>
       <InviteGenerator householdId={data.id} role={data.role} />
-      <MemberList householdId={data.id} />
+      <MemberList householdId={data.id} role={data.role} />
       <ChildList householdId={data.id} role={data.role} />
     </section>
   );

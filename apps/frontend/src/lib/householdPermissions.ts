@@ -10,12 +10,7 @@
 export type HouseholdRole = 'OWNER' | 'CO_PARENT' | 'CAREGIVER' | 'OBSERVER';
 
 /** Every role. Anything a member may do at all (reading, own settings). */
-export const ALL_ROLES: readonly HouseholdRole[] = [
-  'OWNER',
-  'CO_PARENT',
-  'CAREGIVER',
-  'OBSERVER',
-];
+export const ALL_ROLES: readonly HouseholdRole[] = ['OWNER', 'CO_PARENT', 'CAREGIVER', 'OBSERVER'];
 
 /** May record entries and edit their OWN entries. */
 export const ENTRY_WRITE_ROLES: readonly HouseholdRole[] = ['OWNER', 'CO_PARENT', 'CAREGIVER'];
