@@ -1,6 +1,7 @@
 import { ExecutionContext, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { HouseholdAccessService } from '../household-access.service';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household-permissions';
 import { HouseholdRole } from '../household-role.enum';
 import type { MembershipWithHousehold } from '../types/household-scoped-request';
 import { HouseholdMembershipGuard } from './household-membership.guard';
@@ -22,8 +23,11 @@ describe('HouseholdMembershipGuard', () => {
     },
   });
 
-  const buildContext = (): { context: ExecutionContext; request: Record<string, unknown> } => {
+  const buildContext = (
+    method = 'GET',
+  ): { context: ExecutionContext; request: Record<string, unknown> } => {
     const request: Record<string, unknown> = {
+      method,
       user: { id: userId, email: 'parent@example.com', createdAt: new Date() },
       params: { householdId },
     };
@@ -48,7 +52,7 @@ describe('HouseholdMembershipGuard', () => {
     );
   });
 
-  it('allows the request when membership exists and no role metadata is set', async () => {
+  it('allows a read request when membership exists and no role metadata is set', async () => {
     const membership = buildMembership(HouseholdRole.CO_PARENT);
     householdAccessService.findMembershipOrThrow.mockResolvedValue(membership);
     reflector.getAllAndOverride.mockReturnValue(undefined);
@@ -85,6 +89,61 @@ describe('HouseholdMembershipGuard', () => {
     reflector.getAllAndOverride.mockReturnValue([HouseholdRole.OWNER]);
 
     const { context } = buildContext();
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('allows a CAREGIVER on an entry-write route', async () => {
+    const membership = buildMembership(HouseholdRole.CAREGIVER);
+    householdAccessService.findMembershipOrThrow.mockResolvedValue(membership);
+    reflector.getAllAndOverride.mockReturnValue([...ENTRY_WRITE_ROLES]);
+
+    const { context } = buildContext('POST');
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+  });
+
+  it('rejects an OBSERVER on an entry-write route', async () => {
+    const membership = buildMembership(HouseholdRole.OBSERVER);
+    householdAccessService.findMembershipOrThrow.mockResolvedValue(membership);
+    reflector.getAllAndOverride.mockReturnValue([...ENTRY_WRITE_ROLES]);
+
+    const { context } = buildContext('POST');
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects an OBSERVER on a full-write route', async () => {
+    const membership = buildMembership(HouseholdRole.OBSERVER);
+    householdAccessService.findMembershipOrThrow.mockResolvedValue(membership);
+    reflector.getAllAndOverride.mockReturnValue([...FULL_WRITE_ROLES]);
+
+    const { context } = buildContext('DELETE');
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  // ROL-2 fail-closed: an unannotated write endpoint must not silently fall
+  // back to "any member may write".
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
+    'throws ForbiddenException on an unannotated %s route',
+    async (method) => {
+      const membership = buildMembership(HouseholdRole.OWNER);
+      householdAccessService.findMembershipOrThrow.mockResolvedValue(membership);
+      reflector.getAllAndOverride.mockReturnValue(undefined);
+
+      const { context } = buildContext(method);
+
+      await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+    },
+  );
+
+  it('treats an empty role array on a write route as a missing requirement', async () => {
+    const membership = buildMembership(HouseholdRole.OWNER);
+    householdAccessService.findMembershipOrThrow.mockResolvedValue(membership);
+    reflector.getAllAndOverride.mockReturnValue([]);
+
+    const { context } = buildContext('POST');
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
   });
