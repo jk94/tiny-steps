@@ -67,9 +67,25 @@ function toDateInputValue(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** The `[from, to)` instants a preset stands for, relative to now. */
+/** Start of the current day in UTC — the presets are whole-day ranges. */
+function todayStartUtc(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+/**
+ * The `[from, to)` instants a preset stands for, ending at the end of today.
+ *
+ * Both bounds are snapped to a UTC day boundary rather than the moment the
+ * button is clicked, so the report header reads as a clean span
+ * ("16.03.2026 – 15.06.2026") instead of a ragged one that ends "yesterday" at
+ * whatever time of day the report happened to be generated. `to` is the
+ * exclusive start of tomorrow, so anything logged today is still inside the
+ * range.
+ */
 function presetRange(preset: Exclude<PeriodPreset, 'custom'>): { from: string; to: string } {
-  const to = new Date();
+  const to = todayStartUtc();
+  to.setUTCDate(to.getUTCDate() + 1);
   const from = new Date(to);
   from.setUTCMonth(from.getUTCMonth() - PRESET_MONTHS[preset]);
   return { from: from.toISOString(), to: to.toISOString() };

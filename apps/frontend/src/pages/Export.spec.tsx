@@ -187,8 +187,8 @@ describe('Export page', () => {
       await user.click(screen.getByRole('button', { name: DOWNLOAD_REPORT }));
 
       expect(mockedExportApi.downloadReport).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, {
-        from: '2026-08-03T12:00:00.000Z',
-        to: '2026-09-03T12:00:00.000Z',
+        from: '2026-08-04T00:00:00.000Z',
+        to: '2026-09-04T00:00:00.000Z',
         sections: ['CORE', 'GROWTH', 'MEDICAL', 'TRACKING'],
         locale: 'en',
       });
