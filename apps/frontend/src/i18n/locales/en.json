@@ -137,6 +137,7 @@
         "title": "Change role?",
         "description": "{{name}} will get the \"{{role}}\" role.",
         "descriptionDemotion": "{{name}} will get the \"{{role}}\" role and lose permissions they have today.",
+        "descriptionPromotionToOwner": "{{name}} will get the \"{{role}}\" role and will then be able to manage members and the household itself.",
         "confirmButton": "Change role",
         "cancelButton": "Cancel"
       }

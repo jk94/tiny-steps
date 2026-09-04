@@ -137,6 +137,7 @@
         "title": "Rolle ändern?",
         "description": "{{name}} erhält die Rolle „{{role}}“.",
         "descriptionDemotion": "{{name}} erhält die Rolle „{{role}}“ und verliert dabei Rechte, die diese Person heute hat.",
+        "descriptionPromotionToOwner": "{{name}} erhält die Rolle „{{role}}“ und kann dann Mitglieder und den Haushalt selbst verwalten.",
         "confirmButton": "Rolle ändern",
         "cancelButton": "Abbrechen"
       }

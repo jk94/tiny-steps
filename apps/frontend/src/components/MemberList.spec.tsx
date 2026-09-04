@@ -204,6 +204,43 @@ describe('MemberList', () => {
     expect(within(dialog).getByText('Sam Sitter will get the "Carer" role.')).toBeInTheDocument();
   });
 
+  it('offers OWNER as a target role, unlike an invite link', async () => {
+    const user = userEvent.setup();
+    renderMemberList();
+
+    const row = await findOtherMemberRow();
+    await user.click(within(row).getByRole('combobox', { name: 'Role' }));
+
+    const ownerOption = await screen.findByRole('option', { name: 'Owner' });
+    expect(ownerOption).toBeInTheDocument();
+    expect(ownerOption).not.toHaveAttribute('data-disabled');
+  });
+
+  it('hands over ownership, explaining what the new owner gains', async () => {
+    mockedHouseholdApi.changeMemberRole.mockResolvedValueOnce({
+      ...OTHER_MEMBER,
+      role: 'OWNER',
+    });
+    const user = userEvent.setup();
+    renderMemberList();
+
+    const row = await findOtherMemberRow();
+    await user.click(within(row).getByRole('combobox', { name: 'Role' }));
+    await user.click(await screen.findByRole('option', { name: 'Owner' }));
+
+    const dialog = await screen.findByRole('dialog');
+    // A promotion, so no demotion warning — but the added administration
+    // rights are spelled out.
+    expect(
+      within(dialog).getByText(/able to manage members and the household/),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/lose permissions/)).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Change role' }));
+
+    expect(mockedHouseholdApi.changeMemberRole).toHaveBeenCalledWith('h1', 'u2', 'OWNER');
+  });
+
   it('changes the role and refreshes the list once confirmed', async () => {
     mockedHouseholdApi.changeMemberRole.mockResolvedValueOnce({
       ...OTHER_MEMBER,

@@ -13,13 +13,7 @@ import { ErrorMessage } from './ErrorMessage';
 import { Avatar, Badge, Card, EmptyState, Button, Select, Skeleton } from './ui';
 import { householdRoleLabelKey } from '../household/householdRoleLabelKey';
 import { mapHouseholdError } from '../household/mapHouseholdError';
-import {
-  ALL_ROLES,
-  canWrite,
-  INVITABLE_ROLES,
-  OWNER_ROLES,
-  type HouseholdRole,
-} from '../lib/householdPermissions';
+import { ALL_ROLES, canWrite, OWNER_ROLES, type HouseholdRole } from '../lib/householdPermissions';
 
 export interface MemberListProps {
   householdId: string;
@@ -41,6 +35,22 @@ const ROLE_RANK: Record<HouseholdRole, number> = {
 
 function isDemotion(from: HouseholdRole, to: HouseholdRole): boolean {
   return ROLE_RANK[to] < ROLE_RANK[from];
+}
+
+/**
+ * Picks the confirmation wording for a role change. Being made an OWNER gets
+ * its own sentence rather than the generic one: it is the only change that
+ * hands out household administration, and it is deliberately unreachable
+ * through an invite link (`INVITABLE_ROLES`), so the one path that does grant
+ * it should say what it grants.
+ */
+function roleChangeDescriptionKey(from: HouseholdRole, to: HouseholdRole) {
+  if (to === 'OWNER') {
+    return 'household.members.roleChangeDialog.descriptionPromotionToOwner';
+  }
+  return isDemotion(from, to)
+    ? 'household.members.roleChangeDialog.descriptionDemotion'
+    : 'household.members.roleChangeDialog.description';
 }
 
 interface PendingRoleChange {
@@ -169,16 +179,12 @@ export function MemberList({ householdId, role }: MemberListProps) {
                               });
                             }}
                           >
-                            {/* OWNER is listed but not choosable: it has to be
-                                present for a co-owner's current role to render
-                                at all, while promoting to owner is deliberately
-                                not offered here (mirroring the invite). */}
+                            {/* All four roles, OWNER included: unlike an invite
+                                link (`INVITABLE_ROLES`), promoting a known
+                                member is how ownership is shared or handed
+                                over — see `ChangeMemberRoleDto`. */}
                             {ALL_ROLES.map((targetRole) => (
-                              <Select.Item
-                                key={targetRole}
-                                value={targetRole}
-                                disabled={!INVITABLE_ROLES.includes(targetRole)}
-                              >
+                              <Select.Item key={targetRole} value={targetRole}>
                                 {t(householdRoleLabelKey(targetRole))}
                               </Select.Item>
                             ))}
@@ -212,9 +218,7 @@ export function MemberList({ householdId, role }: MemberListProps) {
           isOpen
           title={t('household.members.roleChangeDialog.title')}
           description={t(
-            isDemotion(pendingRoleChange.member.role, pendingRoleChange.nextRole)
-              ? 'household.members.roleChangeDialog.descriptionDemotion'
-              : 'household.members.roleChangeDialog.description',
+            roleChangeDescriptionKey(pendingRoleChange.member.role, pendingRoleChange.nextRole),
             {
               name: pendingRoleChange.member.name ?? pendingRoleChange.member.email,
               role: t(householdRoleLabelKey(pendingRoleChange.nextRole)),
