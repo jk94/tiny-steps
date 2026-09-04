@@ -46,7 +46,7 @@ describe('NotificationSchedulerService', () => {
     notificationSettings: { findMany: jest.Mock; update: jest.Mock };
     event: { findFirst: jest.Mock; count: jest.Mock };
     pushSubscription: { findMany: jest.Mock };
-    child: { findUnique: jest.Mock };
+    child: { findUnique: jest.Mock; findMany: jest.Mock };
     healthRecord: { findMany: jest.Mock; update: jest.Mock };
     membership: { findMany: jest.Mock };
   };
@@ -61,9 +61,36 @@ describe('NotificationSchedulerService', () => {
       pushSubscription: {
         findMany: jest.fn().mockResolvedValue(TOKENS.map((token) => ({ token }))),
       },
-      child: { findUnique: jest.fn().mockResolvedValue({ householdId: HOUSEHOLD_ID }) },
+      child: {
+        findUnique: jest.fn().mockResolvedValue({ householdId: HOUSEHOLD_ID }),
+        // Resolves every child the settings-driven crons touch to the one test
+        // household, so the membership filter has a household to match against.
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
+            Promise.resolve(where.id.in.map((id: string) => ({ id, householdId: HOUSEHOLD_ID }))),
+          ),
+      },
       healthRecord: { findMany: jest.fn().mockResolvedValue([]), update: jest.fn() },
-      membership: { findMany: jest.fn().mockResolvedValue([]) },
+      membership: {
+        // Two different callers, distinguished by their `where`:
+        // - the membership filter of the settings-driven crons asks for
+        //   specific users, and by default every one of them is still a member
+        //   (tests override this to exercise the removed-member case);
+        // - `checkMedicalReminders` asks for a household's members without
+        //   naming users, and keeps the old empty default that its own tests
+        //   opt out of via `withMembers(...)`.
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: { where: { userId?: { in: string[] } } }) =>
+            Promise.resolve(
+              (where.userId?.in ?? []).map((userId: string) => ({
+                userId,
+                householdId: HOUSEHOLD_ID,
+              })),
+            ),
+          ),
+      },
     };
     pushSender = { sendToTokens: jest.fn().mockResolvedValue(undefined) };
     clock = { now: jest.fn() };
@@ -84,6 +111,31 @@ describe('NotificationSchedulerService', () => {
       expect(prisma.notificationSettings.findMany).toHaveBeenCalledWith({
         where: { feedingReminderEnabled: true },
       });
+    });
+
+    it('does not send to a user who is no longer a member of the child’s household', async () => {
+      // `NotificationSettings` has no FK to `Membership`, so a removed member's
+      // rows survive their removal — they must not keep receiving pushes.
+      clock.now.mockReturnValue(new Date('2026-01-01T14:01:00.000Z'));
+      prisma.notificationSettings.findMany.mockResolvedValue([makeFeedingSettings()]);
+      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT, createdAt: FEEDING_AT });
+      prisma.membership.findMany.mockResolvedValue([]);
+
+      await service.checkFeedingReminders();
+
+      expect(pushSender.sendToTokens).not.toHaveBeenCalled();
+      expect(prisma.notificationSettings.update).not.toHaveBeenCalled();
+    });
+
+    it('does not send when the settings row’s child no longer exists', async () => {
+      clock.now.mockReturnValue(new Date('2026-01-01T14:01:00.000Z'));
+      prisma.notificationSettings.findMany.mockResolvedValue([makeFeedingSettings()]);
+      prisma.event.findFirst.mockResolvedValue({ occurredAt: FEEDING_AT, createdAt: FEEDING_AT });
+      prisma.child.findMany.mockResolvedValue([]);
+
+      await service.checkFeedingReminders();
+
+      expect(pushSender.sendToTokens).not.toHaveBeenCalled();
     });
 
     it('does NOT send just under the threshold (13:59, 3h59m since a 10:00 feeding)', async () => {
@@ -248,6 +300,21 @@ describe('NotificationSchedulerService', () => {
       expect(payload.body).toContain('5');
       expect(payload.body).toContain('2');
       expect(payload.body).toContain('7');
+    });
+
+    it('does not send to a user who is no longer a member of the child’s household', async () => {
+      const now = new Date(2026, 0, 1, 20, 0, 0);
+      clock.now.mockReturnValue(now);
+      prisma.notificationSettings.findMany.mockResolvedValue([
+        makeFeedingSettings({ dailySummaryEnabled: true, dailySummaryHourLocal: 20 }),
+      ]);
+      prisma.membership.findMany.mockResolvedValue([]);
+
+      await service.sendDailySummaries();
+
+      // Filtered out before the per-child counting query even runs.
+      expect(prisma.event.count).not.toHaveBeenCalled();
+      expect(pushSender.sendToTokens).not.toHaveBeenCalled();
     });
 
     it('does nothing when no rows are due this hour', async () => {

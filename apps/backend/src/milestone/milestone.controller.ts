@@ -23,7 +23,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
 import { MulterExceptionFilter } from '../common/photo/multer-exception.filter';
 import { photoFileInterceptor, photoValidationPipe } from '../common/photo/photo-upload';
+import { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { MilestoneRangeQueryDto } from './dto/milestone-range-query.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
@@ -38,12 +41,14 @@ const milestonePhotoValidationPipe = () => photoValidationPipe({ isRequired: tru
 /**
  * Developmental milestones for one child (roadmap Phase 7.2).
  *
- * No `@RequireRole` on any route: both OWNER and CO_PARENT may record, edit
- * and delete milestones, exactly like the event and growth controllers. A
- * non-member already resolves to 404 in `HouseholdMembershipGuard` before a
- * role check would run, so no route here can produce a 403. The
- * Betreuer/Beobachter audit of every writing endpoint is deliberately deferred
- * to Phase 7.5 (see the phase-7 README).
+ * Role scoping (Phase 7.5), exactly like the event and growth controllers:
+ * reads are open to every member; recording, editing and *adding* a photo need
+ * `ENTRY_WRITE_ROLES` — a CAREGIVER additionally only reaches milestones they
+ * recorded themselves, enforced per-row in `MilestoneService` via
+ * `assertMayEditEntry`. Deleting a milestone *or a single photo* needs
+ * `FULL_WRITE_ROLES`: a caregiver may add to the family's record but never
+ * destroy part of it, not even on their own entry. A non-member still resolves
+ * to 404 in `HouseholdMembershipGuard` before any role check runs.
  */
 @Controller('households/:householdId/children/:childId/milestones')
 export class MilestoneController {
@@ -53,6 +58,7 @@ export class MilestoneController {
   // (populated by JwtAuthGuard), and CsrfGuard is last — same ordering as
   // GrowthController.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @UseFilters(MilestoneValidationExceptionFilter)
   @Post()
   async create(
@@ -85,6 +91,7 @@ export class MilestoneController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @UseFilters(MilestoneValidationExceptionFilter)
   @Patch(':milestoneId')
   async update(
@@ -92,11 +99,13 @@ export class MilestoneController {
     @Param('childId') childId: string,
     @Param('milestoneId') milestoneId: string,
     @Body() dto: UpdateMilestoneDto,
+    @HouseholdActor() actor: HouseholdActor,
   ): Promise<MilestoneSummary> {
-    return this.milestoneService.update(householdId, childId, milestoneId, dto);
+    return this.milestoneService.update(householdId, childId, milestoneId, actor, dto);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':milestoneId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
@@ -111,6 +120,7 @@ export class MilestoneController {
   // then only affects its own file, which is what lets the UI report a
   // per-file error and keep the rest (M-15).
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Post(':milestoneId/photos')
   @UseInterceptors(photoFileInterceptor())
   @UseFilters(MulterExceptionFilter, MilestoneValidationExceptionFilter)
@@ -119,8 +129,9 @@ export class MilestoneController {
     @Param('childId') childId: string,
     @Param('milestoneId') milestoneId: string,
     @UploadedFile(milestonePhotoValidationPipe()) photo: Express.Multer.File,
+    @HouseholdActor() actor: HouseholdActor,
   ): Promise<MilestonePhotoRef> {
-    return this.milestoneService.addPhoto(householdId, childId, milestoneId, photo);
+    return this.milestoneService.addPhoto(householdId, childId, milestoneId, actor, photo);
   }
 
   // Buffers the whole (<=2MB) file into memory rather than streaming, so an
@@ -141,6 +152,7 @@ export class MilestoneController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':milestoneId/photos/:photoId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async removePhoto(

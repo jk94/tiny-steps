@@ -22,7 +22,7 @@ import { MulterExceptionFilter } from '../common/photo/multer-exception.filter';
 import { photoFileInterceptor, photoValidationPipe } from '../common/photo/photo-upload';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
 import { RequireRole } from '../household/guards/require-role.decorator';
-import { HouseholdRole } from '../household/household-role.enum';
+import { FULL_WRITE_ROLES } from '../household/household-permissions';
 import { ChildService } from './child.service';
 import type { ChildSummary } from './child.service';
 import { CreateChildDto } from './dto/create-child.dto';
@@ -39,10 +39,14 @@ export class ChildController {
 
   // Guard order matters: HouseholdMembershipGuard reads request.user
   // (populated by JwtAuthGuard), and CsrfGuard is last, mirroring
-  // HouseholdController's `createInvite` route. Creation is restricted to
-  // OWNER — see the role-scoping reconciliation in ADR-0003/roadmap.
+  // HouseholdController's `createInvite` route.
+  //
+  // Managing child profiles is `FULL_WRITE_ROLES` (Phase 7.5): CO_PARENT joins
+  // OWNER here — the Phase 7.5 permission matrix grants "create/change/delete
+  // child profiles" to both, superseding the narrower OWNER-only scoping
+  // ADR-0003 set when CO_PARENT was the only other role.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
-  @RequireRole(HouseholdRole.OWNER)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Post()
   @UseInterceptors(photoFileInterceptor())
   @UseFilters(MulterExceptionFilter, ChildValidationExceptionFilter)
@@ -84,10 +88,11 @@ export class ChildController {
     return new StreamableFile(photo.buffer);
   }
 
-  // No @RequireRole: Co-Parent can read/edit children per the role
-  // reconciliation (create/delete only are Owner-restricted) — see
-  // ADR-0003 and the roadmap's Definition of Done.
+  // Editing a child profile is a household-management action, not an entry
+  // edit: it is role-gated only, with no per-row ownership check — a child
+  // profile has no single "recorded by" owner to compare against.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Patch(':childId')
   @UseInterceptors(photoFileInterceptor())
   @UseFilters(MulterExceptionFilter, ChildValidationExceptionFilter)
@@ -101,7 +106,7 @@ export class ChildController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
-  @RequireRole(HouseholdRole.OWNER)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':childId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(

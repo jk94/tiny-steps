@@ -1,4 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
+import { HouseholdRole } from '../household/household-role.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildSex } from '../child/child-sex.enum';
 import { GrowthService, REFERENCE_BAND_STEP_DAYS } from './growth.service';
@@ -8,6 +10,12 @@ import { REFERENCE_MAX_AGE_DAYS } from './reference-data';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const USER_ID = 'user-1';
+const OTHER_USER_ID = 'user-2';
+
+// Role scoping (Phase 7.5): most tests act as an OWNER, who may edit anything;
+// CAREGIVER_ACTOR exercises the own-entries-only rule.
+const OWNER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.OWNER };
+const CAREGIVER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.CAREGIVER };
 const MEASUREMENT_ID = 'measurement-1';
 
 const BIRTH_DATE = new Date('2025-01-01T00:00:00.000Z');
@@ -288,12 +296,38 @@ describe('GrowthService', () => {
       prisma.growthMeasurement.findUnique.mockResolvedValue(makeGrowthMeasurement());
     });
 
+    it('lets a CAREGIVER edit their own measurement', async () => {
+      prisma.growthMeasurement.findUnique.mockResolvedValue(
+        makeGrowthMeasurement({ userId: USER_ID }),
+      );
+      prisma.growthMeasurement.update.mockResolvedValue(makeGrowthMeasurement());
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, CAREGIVER_ACTOR, {
+          weightGrams: 6600,
+        }),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a CAREGIVER editing another member's measurement", async () => {
+      prisma.growthMeasurement.findUnique.mockResolvedValue(
+        makeGrowthMeasurement({ userId: OTHER_USER_ID }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, CAREGIVER_ACTOR, {
+          weightGrams: 6600,
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.growthMeasurement.update).not.toHaveBeenCalled();
+    });
+
     it('writes only the fields present in the request body', async () => {
       prisma.growthMeasurement.update.mockResolvedValue(
         makeGrowthMeasurement({ weightGrams: 6600 }),
       );
 
-      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, {
         weightGrams: 6600,
       });
 
@@ -309,7 +343,7 @@ describe('GrowthService', () => {
         makeGrowthMeasurement({ headCircumferenceMillimeters: null }),
       );
 
-      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, {
         headCircumferenceMillimeters: null,
       });
 
@@ -328,7 +362,7 @@ describe('GrowthService', () => {
         makeGrowthMeasurement({ lengthMeasurementPosition: null }),
       );
 
-      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, {
         lengthMeasurementPosition: null,
       });
 
@@ -342,7 +376,7 @@ describe('GrowthService', () => {
 
     it('rejects an update that would clear all three values (W-1)', async () => {
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
+        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, {
           weightGrams: null,
           lengthMillimeters: null,
           headCircumferenceMillimeters: null,
@@ -357,7 +391,7 @@ describe('GrowthService', () => {
       );
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
+        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, {
           lengthMillimeters: null,
           headCircumferenceMillimeters: null,
         }),
@@ -366,7 +400,7 @@ describe('GrowthService', () => {
 
     it('rejects moving a measurement before the child birth date (W-5)', async () => {
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, {
+        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, {
           measuredAt: '2024-06-01',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -377,7 +411,7 @@ describe('GrowthService', () => {
       prisma.growthMeasurement.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, { weightGrams: 6600 }),
+        service.update(HOUSEHOLD_ID, CHILD_ID, MEASUREMENT_ID, OWNER_ACTOR, { weightGrams: 6600 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

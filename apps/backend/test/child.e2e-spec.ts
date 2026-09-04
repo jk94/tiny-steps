@@ -329,21 +329,19 @@ describe('Child profiles (e2e)', () => {
     expect(afterRow.photoPath).toBe(beforeRow.photoPath);
   });
 
-  it('Co-Parent cannot create or delete, but CAN update including replacing a photo', async () => {
-    // Key reconciliation case: the roadmap checklist says "bearbeiten/löschen
-    // (nur Owner)", but this phase's Definition of Done says "Co-Parent kann
-    // Kind-Profile lesen/bearbeiten aber keine Nutzer verwalten" — edit is
-    // allowed for Co-Parent, only create/delete are Owner-only. See ADR-0003.
+  it('Co-Parent can create, update (including replacing a photo) and delete', async () => {
+    // Changed in Phase 7.5: create/delete used to be OWNER-only (the
+    // ADR-0003 reconciliation of the roadmap's "nur Owner" against
+    // "Co-Parent kann Kind-Profile lesen/bearbeiten"). The Phase 7.5
+    // permission matrix grants "Kindprofile anlegen/ändern/löschen" to both
+    // OWNER and CO_PARENT — the `FULL_WRITE_ROLES` bundle — and withholds it
+    // from the two new roles instead. `roles.e2e-spec.ts` covers the CAREGIVER
+    // and OBSERVER 403s.
     const owner = await registerUser('reconcile-owner');
     const household = await createHousehold(owner, 'Reconcile Household');
     const coParent = await addCoParent(owner, household.id, 'reconcile-co-parent');
 
-    await createChildRequest(coParent, household.id, {
-      name: 'Should Not Exist',
-      birthDate: '2020-01-01T00:00:00.000Z',
-    }).expect(403);
-
-    const createResponse = await createChildRequest(owner, household.id, {
+    const createResponse = await createChildRequest(coParent, household.id, {
       name: 'Sam',
       birthDate: '2020-01-01T00:00:00.000Z',
     }).expect(201);
@@ -361,7 +359,7 @@ describe('Child profiles (e2e)', () => {
       .delete(`/api/households/${household.id}/children/${child.id}`)
       .set('Cookie', coParent.cookies)
       .set(CSRF_HEADER_NAME, coParent.csrfToken)
-      .expect(403);
+      .expect(204);
   });
 
   it('returns 404 on all six routes for a user with no membership in the household', async () => {

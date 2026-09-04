@@ -1,4 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
+import { HouseholdRole } from '../household/household-role.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { HealthRecordKind } from './health-record-kind.enum';
 import { HealthRecordService } from './health-record.service';
@@ -6,6 +8,12 @@ import { HealthRecordService } from './health-record.service';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const USER_ID = 'user-1';
+const OTHER_USER_ID = 'user-2';
+
+// Role scoping (Phase 7.5): most tests act as an OWNER, who may edit anything;
+// CAREGIVER_ACTOR exercises the own-entries-only rule.
+const OWNER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.OWNER };
+const CAREGIVER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.CAREGIVER };
 const RECORD_ID = 'health-record-1';
 
 const BIRTH_DATE = new Date('2025-01-20T00:00:00.000Z');
@@ -304,8 +312,93 @@ describe('HealthRecordService', () => {
       );
     });
 
+    it('lets a CAREGIVER mark their own planned entry as done', async () => {
+      prisma.healthRecord.findUnique.mockResolvedValue(makeRecord({ userId: USER_ID }));
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
+          administeredAt: ADMINISTERED_AT,
+        }),
+      ).resolves.toBeDefined();
+    });
+
+    it("lets a CAREGIVER mark another member's planned entry as done (MED-5 hand-off)", async () => {
+      // Whoever administers the dose is usually not whoever planned it, so
+      // ticking it off must survive a shift change.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
+          administeredAt: ADMINISTERED_AT,
+        }),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a CAREGIVER changing any other field of another member's record", async () => {
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, { name: 'Renamed' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a CAREGIVER smuggling another field alongside the mark-as-done', async () => {
+      // The exception is exactly "set administeredAt and nothing else" — a
+      // piggybacked edit must not ride along on it.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
+          administeredAt: ADMINISTERED_AT,
+          note: 'sneaky',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a CAREGIVER re-dating an administration someone else already logged', async () => {
+      // Not a completion but a rewrite of a foreign record: the stored
+      // `administeredAt` is already set.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: new Date(ADMINISTERED_AT) }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
+          administeredAt: ADMINISTERED_AT,
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
+    it('does not let an OBSERVER mark a foreign entry as done', async () => {
+      // Defensive: the route guard already rejects OBSERVER, but the mark-done
+      // exception must not be the hole that lets a read-only role write.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(
+          HOUSEHOLD_ID,
+          CHILD_ID,
+          RECORD_ID,
+          { userId: USER_ID, role: HouseholdRole.OBSERVER },
+          { administeredAt: ADMINISTERED_AT },
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
     it('marks a planned entry as done by patching only administeredAt (MED-5)', async () => {
-      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, {
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, {
         administeredAt: ADMINISTERED_AT,
       });
 
@@ -324,7 +417,9 @@ describe('HealthRecordService', () => {
         makeRecord({ administeredAt: null, dueAt: new Date(DUE_AT_DAY) }),
       );
 
-      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, { dueAt: null });
+      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, {
+        dueAt: null,
+      });
 
       await expect(failure.catch(codeOf)).resolves.toBe('HEALTH_RECORD_MISSING_DATE');
       expect(prisma.healthRecord.update).not.toHaveBeenCalled();
@@ -333,7 +428,9 @@ describe('HealthRecordService', () => {
     it('judges MED-3 on the merged state, not on the patch alone', async () => {
       // The stored record has neither amount nor unit; adding just an amount
       // must fail even though the request itself mentions no unit at all.
-      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, { doseAmount: 5 });
+      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, {
+        doseAmount: 5,
+      });
 
       await expect(failure.catch(codeOf)).resolves.toBe('HEALTH_RECORD_DOSE_UNIT_REQUIRED');
     });
@@ -342,7 +439,7 @@ describe('HealthRecordService', () => {
       prisma.healthRecord.findUnique.mockResolvedValue(makeRecord({ doseUnit: 'ml' }));
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, { doseAmount: 5 }),
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, { doseAmount: 5 }),
       ).resolves.toBeDefined();
     });
 
@@ -351,7 +448,7 @@ describe('HealthRecordService', () => {
         makeRecord({ kind: HealthRecordKind.VACCINATION }),
       );
 
-      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, {
+      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, {
         doseAmount: 2,
         doseUnit: 'ml',
       });
@@ -360,7 +457,7 @@ describe('HealthRecordService', () => {
     });
 
     it('rejects moving an administration before the birth date (MED-6)', async () => {
-      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, {
+      const failure = service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, {
         administeredAt: '2024-12-31T00:00:00.000Z',
       });
 
@@ -374,7 +471,7 @@ describe('HealthRecordService', () => {
         makeRecord({ reminderLastSentAt: new Date('2025-09-12T08:00:00.000Z') }),
       );
 
-      await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, { dueAt: '2025-10-01' });
+      await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, { dueAt: '2025-10-01' });
 
       expect(prisma.healthRecord.update).toHaveBeenCalledWith({
         where: { id: RECORD_ID },
@@ -387,7 +484,10 @@ describe('HealthRecordService', () => {
         makeRecord({ reminderLastSentAt: new Date('2025-09-12T08:00:00.000Z') }),
       );
 
-      await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, { dueAt: DUE_AT_DAY, note: 'x' });
+      await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, {
+        dueAt: DUE_AT_DAY,
+        note: 'x',
+      });
 
       expect(prisma.healthRecord.update).toHaveBeenCalledWith({
         where: { id: RECORD_ID },
@@ -396,7 +496,7 @@ describe('HealthRecordService', () => {
     });
 
     it('leaves untouched fields out of the update data entirely', async () => {
-      await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, { name: 'Ibuprofen' });
+      await service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, OWNER_ACTOR, { name: 'Ibuprofen' });
 
       expect(prisma.healthRecord.update).toHaveBeenCalledWith({
         where: { id: RECORD_ID },

@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Child, GrowthMeasurement, Prisma } from '@prisma/client';
 import { ChildSex, toChildSex } from '../child/child-sex.enum';
 import { ageInDaysAt } from '../common/age/age-in-days';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGrowthMeasurementDto } from './dto/create-growth-measurement.dto';
 import { GrowthRangeQueryDto } from './dto/growth-range-query.dto';
@@ -209,6 +211,7 @@ export class GrowthService {
     householdId: string,
     childId: string,
     measurementId: string,
+    actor: HouseholdActor,
     dto: UpdateGrowthMeasurementDto,
   ): Promise<GrowthMeasurementSummary> {
     const { measurement, child } = await this.findMeasurementOrThrow(
@@ -216,6 +219,10 @@ export class GrowthService {
       childId,
       measurementId,
     );
+
+    // A CAREGIVER may only edit what they recorded themselves — a check the
+    // route-level role annotation cannot make, since it needs the row.
+    assertMayEditEntry(actor, measurement.userId);
 
     const data: Prisma.GrowthMeasurementUpdateInput = {};
     if (dto.measuredAt !== undefined) {

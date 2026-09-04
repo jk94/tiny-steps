@@ -15,7 +15,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
+import { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
 import { CreateGrowthMeasurementDto } from './dto/create-growth-measurement.dto';
 import { GrowthRangeQueryDto } from './dto/growth-range-query.dto';
 import { GrowthReferenceQueryDto } from './dto/growth-reference-query.dto';
@@ -26,10 +29,12 @@ import type { GrowthMeasurementSummary, GrowthReferenceResponse } from './growth
 /**
  * Growth measurements for one child (roadmap Phase 7.1).
  *
- * No `@RequireRole` on any route: both OWNER and CO_PARENT may record, edit
- * and delete measurements, exactly like the event controllers. A non-member
- * already resolves to 404 in `HouseholdMembershipGuard` before a role check
- * would run, so no route here can produce a 403.
+ * Role scoping (Phase 7.5), exactly like the event controllers: reads are open
+ * to every member; recording and editing need `ENTRY_WRITE_ROLES` (a CAREGIVER
+ * additionally only reaches measurements they recorded themselves — enforced
+ * per-row in `GrowthService` via `assertMayEditEntry`); deleting needs
+ * `FULL_WRITE_ROLES`. A non-member still resolves to 404 in
+ * `HouseholdMembershipGuard` before any role check runs.
  */
 @Controller('households/:householdId/children/:childId/growth')
 export class GrowthController {
@@ -39,6 +44,7 @@ export class GrowthController {
   // (populated by JwtAuthGuard), and CsrfGuard is last — same ordering as
   // FeedingController.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Post()
   async create(
     @Param('householdId') householdId: string,
@@ -90,17 +96,20 @@ export class GrowthController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Patch(':measurementId')
   async update(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
     @Param('measurementId') measurementId: string,
     @Body() dto: UpdateGrowthMeasurementDto,
+    @HouseholdActor() actor: HouseholdActor,
   ): Promise<GrowthMeasurementSummary> {
-    return this.growthService.update(householdId, childId, measurementId, dto);
+    return this.growthService.update(householdId, childId, measurementId, actor, dto);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':measurementId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(

@@ -14,21 +14,22 @@ import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
+import { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
 import { CreateDiaperEventDto } from './dto/create-diaper-event.dto';
 import { UpdateDiaperEventDto } from './dto/update-diaper-event.dto';
 import { DiaperService } from './diaper.service';
 import type { DiaperEventSummary } from './diaper.service';
 
 /**
- * No `@RequireRole` on any route in this controller: both OWNER and
- * CO_PARENT may create/edit/delete Diaper events (per this repo's
- * CLAUDE.md roles table, only `Child` create/delete is Owner-restricted,
- * not events). Consequently a 403 cannot occur here — a non-member already
- * resolves to 404 via `HouseholdAccessService.findMembershipOrThrow`
- * (invoked by `HouseholdMembershipGuard`) before any role check would run,
- * so there's deliberately no 403 test for this controller. Mirrors
- * `FeedingController`/`SleepController`.
+ * Role scoping (Phase 7.5), mirroring `FeedingController`/`SleepController`:
+ * reads are open to every member; recording and editing need
+ * `ENTRY_WRITE_ROLES` (a CAREGIVER additionally only reaches entries they
+ * recorded themselves — enforced per-row in `DiaperService` via
+ * `assertMayEditEntry`); deleting needs `FULL_WRITE_ROLES`. A non-member still
+ * resolves to 404 in `HouseholdMembershipGuard` before any role check runs.
  *
  * Only 5 routes here — no `active-timer` or `/stop` route, since Diaper is
  * never timer-based (see `DiaperService`'s doc comment). Consequently
@@ -43,6 +44,7 @@ export class DiaperController {
   // (populated by JwtAuthGuard), and CsrfGuard is last, mirroring
   // FeedingController's/SleepController's guard ordering.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Post()
   async create(
     @Param('householdId') householdId: string,
@@ -73,17 +75,20 @@ export class DiaperController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Patch(':eventId')
   async update(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
     @Param('eventId') eventId: string,
     @Body() dto: UpdateDiaperEventDto,
+    @HouseholdActor() actor: HouseholdActor,
   ): Promise<DiaperEventSummary> {
-    return this.diaperService.update(householdId, childId, eventId, dto);
+    return this.diaperService.update(householdId, childId, eventId, actor, dto);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':eventId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(

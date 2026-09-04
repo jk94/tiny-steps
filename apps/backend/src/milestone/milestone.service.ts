@@ -8,8 +8,10 @@ import {
 import { Child, Milestone, MilestonePhoto, Prisma } from '@prisma/client';
 import { ageInDaysAt } from '../common/age/age-in-days';
 import { ageInMonthsAt } from '../common/age/age-in-months';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
 import { toAllowedPhotoMimeType } from '../common/photo/photo-upload';
 import { MAX_PHOTOS_PER_MILESTONE } from '../common/photo/photo.constants';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { MilestonePhotoStorageService } from './milestone-photo-storage.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
@@ -173,9 +175,14 @@ export class MilestoneService {
     householdId: string,
     childId: string,
     milestoneId: string,
+    actor: HouseholdActor,
     dto: UpdateMilestoneDto,
   ): Promise<MilestoneSummary> {
     const { milestone, child } = await this.findMilestoneOrThrow(householdId, childId, milestoneId);
+
+    // A CAREGIVER may only edit what they recorded themselves — a check the
+    // route-level role annotation cannot make, since it needs the row.
+    assertMayEditEntry(actor, milestone.userId);
 
     const isTemplateEntry = milestone.templateKey !== null;
     if (isTemplateEntry && (dto.title !== undefined || dto.category !== undefined)) {
@@ -257,9 +264,15 @@ export class MilestoneService {
     householdId: string,
     childId: string,
     milestoneId: string,
+    actor: HouseholdActor,
     photo: Express.Multer.File,
   ): Promise<MilestonePhotoRef> {
     const { milestone } = await this.findMilestoneOrThrow(householdId, childId, milestoneId);
+
+    // Adding a photo edits the milestone, so a CAREGIVER may only do it on
+    // their own. Removing one is stricter still (OWNER/CO_PARENT only, via
+    // `@RequireRole` on the route) — a caregiver can add but never destroy.
+    assertMayEditEntry(actor, milestone.userId);
 
     // TOCTOU note: the count check, the `max(sortIndex) + 1` derivation and the
     // insert are not wrapped in a transaction, and there is no unique index on

@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Child, Event, FeedingDetail, Prisma } from '@prisma/client';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
 import {
@@ -231,6 +233,7 @@ export class FeedingService {
     householdId: string,
     childId: string,
     eventId: string,
+    actor: HouseholdActor,
     dto: UpdateFeedingEventDto,
   ): Promise<FeedingEventSummary> {
     // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
@@ -240,6 +243,10 @@ export class FeedingService {
     // check-then-act is serialized against other transactions — see ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId, tx);
+
+      // A CAREGIVER may only edit what they recorded themselves — a check the
+      // route-level role annotation cannot make, since it needs the row.
+      assertMayEditEntry(actor, existing.userId);
 
       // Last-Write-Wins: a buffered offline edit whose submit time predates the
       // current server row loses to whoever wrote more recently — see ADR-0011.
@@ -325,6 +332,14 @@ export class FeedingService {
     eventId: string,
     dto: StopEventDto = {},
   ): Promise<FeedingEventSummary> {
+    // Deliberately no `assertMayEditEntry` here, unlike update(): stopping a
+    // running timer is part of *recording* the feed, not editing someone
+    // else's entry. Whoever is with the child when the feed ends has to be
+    // able to stop it, even if a different member started it — that hand-off
+    // is the normal case across a shift change, and refusing it would leave a
+    // timer running for hours and corrupt the recorded duration. The route's
+    // `@RequireRole(...ENTRY_WRITE_ROLES)` still keeps OBSERVER out.
+    //
     // Same atomic read-check-write as update() — see its doc comment and
     // ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {

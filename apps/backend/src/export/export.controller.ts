@@ -2,15 +2,21 @@ import { Controller, Get, Param, Query, Res, StreamableFile, UseGuards } from '@
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { EXPORT_ROLES } from '../household/household-permissions';
 import { toCsv } from './csv.serializer';
 import { ExportQueryDto } from './dto/export-query.dto';
 import { ExportService } from './export.service';
 
 /**
  * Child-level raw-data export (JSON + CSV). Read-only, so — like
- * `EventController` — no `CsrfGuard` and no `@RequireRole`: any household
- * member may export, the same read-access rule as `/events/daily` and
- * `/events/stats`.
+ * `EventController` — no `CsrfGuard`.
+ *
+ * Unlike the other read routes this one *is* role-scoped: generating an export
+ * bundles a child's whole history into one downloadable file, which the Phase
+ * 7.5 permission matrix withholds from OBSERVER. `@RequireRole` works on GET
+ * routes just as well as on writes — the guard only reads metadata, it does not
+ * look at the HTTP method when a requirement is present.
  *
  * Both handlers buffer the full payload in memory before responding, copying
  * `ChildController.getPhoto`'s approach (see ADR-0003's ENOENT-avoidance
@@ -19,6 +25,7 @@ import { ExportService } from './export.service';
  */
 @Controller('households/:householdId/children/:childId/export')
 @UseGuards(JwtAuthGuard, HouseholdMembershipGuard)
+@RequireRole(...EXPORT_ROLES)
 export class ExportController {
   constructor(private readonly exportService: ExportService) {}
 

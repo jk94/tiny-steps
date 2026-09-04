@@ -89,8 +89,9 @@ model Membership {
   id          String   @id @default(cuid())
   userId      String
   householdId String
-  // Stores a `HouseholdRole` string value (Owner/Co-Parent/...; see PRD
-  // section 3 and `src/household/household-role.enum.ts`). Kept as a plain
+  // Stores a `HouseholdRole` string value (OWNER/CO_PARENT/CAREGIVER/
+  // OBSERVER; see PRD section 3 and `src/household/household-role.enum.ts`,
+  // with the per-action rules in `household-permissions.ts`). Kept as a plain
   // `String`, not a Prisma `enum`, because Prisma's `enum` type is not
   // supported on the SQLite connector — this is permanent, not a migration
   // stepping stone. Enforced at the application layer via
@@ -109,7 +110,9 @@ model Invite {
   tokenHash        String    @unique
   householdId      String
   createdByUserId  String
-  // HouseholdRole granted on acceptance; MVP always CO_PARENT, set server-side only.
+  // HouseholdRole granted on acceptance. Chosen by the inviting OWNER out of
+  // `INVITABLE_ROLES` (never OWNER) and always set server-side; the invitee
+  // cannot influence it.
   role             String
   expiresAt        DateTime
   revokedAt        DateTime?

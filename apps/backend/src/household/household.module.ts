@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { RealtimeCoreModule } from '../realtime/realtime-core.module';
 import { HouseholdMembershipGuard } from './guards/household-membership.guard';
 import { HouseholdAccessService } from './household-access.service';
 import { HouseholdController } from './household.controller';
@@ -14,7 +15,10 @@ import { InviteService } from './invite.service';
   // exports, so there's no circular dependency back into AuthModule.
   // PrismaModule is `@Global()` already, but imported explicitly here for
   // clarity/consistency with the rest of this module's dependencies.
-  imports: [PrismaModule, AuthModule],
+  // RealtimeCoreModule (not RealtimeModule, which would be a cycle — see that
+  // module's doc comment) gives `HouseholdService` the `RealtimeService` it
+  // needs to evict a removed member from the household's Socket.IO room.
+  imports: [PrismaModule, AuthModule, RealtimeCoreModule],
   controllers: [HouseholdController, InviteController],
   providers: [HouseholdService, InviteService, HouseholdAccessService, HouseholdMembershipGuard],
   // HouseholdAccessService is exported alongside HouseholdMembershipGuard

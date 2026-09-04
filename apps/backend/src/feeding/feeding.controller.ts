@@ -14,7 +14,10 @@ import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
+import { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
 import { StopEventDto } from '../event/dto/stop-event.dto';
 import { CreateFeedingEventDto } from './dto/create-feeding-event.dto';
 import { UpdateFeedingEventDto } from './dto/update-feeding-event.dto';
@@ -22,13 +25,12 @@ import { FeedingService } from './feeding.service';
 import type { FeedingEventSummary } from './feeding.service';
 
 /**
- * No `@RequireRole` on any route in this controller: both OWNER and
- * CO_PARENT may create/edit/delete Feeding events (per this repo's
- * CLAUDE.md roles table, only `Child` create/delete is Owner-restricted,
- * not events). Consequently a 403 cannot occur here — a non-member already
- * resolves to 404 via `HouseholdAccessService.findMembershipOrThrow`
- * (invoked by `HouseholdMembershipGuard`) before any role check would run,
- * so there's deliberately no 403 test for this controller.
+ * Role scoping (Phase 7.5): reads are open to every member; recording, editing
+ * and stopping need `ENTRY_WRITE_ROLES` (a CAREGIVER additionally only reaches
+ * entries they recorded themselves — enforced per-row in `FeedingService` via
+ * `assertMayEditEntry`); deleting needs `FULL_WRITE_ROLES`. A non-member still
+ * resolves to 404 in `HouseholdMembershipGuard` before any role check runs, so
+ * 403 here always means "member, wrong role" rather than "unknown household".
  */
 @Controller('households/:householdId/children/:childId/feeding-events')
 export class FeedingController {
@@ -38,6 +40,7 @@ export class FeedingController {
   // (populated by JwtAuthGuard), and CsrfGuard is last, mirroring
   // ChildController's guard ordering.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Post()
   async create(
     @Param('householdId') householdId: string,
@@ -79,17 +82,20 @@ export class FeedingController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Patch(':eventId')
   async update(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
     @Param('eventId') eventId: string,
     @Body() dto: UpdateFeedingEventDto,
+    @HouseholdActor() actor: HouseholdActor,
   ): Promise<FeedingEventSummary> {
-    return this.feedingService.update(householdId, childId, eventId, dto);
+    return this.feedingService.update(householdId, childId, eventId, actor, dto);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':eventId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
@@ -101,6 +107,9 @@ export class FeedingController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  // No `@HouseholdActor()`: stopping a timer is recording, not editing
+  // someone else's entry, so it is role-gated only — see `FeedingService.stop`.
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @Post(':eventId/stop')
   async stop(
     @Param('householdId') householdId: string,
