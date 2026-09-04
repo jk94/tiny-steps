@@ -1,3 +1,4 @@
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { apiFetch } from './http-client';
 
 /**
@@ -16,7 +17,8 @@ export interface InvitePreview {
 
 export interface AcceptedInvite {
   household: { id: string; name: string };
-  role: 'OWNER' | 'CO_PARENT';
+  /** The role the invite granted — any of the four, since Phase 7.5. */
+  role: HouseholdRole;
 }
 
 /**
