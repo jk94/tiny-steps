@@ -2,10 +2,12 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Household } from '@prisma/client';
+import { Household, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateHouseholdDto } from './dto/create-household.dto';
 import { HouseholdRole, toHouseholdRole } from './household-role.enum';
 
@@ -34,7 +36,12 @@ export interface HouseholdMemberSummary {
 
 @Injectable()
 export class HouseholdService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(HouseholdService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   /** Creates a household with the creating user as its sole OWNER member. */
   async create(userId: string, dto: CreateHouseholdDto): Promise<Household> {
@@ -103,20 +110,27 @@ export class HouseholdService {
 
     const membership = await this.findMembershipOrThrow(householdId, targetUserId);
 
-    if (toHouseholdRole(membership.role) === HouseholdRole.OWNER && role !== HouseholdRole.OWNER) {
-      await this.assertNotLastOwner(householdId, 'LAST_OWNER_CANNOT_BE_DEMOTED');
-    }
-
     if (membership.role === role) {
       // Idempotent: re-sending the current role is a no-op rather than a
       // pointless write, so a double-submit cannot race with itself.
       return toMemberSummary(membership);
     }
 
-    const updated = await this.prisma.membership.update({
-      where: { id: membership.id },
-      data: { role },
-      include: { user: true },
+    const isDemotingAnOwner =
+      toHouseholdRole(membership.role) === HouseholdRole.OWNER && role !== HouseholdRole.OWNER;
+
+    // Re-count inside the transaction, so a concurrent demotion of the *other*
+    // owner cannot slip between the count and this write — see
+    // `assertLastOwnerSurvives`.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (isDemotingAnOwner) {
+        await assertLastOwnerSurvives(tx, householdId, 'LAST_OWNER_CANNOT_BE_DEMOTED');
+      }
+      return tx.membership.update({
+        where: { id: membership.id },
+        data: { role },
+        include: { user: true },
+      });
     });
 
     return toMemberSummary(updated);
@@ -132,6 +146,10 @@ export class HouseholdService {
    * dropping the row is sufficient. "Leave a household yourself" is out of
    * scope; self-removal is refused so an owner cannot orphan the household in
    * one click.
+   *
+   * The already-open Socket.IO room is the one place membership is *not*
+   * re-checked per message (`handleJoinHousehold` checks once, at join time),
+   * so the removed user is evicted from it explicitly afterwards.
    */
   async removeMember(
     householdId: string,
@@ -147,12 +165,27 @@ export class HouseholdService {
     }
 
     const membership = await this.findMembershipOrThrow(householdId, targetUserId);
+    const isRemovingAnOwner = toHouseholdRole(membership.role) === HouseholdRole.OWNER;
 
-    if (toHouseholdRole(membership.role) === HouseholdRole.OWNER) {
-      await this.assertNotLastOwner(householdId, 'LAST_OWNER_CANNOT_BE_REMOVED');
+    await this.prisma.$transaction(async (tx) => {
+      if (isRemovingAnOwner) {
+        await assertLastOwnerSurvives(tx, householdId, 'LAST_OWNER_CANNOT_BE_REMOVED');
+      }
+      await tx.membership.delete({ where: { id: membership.id } });
+    });
+
+    // Best-effort and deliberately after the commit: the DB is the source of
+    // truth for access, and the broadcast this stops carries no payload of its
+    // own (a client that keeps receiving it just refetches and gets a 404).
+    // Failing the request over a socket bookkeeping error would be worse than
+    // the stale room.
+    try {
+      await this.realtime.evictFromHousehold(targetUserId, householdId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to evict user ${targetUserId} from the room of household ${householdId}: ${String(error)}`,
+      );
     }
-
-    await this.prisma.membership.delete({ where: { id: membership.id } });
   }
 
   /**
@@ -171,32 +204,40 @@ export class HouseholdService {
 
     return membership;
   }
+}
 
-  /**
-   * ROL-6: a household must always keep at least one OWNER.
-   *
-   * Defence in depth, deliberately kept even though the current routes cannot
-   * reach it: both callers are `@RequireRole(...OWNER_ROLES)` and refuse a
-   * self-target, so whenever the *target* is an OWNER the caller is a second
-   * one and the count is already ≥ 2. That reasoning collapses the moment
-   * either premise changes — e.g. a future "leave this household" action, or
-   * allowing an owner to step down — so the invariant is enforced here rather
-   * than left implicit in the route annotations. Covered directly in
-   * `household.service.spec.ts`; `roles.e2e-spec.ts` asserts the resulting
-   * guarantee over HTTP instead.
-   */
-  private async assertNotLastOwner(householdId: string, code: string): Promise<void> {
-    const ownerCount = await this.prisma.membership.count({
-      where: { householdId, role: HouseholdRole.OWNER },
+/**
+ * ROL-6: a household must always keep at least one OWNER.
+ *
+ * Takes the transaction client rather than the service's own, and must be
+ * called *inside* the same `$transaction` as the demotion/removal it guards:
+ * counting outside would leave a read-check-write race where two owners
+ * demote each other concurrently, both read `ownerCount = 2`, and both commit
+ * — leaving the household with no owner at all. Same read-check-write-in-one-
+ * transaction reasoning as `InviteService.accept()` and the LWW updates in
+ * `FeedingService`/`SleepService` (ADR-0011).
+ *
+ * The single-owner case is also unreachable through today's routes (both
+ * callers are `@RequireRole(...OWNER_ROLES)` and refuse a self-target, so an
+ * OWNER target implies a second OWNER caller), but that argument collapses the
+ * moment either premise changes — e.g. a future "leave this household" action
+ * — so the invariant is enforced rather than left implicit.
+ */
+async function assertLastOwnerSurvives(
+  tx: Prisma.TransactionClient,
+  householdId: string,
+  code: string,
+): Promise<void> {
+  const ownerCount = await tx.membership.count({
+    where: { householdId, role: HouseholdRole.OWNER },
+  });
+
+  if (ownerCount <= 1) {
+    throw new ConflictException({
+      statusCode: 409,
+      code,
+      message: 'A household must always have at least one owner',
     });
-
-    if (ownerCount <= 1) {
-      throw new ConflictException({
-        statusCode: 409,
-        code,
-        message: 'A household must always have at least one owner',
-      });
-    }
   }
 }
 

@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException, NotFoundException } from '@nestj
 import { HouseholdRole } from './household-role.enum';
 import { HouseholdService } from './household.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 const HOUSEHOLD_ID = 'household-1';
 const OWNER_ID = 'user-1';
@@ -36,7 +37,9 @@ describe('HouseholdService', () => {
       delete: jest.Mock;
       count: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
+  let realtime: { evictFromHousehold: jest.Mock };
   let service: HouseholdService;
 
   beforeEach(() => {
@@ -49,8 +52,15 @@ describe('HouseholdService', () => {
         delete: jest.fn(),
         count: jest.fn(),
       },
+      // The last-owner guard has to re-count *inside* the transaction, so the
+      // mock hands the callback the same client the assertions inspect.
+      $transaction: jest.fn((callback: (tx: unknown) => unknown) => callback(prisma)),
     };
-    service = new HouseholdService(prisma as unknown as PrismaService);
+    realtime = { evictFromHousehold: jest.fn().mockResolvedValue(undefined) };
+    service = new HouseholdService(
+      prisma as unknown as PrismaService,
+      realtime as unknown as RealtimeService,
+    );
   });
 
   describe('create', () => {
@@ -258,6 +268,21 @@ describe('HouseholdService', () => {
 
       expect(prisma.membership.count).not.toHaveBeenCalled();
     });
+
+    it('counts owners and writes inside one transaction', async () => {
+      // Counting outside the transaction would let two concurrent demotions
+      // both observe two owners and both commit, leaving none.
+      prisma.membership.findUnique.mockResolvedValue(makeMembership({ role: HouseholdRole.OWNER }));
+      prisma.membership.count.mockResolvedValue(2);
+      prisma.membership.update.mockResolvedValue(makeMembership({ role: HouseholdRole.CO_PARENT }));
+
+      await service.changeMemberRole(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID, HouseholdRole.CO_PARENT);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.membership.count.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.membership.update.mock.invocationCallOrder[0],
+      );
+    });
   });
 
   describe('removeMember', () => {
@@ -304,6 +329,51 @@ describe('HouseholdService', () => {
         service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID),
       ).resolves.toBeUndefined();
       expect(prisma.membership.delete).toHaveBeenCalled();
+    });
+
+    it('counts owners and deletes inside one transaction', async () => {
+      prisma.membership.findUnique.mockResolvedValue(makeMembership({ role: HouseholdRole.OWNER }));
+      prisma.membership.count.mockResolvedValue(2);
+
+      await service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.membership.count.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.membership.delete.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('evicts the removed member from the household’s Socket.IO room', async () => {
+      // The room is the one place membership is not re-checked per message.
+      prisma.membership.findUnique.mockResolvedValue(makeMembership());
+
+      await service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID);
+
+      expect(realtime.evictFromHousehold).toHaveBeenCalledWith(MEMBER_ID, HOUSEHOLD_ID);
+      expect(prisma.membership.delete.mock.invocationCallOrder[0]).toBeLessThan(
+        realtime.evictFromHousehold.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('still succeeds when the room eviction fails', async () => {
+      // Socket bookkeeping must never undo an already-committed removal.
+      prisma.membership.findUnique.mockResolvedValue(makeMembership());
+      realtime.evictFromHousehold.mockRejectedValue(new Error('socket server gone'));
+
+      await expect(
+        service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID),
+      ).resolves.toBeUndefined();
+      expect(prisma.membership.delete).toHaveBeenCalled();
+    });
+
+    it('does not evict anyone when the removal itself was refused', async () => {
+      prisma.membership.findUnique.mockResolvedValue(makeMembership({ role: HouseholdRole.OWNER }));
+      prisma.membership.count.mockResolvedValue(1);
+
+      await expect(service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(realtime.evictFromHousehold).not.toHaveBeenCalled();
     });
   });
 });
