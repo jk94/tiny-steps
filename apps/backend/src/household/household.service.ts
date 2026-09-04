@@ -172,7 +172,19 @@ export class HouseholdService {
     return membership;
   }
 
-  /** ROL-6: a household must always keep at least one OWNER. */
+  /**
+   * ROL-6: a household must always keep at least one OWNER.
+   *
+   * Defence in depth, deliberately kept even though the current routes cannot
+   * reach it: both callers are `@RequireRole(...OWNER_ROLES)` and refuse a
+   * self-target, so whenever the *target* is an OWNER the caller is a second
+   * one and the count is already ≥ 2. That reasoning collapses the moment
+   * either premise changes — e.g. a future "leave this household" action, or
+   * allowing an owner to step down — so the invariant is enforced here rather
+   * than left implicit in the route annotations. Covered directly in
+   * `household.service.spec.ts`; `roles.e2e-spec.ts` asserts the resulting
+   * guarantee over HTTP instead.
+   */
   private async assertNotLastOwner(householdId: string, code: string): Promise<void> {
     const ownerCount = await this.prisma.membership.count({
       where: { householdId, role: HouseholdRole.OWNER },
