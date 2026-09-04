@@ -153,14 +153,18 @@ der vorhandene JSON-Export wird um die neuen Datensätze als eigene Schlüssel e
 
 ## Offene Punkte
 
-- **SVG-Fähigkeiten von `@react-pdf/renderer` prüfen** — die Rückfallebene ist entschieden: Reicht
-  der unterstützte Umfang nicht, wird das Diagramm serverseitig gerastert und als Bild eingebettet
-  (schlechtere Druckqualität, dafür sicher). Offen ist nur, welcher der beiden Wege es wird; der
-  Prototyp gehört an den **Anfang** der Teilphase, nicht ans Ende.
-- **Schriftarten:** react-pdf braucht eingebettete Schriftdateien. Ob die Schrift des Design-Systems
-  dafür lizenzrechtlich und technisch geeignet ist, ist zu prüfen.
-- **Laufzeitgrenze:** Ob und ab welcher Zeitraumlänge die Erzeugung begrenzt oder in den
-  Hintergrund verlagert werden muss, entscheidet die Messung aus EXP-15.
+Alle drei durch den Prototyp am Anfang der Teilphase bzw. die EXP-15-Messung geklärt — Details in
+der Umsetzungsnotiz (3) und in [ADR-0015](../../adr/0015-pdf-report-generation.md).
+
+- [x] **SVG-Fähigkeiten von `@react-pdf/renderer`** — ausreichend: SVG-Strings werden als Vektoren
+  gezeichnet, die vorbereitete Raster-Rückfallebene wurde nicht gebraucht.
+- [x] **Schriftarten** — der CSS-`sans`-Stack des Design-Systems ist nicht einbettbar; stattdessen
+  vier statische Inter-Schnitte (SIL OFL 1.1) gevendort.
+- [x] **Laufzeitgrenze** — Messung ergab ~80–115 ms / ~12–23 MB über 1–24 Monate; harte Grenze
+  `MAX_REPORT_PERIOD_DAYS = 731`, keine Hintergrundverarbeitung nötig.
+- [ ] **Manuelle Prüfung in Acrobat / auf einem echten Gerät** — bislang nur per `sips`-Rasterung
+  verifiziert. Bewusst zurückgestellt (siehe `docs/known-issues.md`), analog zu den offenen
+  Geräte-Checks aus Phase 4/5.
 
 ## Aufgaben
 

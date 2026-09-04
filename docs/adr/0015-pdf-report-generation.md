@@ -262,6 +262,11 @@ The design is fixed, and the code is already shaped for it, so adding it is addi
 - **The report's German and English wording is now a thing to maintain**, separately from the UI's.
   `report-i18n.spec.ts` enforces that the two catalogs have identical key sets and identical
   placeholders, so a one-sided edit fails the suite rather than surfacing as a raw key in a PDF.
+- **The output has not been checked in a real PDF viewer.** Unit tests assert valid PDF bytes and a
+  spike rasterised a page with `sips`, but Acrobat / a browser viewer / an actual print run are
+  outstanding — font embedding, the vector chart and multi-page table behaviour are unverified on a
+  real renderer. Deferred; tracked in `docs/known-issues.md`, same posture as the Phase 4/5
+  real-device items.
 
 ## Related
 
