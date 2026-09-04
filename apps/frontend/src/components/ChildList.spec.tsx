@@ -154,13 +154,24 @@ describe('ChildList', () => {
     expect(screen.getByRole('link', { name: 'Add child' })).toBeInTheDocument();
   });
 
-  it('hides the "add child" link for a CO_PARENT', () => {
+  it('shows the "add child" link for a CO_PARENT, who may create children server-side', () => {
     mockedChildApi.listChildren.mockReturnValue(new Promise(() => {}));
 
     renderChildList('CO_PARENT');
 
-    expect(screen.queryByRole('link', { name: 'Add child' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Add child' })).toBeInTheDocument();
   });
+
+  it.each(['CAREGIVER', 'OBSERVER'] as const)(
+    'hides the "add child" link for a %s',
+    (role) => {
+      mockedChildApi.listChildren.mockReturnValue(new Promise(() => {}));
+
+      renderChildList(role);
+
+      expect(screen.queryByRole('link', { name: 'Add child' })).not.toBeInTheDocument();
+    },
+  );
 
   it('is keyboard-operable: tabbing to the child link and pressing Enter navigates to its home dashboard', async () => {
     mockedChildApi.listChildren.mockResolvedValueOnce([
