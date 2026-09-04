@@ -86,9 +86,13 @@
     "list": {
       "title": "Haushalte",
       "empty": "Du bist noch keinem Haushalt zugeordnet.",
-      "createLink": "Haushalt anlegen",
-      "roleOwner": "Inhaber:in",
-      "roleCoParent": "Mitglied"
+      "createLink": "Haushalt anlegen"
+    },
+    "roles": {
+      "ownerLabel": "Inhaber:in",
+      "coParentLabel": "Mitglied",
+      "caregiverLabel": "Betreuer:in",
+      "observerLabel": "Beobachter:in"
     },
     "create": {
       "title": "Haushalt anlegen",
@@ -109,11 +113,33 @@
       "copiedConfirmation": "Kopiert!",
       "copyFailed": "Kopieren fehlgeschlagen. Bitte kopiere den Link manuell.",
       "expiresAtLabel": "Gültig bis",
-      "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen."
+      "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen.",
+      "roleSelectLabel": "Rolle der eingeladenen Person",
+      "roleDescription": {
+        "coParent": "Voller Zugriff auf alle Einträge und Kindprofile, aber keine Verwaltung des Haushalts.",
+        "caregiver": "Darf Einträge erfassen und eigene bearbeiten, aber nichts löschen und keine Kindprofile verwalten.",
+        "observer": "Nur Lesezugriff, dazu die eigenen Benachrichtigungseinstellungen."
+      }
     },
     "members": {
       "title": "Mitglieder",
-      "empty": "Keine Mitglieder gefunden."
+      "empty": "Keine Mitglieder gefunden.",
+      "roleLabel": "Rolle",
+      "joinedAtLabel": "Mitglied seit",
+      "removeButton": "Entfernen",
+      "removeDialog": {
+        "title": "Mitglied entfernen?",
+        "description": "{{name}} verliert sofort den Zugriff auf diesen Haushalt. Bereits erfasste Einträge bleiben erhalten.",
+        "confirmButton": "Entfernen",
+        "cancelButton": "Abbrechen"
+      },
+      "roleChangeDialog": {
+        "title": "Rolle ändern?",
+        "description": "{{name}} erhält die Rolle „{{role}}“.",
+        "descriptionDemotion": "{{name}} erhält die Rolle „{{role}}“ und verliert dabei Rechte, die diese Person heute hat.",
+        "confirmButton": "Rolle ändern",
+        "cancelButton": "Abbrechen"
+      }
     },
     "validation": {
       "nameRequired": "Bitte gib einen Namen für den Haushalt ein.",
@@ -122,6 +148,10 @@
     "errors": {
       "notFound": "Dieser Haushalt wurde nicht gefunden oder du bist kein Mitglied.",
       "forbidden": "Nur die haushaltführende Person darf diese Aktion ausführen.",
+      "cannotChangeOwnRole": "Du kannst deine eigene Rolle nicht ändern. Bitte eine andere haushaltführende Person darum.",
+      "cannotRemoveSelf": "Du kannst dich nicht selbst aus dem Haushalt entfernen. Bitte eine andere haushaltführende Person darum.",
+      "lastOwnerCannotBeDemoted": "Das ist die letzte haushaltführende Person. Mache zuerst jemand anderen dazu.",
+      "lastOwnerCannotBeRemoved": "Das ist die letzte haushaltführende Person. Mache zuerst jemand anderen dazu.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   },

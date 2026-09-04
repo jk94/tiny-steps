@@ -86,9 +86,13 @@
     "list": {
       "title": "Households",
       "empty": "You aren't a member of any household yet.",
-      "createLink": "Create household",
-      "roleOwner": "Owner",
-      "roleCoParent": "Member"
+      "createLink": "Create household"
+    },
+    "roles": {
+      "ownerLabel": "Owner",
+      "coParentLabel": "Member",
+      "caregiverLabel": "Carer",
+      "observerLabel": "Viewer"
     },
     "create": {
       "title": "Create household",
@@ -109,11 +113,33 @@
       "copiedConfirmation": "Copied!",
       "copyFailed": "Copy failed. Please copy the link manually.",
       "expiresAtLabel": "Valid until",
-      "ownerOnlyHint": "Only the household owner can generate invites."
+      "ownerOnlyHint": "Only the household owner can generate invites.",
+      "roleSelectLabel": "Role for the invited person",
+      "roleDescription": {
+        "coParent": "Full access to all entries and child profiles, but cannot manage the household.",
+        "caregiver": "Can record entries and edit their own, but cannot delete anything or manage child profiles.",
+        "observer": "Read-only access, plus their own notification settings."
+      }
     },
     "members": {
       "title": "Members",
-      "empty": "No members found."
+      "empty": "No members found.",
+      "roleLabel": "Role",
+      "joinedAtLabel": "Member since",
+      "removeButton": "Remove",
+      "removeDialog": {
+        "title": "Remove member?",
+        "description": "{{name}} loses access to this household immediately. Entries they recorded are kept.",
+        "confirmButton": "Remove",
+        "cancelButton": "Cancel"
+      },
+      "roleChangeDialog": {
+        "title": "Change role?",
+        "description": "{{name}} will get the \"{{role}}\" role.",
+        "descriptionDemotion": "{{name}} will get the \"{{role}}\" role and lose permissions they have today.",
+        "confirmButton": "Change role",
+        "cancelButton": "Cancel"
+      }
     },
     "validation": {
       "nameRequired": "Please enter a name for the household.",
@@ -122,6 +148,10 @@
     "errors": {
       "notFound": "This household wasn't found, or you aren't a member.",
       "forbidden": "Only the household owner can perform this action.",
+      "cannotChangeOwnRole": "You can't change your own role. Ask another owner to do it.",
+      "cannotRemoveSelf": "You can't remove yourself from the household. Ask another owner to do it.",
+      "lastOwnerCannotBeDemoted": "This is the household's last owner. Make someone else an owner first.",
+      "lastOwnerCannotBeRemoved": "This is the household's last owner. Make someone else an owner first.",
       "generic": "Something went wrong. Please try again later."
     }
   },
