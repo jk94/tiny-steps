@@ -1,5 +1,12 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
+import { HouseholdRole } from '../household/household-role.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { MilestonePhotoStorageService } from './milestone-photo-storage.service';
 import { MilestoneCategory } from './milestone-category.enum';
@@ -9,6 +16,12 @@ import { MilestoneService } from './milestone.service';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const USER_ID = 'user-1';
+const OTHER_USER_ID = 'user-2';
+
+// Role scoping (Phase 7.5): most tests act as an OWNER, who may edit anything;
+// CAREGIVER_ACTOR exercises the own-entries-only rule.
+const OWNER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.OWNER };
+const CAREGIVER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.CAREGIVER };
 const MILESTONE_ID = 'milestone-1';
 
 const BIRTH_DATE = new Date('2025-01-20T00:00:00.000Z');
@@ -346,12 +359,34 @@ describe('MilestoneService', () => {
   });
 
   describe('update', () => {
+    it('lets a CAREGIVER edit their own milestone', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ userId: USER_ID }));
+      prisma.milestone.update.mockResolvedValue(makeMilestone());
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, CAREGIVER_ACTOR, { note: 'mine' }),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a CAREGIVER editing another member's milestone", async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ userId: OTHER_USER_ID }));
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, CAREGIVER_ACTOR, { note: 'theirs' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.milestone.update).not.toHaveBeenCalled();
+    });
+
     it('rejects changing the title of a template entry', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.milestone.findUnique.mockResolvedValue(makeMilestone());
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, { title: 'Etwas anderes' }),
+        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, {
+          title: 'Etwas anderes',
+        }),
       ).rejects.toMatchObject({
         response: expect.objectContaining({ code: 'MILESTONE_TEMPLATE_FIELD_NOT_EDITABLE' }),
       });
@@ -363,7 +398,7 @@ describe('MilestoneService', () => {
       prisma.milestone.findUnique.mockResolvedValue(makeMilestone());
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, {
+        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, {
           category: MilestoneCategory.SOCIAL,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -378,7 +413,7 @@ describe('MilestoneService', () => {
         makeMilestone({ templateKey: null, category: null, title: 'Erste Bahnfahrt' }),
       );
 
-      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, {
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, {
         title: 'Erste Bahnfahrt',
       });
 
@@ -398,7 +433,7 @@ describe('MilestoneService', () => {
         makeMilestone({ note: 'Auf dem Spielplatz', achievedAt: new Date('2025-08-21') }),
       );
 
-      await service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, {
+      await service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, {
         note: 'Auf dem Spielplatz',
         achievedAt: '2025-08-21',
       });
@@ -415,7 +450,9 @@ describe('MilestoneService', () => {
       prisma.milestone.findUnique.mockResolvedValue(makeMilestone());
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, { achievedAt: '2024-12-31' }),
+        service.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, {
+          achievedAt: '2024-12-31',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.milestone.update).not.toHaveBeenCalled();
     });
@@ -471,6 +508,18 @@ describe('MilestoneService', () => {
   });
 
   describe('addPhoto', () => {
+    it("rejects a CAREGIVER adding a photo to another member's milestone", async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findUnique.mockResolvedValue(
+        makeMilestone({ userId: OTHER_USER_ID, photos: [] }),
+      );
+
+      await expect(
+        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, CAREGIVER_ACTOR, makeUpload()),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.milestonePhoto.create).not.toHaveBeenCalled();
+    });
+
     it('writes the file before the row and assigns the next sort index (M-10)', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.milestone.findUnique.mockResolvedValue(
@@ -485,7 +534,13 @@ describe('MilestoneService', () => {
         makePhoto({ id: 'photo-3', sortIndex: 5, path: 'milestones/milestone-1-new.jpg' }),
       );
 
-      const result = await service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload());
+      const result = await service.addPhoto(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        MILESTONE_ID,
+        OWNER_ACTOR,
+        makeUpload(),
+      );
 
       expect(photoStorage.save).toHaveBeenCalledWith(
         MILESTONE_ID,
@@ -510,7 +565,7 @@ describe('MilestoneService', () => {
       prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [] }));
       prisma.milestonePhoto.create.mockResolvedValue(makePhoto({ sortIndex: 0 }));
 
-      await service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload());
+      await service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, makeUpload());
 
       expect(prisma.milestonePhoto.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ sortIndex: 0 }) }),
@@ -528,7 +583,7 @@ describe('MilestoneService', () => {
       );
 
       await expect(
-        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload()),
+        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, makeUpload()),
       ).rejects.toMatchObject({
         response: expect.objectContaining({ code: 'MILESTONE_PHOTO_LIMIT_REACHED' }),
       });
@@ -540,7 +595,13 @@ describe('MilestoneService', () => {
       prisma.milestone.findUnique.mockResolvedValue(makeMilestone({ photos: [] }));
 
       await expect(
-        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload('application/pdf')),
+        service.addPhoto(
+          HOUSEHOLD_ID,
+          CHILD_ID,
+          MILESTONE_ID,
+          OWNER_ACTOR,
+          makeUpload('application/pdf'),
+        ),
       ).rejects.toThrow('Unexpected photo mime type: application/pdf');
       expect(photoStorage.save).not.toHaveBeenCalled();
     });
@@ -549,7 +610,7 @@ describe('MilestoneService', () => {
       prisma.child.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, makeUpload()),
+        service.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, OWNER_ACTOR, makeUpload()),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

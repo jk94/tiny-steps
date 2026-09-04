@@ -16,7 +16,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
+import { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
 import { CreateHealthRecordDto } from './dto/create-health-record.dto';
 import { HealthRecordQueryDto } from './dto/health-record-query.dto';
 import { UpdateHealthRecordDto } from './dto/update-health-record.dto';
@@ -27,12 +30,13 @@ import type { HealthRecordSummary } from './health-record.service';
 /**
  * Medications and vaccinations for one child (roadmap Phase 7.3).
  *
- * No `@RequireRole` on any route: both OWNER and CO_PARENT may record, edit and
- * delete health records, exactly like the event, growth and milestone
- * controllers. A non-member already resolves to 404 in
- * `HouseholdMembershipGuard` before a role check would run, so no route here
- * can produce a 403. The Betreuer/Beobachter audit of every writing endpoint is
- * deliberately deferred to Phase 7.5 (see the phase-7 README).
+ * Role scoping (Phase 7.5), exactly like the event, growth and milestone
+ * controllers: reads are open to every member; recording and editing (including
+ * MED-5 "mark as done", which runs through the PATCH) need
+ * `ENTRY_WRITE_ROLES` — a CAREGIVER additionally only reaches records they
+ * recorded themselves, enforced per-row in `HealthRecordService` via
+ * `assertMayEditEntry`; deleting needs `FULL_WRITE_ROLES`. A non-member still
+ * resolves to 404 in `HouseholdMembershipGuard` before any role check runs.
  *
  * Named `health-records` rather than `health`: the app already serves a bare
  * `GET /health` liveness endpoint (`src/health.controller.ts`), and although
@@ -48,6 +52,7 @@ export class HealthRecordController {
   // (populated by JwtAuthGuard), and CsrfGuard is last — same ordering as
   // MilestoneController.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @UseFilters(HealthRecordValidationExceptionFilter)
   @Post()
   async create(
@@ -83,6 +88,7 @@ export class HealthRecordController {
   // `{ administeredAt: <now> }` through here rather than getting its own
   // endpoint, so the result stays a normal, editable record afterwards.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...ENTRY_WRITE_ROLES)
   @UseFilters(HealthRecordValidationExceptionFilter)
   @Patch(':recordId')
   async update(
@@ -90,11 +96,13 @@ export class HealthRecordController {
     @Param('childId') childId: string,
     @Param('recordId') recordId: string,
     @Body() dto: UpdateHealthRecordDto,
+    @HouseholdActor() actor: HouseholdActor,
   ): Promise<HealthRecordSummary> {
-    return this.healthRecordService.update(householdId, childId, recordId, dto);
+    return this.healthRecordService.update(householdId, childId, recordId, actor, dto);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @UseFilters(HealthRecordValidationExceptionFilter)
   @Delete(':recordId')
   @HttpCode(HttpStatus.NO_CONTENT)

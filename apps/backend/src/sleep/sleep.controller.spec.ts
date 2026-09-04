@@ -1,4 +1,7 @@
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HOUSEHOLD_ROLES_KEY } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
+import { HouseholdRole } from '../household/household-role.enum';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
 import { EventType } from '../event/event-type.enum';
 import { CreateSleepEventDto } from './dto/create-sleep-event.dto';
@@ -10,6 +13,11 @@ import type { SleepEventSummary } from './sleep.service';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const EVENT_ID = 'event-1';
+
+// Role scoping (Phase 7.5): the controller only forwards the injected actor,
+// so one representative value is enough here — the role rules themselves are
+// covered by the guard, service and e2e specs.
+const OWNER_ACTOR: HouseholdActor = { userId: 'user-1', role: HouseholdRole.OWNER };
 
 const user: AuthenticatedUser = {
   id: 'user-1',
@@ -39,6 +47,17 @@ const ROUTE_METHOD_NAMES = [
   'remove',
   'stop',
 ] as const;
+
+/** Route method → the exact role bundle its `@RequireRole` must declare. */
+const ROLE_SCOPED_ROUTES = [
+  ['create', ENTRY_WRITE_ROLES],
+  ['update', ENTRY_WRITE_ROLES],
+  ['stop', ENTRY_WRITE_ROLES],
+  ['remove', FULL_WRITE_ROLES],
+] as const;
+
+/** Routes any household member may call, so they carry no role metadata. */
+const READ_OPEN_ROUTES = ['list', 'getActiveTimer', 'getOne'] as const;
 
 describe('SleepController', () => {
   let sleepService: jest.Mocked<
@@ -112,9 +131,15 @@ describe('SleepController', () => {
       sleepService.update.mockResolvedValue(summary);
       const dto: UpdateSleepEventDto = { endedAt: '2026-01-01T20:30:00.000Z' };
 
-      const result = await controller.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      const result = await controller.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto, OWNER_ACTOR);
 
-      expect(sleepService.update).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      expect(sleepService.update).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        EVENT_ID,
+        OWNER_ACTOR,
+        dto,
+      );
       expect(result).toBe(summary);
     });
   });
@@ -134,28 +159,49 @@ describe('SleepController', () => {
       sleepService.stop.mockResolvedValue(summary);
       const dto = { clientTimestamp: '2026-01-01T21:00:00.000Z' };
 
-      const result = await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      const result = await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto, OWNER_ACTOR);
 
-      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      expect(sleepService.stop).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        EVENT_ID,
+        OWNER_ACTOR,
+        dto,
+      );
       expect(result).toBe(summary);
     });
 
     it('forwards an empty body for a plain online stop', async () => {
       sleepService.stop.mockResolvedValue(summary);
 
-      await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {});
+      await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {}, OWNER_ACTOR);
 
-      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {});
+      expect(sleepService.stop).toHaveBeenCalledWith(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        EVENT_ID,
+        OWNER_ACTOR,
+        {},
+      );
     });
   });
 
   describe('role requirements', () => {
-    // Deliberate deviation from ChildController: no route on this
-    // controller carries `@RequireRole` — both OWNER and CO_PARENT may
-    // create/edit/delete Sleep events (see the controller's own doc
-    // comment). Asserted explicitly here so a future reader doesn't wonder
-    // why there's no 403 test for this controller.
-    it.each(ROUTE_METHOD_NAMES)('%s has no required role', (methodName) => {
+    it('classifies every route as either role-scoped or read-open', () => {
+      // Catches a newly added route that nobody classified below.
+      expect([...ROLE_SCOPED_ROUTES.map(([name]) => name), ...READ_OPEN_ROUTES].sort()).toEqual(
+        [...ROUTE_METHOD_NAMES].sort(),
+      );
+    });
+
+    // Every writing route must carry an explicit role requirement (ROL-2) —
+    // `HouseholdMembershipGuard` rejects unannotated writes outright.
+    it.each(ROLE_SCOPED_ROUTES)('%s requires the expected roles', (methodName, expectedRoles) => {
+      const roles = Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, SleepController.prototype[methodName]);
+      expect(roles).toEqual([...expectedRoles]);
+    });
+
+    it.each(READ_OPEN_ROUTES)('leaves the read route %s open to any member', (methodName) => {
       const roles = Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, SleepController.prototype[methodName]);
       expect(roles).toBeUndefined();
     });

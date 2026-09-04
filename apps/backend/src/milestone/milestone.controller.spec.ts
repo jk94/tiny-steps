@@ -2,7 +2,10 @@ import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/types/authenticated-request';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { HOUSEHOLD_ROLES_KEY } from '../household/guards/require-role.decorator';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../household/household-permissions';
+import { HouseholdRole } from '../household/household-role.enum';
 import { MilestoneCategory } from './milestone-category.enum';
 import { MilestoneTemplate } from './milestone-template.enum';
 import { MilestoneController } from './milestone.controller';
@@ -12,6 +15,11 @@ import type { MilestoneSummary } from './milestone.service';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const MILESTONE_ID = 'milestone-1';
+
+// Role scoping (Phase 7.5): the controller only forwards the injected actor,
+// so one representative value is enough here — the role rules themselves are
+// covered by the guard, service and e2e specs.
+const OWNER_ACTOR: HouseholdActor = { userId: 'user-1', role: HouseholdRole.OWNER };
 
 const user: AuthenticatedUser = {
   id: 'user-1',
@@ -46,6 +54,23 @@ const ROUTE_METHOD_NAMES = [
   'getPhoto',
   'removePhoto',
 ] as const;
+
+/**
+ * Route method → the exact role bundle its `@RequireRole` must declare. Note
+ * the deliberate asymmetry: `addPhoto` is an entry write, `removePhoto` is a
+ * delete — a CAREGIVER may add to the family's record but never destroy part
+ * of it.
+ */
+const ROLE_SCOPED_ROUTES = [
+  ['create', ENTRY_WRITE_ROLES],
+  ['update', ENTRY_WRITE_ROLES],
+  ['addPhoto', ENTRY_WRITE_ROLES],
+  ['remove', FULL_WRITE_ROLES],
+  ['removePhoto', FULL_WRITE_ROLES],
+] as const;
+
+/** Routes any household member may call, so they carry no role metadata. */
+const READ_OPEN_ROUTES = ['list', 'getOne', 'getPhoto'] as const;
 
 /** The `@UseGuards(...)` classes Nest recorded for one controller method. */
 function guardsOf(methodName: (typeof ROUTE_METHOD_NAMES)[number]): unknown[] {
@@ -113,9 +138,15 @@ describe('MilestoneController', () => {
     milestoneService.update.mockResolvedValue(summary);
     const dto = { note: 'Auf dem Spielplatz' };
 
-    const result = await controller.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, dto);
+    const result = await controller.update(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, dto, OWNER_ACTOR);
 
-    expect(milestoneService.update).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, dto);
+    expect(milestoneService.update).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      MILESTONE_ID,
+      OWNER_ACTOR,
+      dto,
+    );
     expect(result).toBe(summary);
   });
 
@@ -131,12 +162,19 @@ describe('MilestoneController', () => {
     milestoneService.addPhoto.mockResolvedValue(photoRef);
     const upload = { mimetype: 'image/jpeg', buffer: Buffer.from('bytes') } as Express.Multer.File;
 
-    const result = await controller.addPhoto(HOUSEHOLD_ID, CHILD_ID, MILESTONE_ID, upload);
+    const result = await controller.addPhoto(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+      MILESTONE_ID,
+      upload,
+      OWNER_ACTOR,
+    );
 
     expect(milestoneService.addPhoto).toHaveBeenCalledWith(
       HOUSEHOLD_ID,
       CHILD_ID,
       MILESTONE_ID,
+      OWNER_ACTOR,
       upload,
     );
     expect(result).toBe(photoRef);
@@ -194,10 +232,22 @@ describe('MilestoneController', () => {
       },
     );
 
-    // Deliberate: no route requires a specific household role — both OWNER and
-    // CO_PARENT may record and manage milestones, exactly like the event and
-    // growth controllers. The Betreuer/Beobachter audit is Phase 7.5's job.
-    it.each(ROUTE_METHOD_NAMES)('%s has no required role', (methodName) => {
+    it('classifies every route as either role-scoped or read-open', () => {
+      // Catches a newly added route that nobody classified below.
+      expect([...ROLE_SCOPED_ROUTES.map(([name]) => name), ...READ_OPEN_ROUTES].sort()).toEqual(
+        [...ROUTE_METHOD_NAMES].sort(),
+      );
+    });
+
+    // Every writing route must carry an explicit role requirement (ROL-2) —
+    // `HouseholdMembershipGuard` rejects unannotated writes outright.
+    it.each(ROLE_SCOPED_ROUTES)('%s requires the expected roles', (methodName, expectedRoles) => {
+      expect(
+        Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, MilestoneController.prototype[methodName]),
+      ).toEqual([...expectedRoles]);
+    });
+
+    it.each(READ_OPEN_ROUTES)('leaves the read route %s open to any member', (methodName) => {
       expect(
         Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, MilestoneController.prototype[methodName]),
       ).toBeUndefined();

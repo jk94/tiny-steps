@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
+import { HouseholdRole } from '../household/household-role.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
 import { EventConflictException } from '../event/event-conflict.exception';
@@ -10,6 +17,12 @@ import { SleepService } from './sleep.service';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const USER_ID = 'user-1';
+const OTHER_USER_ID = 'user-2';
+
+// Role scoping (Phase 7.5): most tests act as an OWNER, who may edit anything;
+// CAREGIVER_ACTOR exercises the own-entries-only rule.
+const OWNER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.OWNER };
+const CAREGIVER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.CAREGIVER };
 const EVENT_ID = 'event-1';
 
 function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
@@ -256,6 +269,30 @@ describe('SleepService', () => {
   });
 
   describe('update', () => {
+    it('lets a CAREGIVER edit their own event', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findUnique.mockResolvedValue(makeEvent({ userId: USER_ID }));
+      prisma.event.update.mockResolvedValue(makeEvent());
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR, {
+          occurredAt: '2026-01-01T20:00:00.000Z',
+        }),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a CAREGIVER editing another member's event", async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findUnique.mockResolvedValue(makeEvent({ userId: OTHER_USER_ID }));
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR, {
+          occurredAt: '2026-01-01T20:00:00.000Z',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.event.update).not.toHaveBeenCalled();
+    });
+
     it('merges partial fields onto the existing row and persists them', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       const existing = makeEvent({
@@ -271,7 +308,7 @@ describe('SleepService', () => {
       );
 
       const dto: UpdateSleepEventDto = { endedAt: '2026-01-02T06:30:00.000Z' };
-      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, dto);
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -295,7 +332,7 @@ describe('SleepService', () => {
       prisma.event.findUnique.mockResolvedValue(existing);
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           endedAt: '2026-01-01T20:00:00.000Z',
         }),
       ).rejects.toThrow(BadRequestException);
@@ -311,7 +348,7 @@ describe('SleepService', () => {
       prisma.event.findUnique.mockResolvedValue(existing);
 
       await expect(
-        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           startedAt: '2026-01-01T20:30:00.000Z',
         }),
       ).rejects.toThrow(BadRequestException);
@@ -321,9 +358,9 @@ describe('SleepService', () => {
     it('throws NotFoundException when scoped to a different child/household', async () => {
       prisma.child.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {})).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {}),
+      ).rejects.toThrow(NotFoundException);
     });
 
     describe('Last-Write-Wins (clientTimestamp)', () => {
@@ -333,7 +370,7 @@ describe('SleepService', () => {
         prisma.event.findUnique.mockResolvedValue(existing);
         prisma.event.update.mockResolvedValue(existing);
 
-        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           occurredAt: '2026-01-01T09:00:00.000Z',
         });
 
@@ -346,7 +383,7 @@ describe('SleepService', () => {
         prisma.event.findUnique.mockResolvedValue(existing);
         prisma.event.update.mockResolvedValue(existing);
 
-        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           occurredAt: '2026-01-01T09:00:00.000Z',
           clientTimestamp: '2026-01-01T11:00:00.000Z',
         });
@@ -361,7 +398,7 @@ describe('SleepService', () => {
         );
 
         await expect(
-          service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
             occurredAt: '2026-01-01T09:00:00.000Z',
             clientTimestamp: '2026-01-01T11:00:00.000Z',
           }),
@@ -372,6 +409,22 @@ describe('SleepService', () => {
   });
 
   describe('stop', () => {
+    it("rejects a CAREGIVER stopping another member's timer", async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findUnique.mockResolvedValue(
+        makeEvent({
+          userId: OTHER_USER_ID,
+          startedAt: new Date('2026-01-01T20:00:00.000Z'),
+          endedAt: null,
+        }),
+      );
+
+      await expect(
+        service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.event.update).not.toHaveBeenCalled();
+    });
+
     it('sets endedAt to now for a running timer', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       const running = makeEvent({
@@ -386,7 +439,7 @@ describe('SleepService', () => {
         }),
       );
 
-      const result = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+      const result = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -413,7 +466,7 @@ describe('SleepService', () => {
         }),
       );
 
-      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID).then(
+      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR).then(
         () => undefined,
         (thrown: unknown) => thrown,
       );
@@ -427,7 +480,7 @@ describe('SleepService', () => {
     it('throws NotFoundException when scoped to a different child/household', async () => {
       prisma.child.findUnique.mockResolvedValue(null);
 
-      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
+      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -446,7 +499,7 @@ describe('SleepService', () => {
         // A sleep-timer stop captured offline at 22:00 but resent hours later
         // must record 22:00 as endedAt — otherwise the night's sleep duration
         // is inflated by the whole offline gap (the core bug this fix closes).
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           clientTimestamp: '2026-01-01T22:00:00.000Z',
         });
 
@@ -466,7 +519,7 @@ describe('SleepService', () => {
         prisma.event.update.mockResolvedValue(running);
 
         const before = Date.now();
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
         const after = Date.now();
 
         const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
@@ -487,7 +540,7 @@ describe('SleepService', () => {
         prisma.event.findUnique.mockResolvedValue(running);
         prisma.event.update.mockResolvedValue(running);
 
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           clientTimestamp: '2026-01-01T21:00:00.000Z',
         });
 
@@ -505,7 +558,7 @@ describe('SleepService', () => {
         );
 
         await expect(
-          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
             clientTimestamp: '2026-01-01T21:00:00.000Z',
           }),
         ).rejects.toThrow(EventConflictException);

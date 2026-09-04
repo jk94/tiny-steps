@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Child, Event, Prisma } from '@prisma/client';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
 import {
@@ -172,6 +174,7 @@ export class SleepService {
     householdId: string,
     childId: string,
     eventId: string,
+    actor: HouseholdActor,
     dto: UpdateSleepEventDto,
   ): Promise<SleepEventSummary> {
     // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
@@ -181,6 +184,10 @@ export class SleepService {
     // check-then-act is serialized against other transactions — see ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findSleepEventOrThrow(householdId, childId, eventId, tx);
+
+      // A CAREGIVER may only edit what they recorded themselves — a check the
+      // route-level role annotation cannot make, since it needs the row.
+      assertMayEditEntry(actor, existing.userId);
 
       // Last-Write-Wins: a buffered offline edit older than the current server
       // row loses — see ADR-0011. Checked before any write.
@@ -238,12 +245,17 @@ export class SleepService {
     householdId: string,
     childId: string,
     eventId: string,
+    actor: HouseholdActor,
     dto: StopEventDto = {},
   ): Promise<SleepEventSummary> {
     // Same atomic read-check-write as update() — see its doc comment and
     // ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findSleepEventOrThrow(householdId, childId, eventId, tx);
+
+      // Stopping a timer mutates the entry, so it follows the same
+      // own-entries-only rule as update().
+      assertMayEditEntry(actor, existing.userId);
 
       // No "wrong type" guard needed here, unlike FeedingService.stop — every
       // Sleep event is timer-capable, there's no non-timer sub-type to reject.

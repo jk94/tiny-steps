@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Child, Event, FeedingDetail, Prisma } from '@prisma/client';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
 import {
@@ -231,6 +233,7 @@ export class FeedingService {
     householdId: string,
     childId: string,
     eventId: string,
+    actor: HouseholdActor,
     dto: UpdateFeedingEventDto,
   ): Promise<FeedingEventSummary> {
     // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
@@ -240,6 +243,10 @@ export class FeedingService {
     // check-then-act is serialized against other transactions — see ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId, tx);
+
+      // A CAREGIVER may only edit what they recorded themselves — a check the
+      // route-level role annotation cannot make, since it needs the row.
+      assertMayEditEntry(actor, existing.userId);
 
       // Last-Write-Wins: a buffered offline edit whose submit time predates the
       // current server row loses to whoever wrote more recently — see ADR-0011.
@@ -323,12 +330,18 @@ export class FeedingService {
     householdId: string,
     childId: string,
     eventId: string,
+    actor: HouseholdActor,
     dto: StopEventDto = {},
   ): Promise<FeedingEventSummary> {
     // Same atomic read-check-write as update() — see its doc comment and
     // ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findFeedingEventOrThrow(householdId, childId, eventId, tx);
+
+      // Stopping a timer mutates the entry, so it follows the same
+      // own-entries-only rule as update().
+      assertMayEditEntry(actor, existing.userId);
+
       const feedingType = toFeedingType(existing.feedingDetail!.feedingType);
 
       if (feedingType !== FeedingType.BREAST) {

@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Child, HealthRecord, Prisma } from '@prisma/client';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
 import { MAX_UTC_OFFSET_MS } from '../common/validators/is-not-future-date.validator';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHealthRecordDto } from './dto/create-health-record.dto';
 import { HealthRecordQueryDto } from './dto/health-record-query.dto';
@@ -150,9 +152,15 @@ export class HealthRecordService {
     householdId: string,
     childId: string,
     recordId: string,
+    actor: HouseholdActor,
     dto: UpdateHealthRecordDto,
   ): Promise<HealthRecordSummary> {
     const { record, child } = await this.findRecordOrThrow(householdId, childId, recordId);
+
+    // A CAREGIVER may only edit what they recorded themselves — a check the
+    // route-level role annotation cannot make, since it needs the row. This
+    // also gates "mark as done" (MED-5), which runs through this same PATCH.
+    assertMayEditEntry(actor, record.userId);
 
     const next: HealthRecordState = {
       administeredAt: mergeDate(dto.administeredAt, record.administeredAt),
