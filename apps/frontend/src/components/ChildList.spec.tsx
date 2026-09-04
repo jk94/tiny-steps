@@ -6,12 +6,13 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { ChildList } from './ChildList';
 import * as childApi from '../api/child-api';
 import { queryClient } from '../lib/query-client';
+import type { HouseholdRole } from '../lib/householdPermissions';
 
 vi.mock('../api/child-api');
 
 const mockedChildApi = vi.mocked(childApi);
 
-function renderChildList(role: 'OWNER' | 'CO_PARENT') {
+function renderChildList(role: HouseholdRole) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>

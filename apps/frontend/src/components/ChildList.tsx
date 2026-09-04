@@ -6,10 +6,11 @@ import { ChildPhoto } from './ChildPhoto';
 import { LoadingIndicator } from './LoadingIndicator';
 import { Card, EmptyState } from './ui';
 import { cn } from '../lib/cn';
+import type { HouseholdRole } from '../lib/householdPermissions';
 
 export interface ChildListProps {
   householdId: string;
-  role: 'OWNER' | 'CO_PARENT';
+  role: HouseholdRole;
 }
 
 const EVENT_TYPE_PILL = 'bg-feeding text-feeding-foreground';

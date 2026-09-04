@@ -37,8 +37,20 @@ describe('MemberList', () => {
 
   it('renders every member by email once loaded', async () => {
     mockedHouseholdApi.listHouseholdMembers.mockResolvedValueOnce([
-      { userId: 'u1', email: 'alex@example.com' },
-      { userId: 'u2', email: 'sam@example.com' },
+      {
+        userId: 'u1',
+        email: 'alex@example.com',
+        name: null,
+        role: 'OWNER',
+        joinedAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        userId: 'u2',
+        email: 'sam@example.com',
+        name: null,
+        role: 'CO_PARENT',
+        joinedAt: '2026-01-01T00:00:00.000Z',
+      },
     ]);
 
     renderMemberList();

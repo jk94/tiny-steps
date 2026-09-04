@@ -6,12 +6,13 @@ import { InviteGenerator } from './InviteGenerator';
 import * as householdApi from '../api/household-api';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
+import type { HouseholdRole } from '../lib/householdPermissions';
 
 vi.mock('../api/household-api');
 
 const mockedHouseholdApi = vi.mocked(householdApi);
 
-function renderInviteGenerator(role: 'OWNER' | 'CO_PARENT') {
+function renderInviteGenerator(role: HouseholdRole) {
   return render(
     <QueryClientProvider client={queryClient}>
       <InviteGenerator householdId="h1" role={role} />

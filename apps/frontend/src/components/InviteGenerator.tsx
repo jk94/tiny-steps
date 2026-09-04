@@ -5,10 +5,11 @@ import { createInvite } from '../api/household-api';
 import { ErrorMessage } from './ErrorMessage';
 import { Button, Card, Input } from './ui';
 import { mapHouseholdError } from '../household/mapHouseholdError';
+import type { HouseholdRole } from '../lib/householdPermissions';
 
 export interface InviteGeneratorProps {
   householdId: string;
-  role: 'OWNER' | 'CO_PARENT';
+  role: HouseholdRole;
 }
 
 /**

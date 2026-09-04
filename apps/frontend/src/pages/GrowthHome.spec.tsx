@@ -109,7 +109,13 @@ describe('GrowthHome', () => {
     mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([makeMeasurement()]);
     mockedGrowthApi.fetchGrowthReference.mockResolvedValue(availableReference);
     mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([
-      { userId: 'u1', email: 'parent@example.com' },
+      {
+        userId: 'u1',
+        email: 'parent@example.com',
+        name: null,
+        role: 'OWNER',
+        joinedAt: '2026-01-01T00:00:00.000Z',
+      },
     ]);
   });
 
