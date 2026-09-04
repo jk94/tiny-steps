@@ -322,19 +322,74 @@ describe('Household roles (e2e)', () => {
       expect(response.body).toMatchObject({ code: 'NOT_ENTRY_OWNER' });
     });
 
-    it("refuses a CAREGIVER stopping another member's sleep timer", async () => {
+    it("lets a CAREGIVER stop another member's sleep timer (shift hand-off)", async () => {
       const f = await seedHousehold('stop-timer');
       const started = await post(f.owner, `${childScope(f)}/sleep-events`)
         .send({})
         .expect(201);
 
+      // Stopping counts as recording, not as editing a foreign entry: leaving
+      // the timer running until whoever started it returns would corrupt the
+      // recorded duration.
+      // 201, not 200: `/stop` is a POST and carries no explicit `@HttpCode`.
       await post(f.caregiver, `${childScope(f)}/sleep-events/${started.body.id}/stop`)
         .send({})
-        .expect(403);
-      // 201, not 200: `/stop` is a POST and carries no explicit `@HttpCode`.
-      await post(f.coParent, `${childScope(f)}/sleep-events/${started.body.id}/stop`)
+        .expect(201);
+    });
+
+    it('still refuses an OBSERVER stopping a timer', async () => {
+      const f = await seedHousehold('stop-timer-observer');
+      const started = await post(f.owner, `${childScope(f)}/sleep-events`)
         .send({})
         .expect(201);
+
+      await post(f.observer, `${childScope(f)}/sleep-events/${started.body.id}/stop`)
+        .send({})
+        .expect(403);
+      await post(f.outsider, `${childScope(f)}/sleep-events/${started.body.id}/stop`)
+        .send({})
+        .expect(404);
+    });
+  });
+
+  describe('marking a planned health record as done (MED-5)', () => {
+    /** A planned vaccination recorded by the owner, awaiting administration. */
+    async function planVaccination(f: Fixture): Promise<string> {
+      const planned = await post(f.owner, `${childScope(f)}/health-records`)
+        .send({ kind: 'VACCINATION', name: '6-fach-Impfung', dueAt: '2025-09-01' })
+        .expect(201);
+      return planned.body.id as string;
+    }
+
+    it("lets a CAREGIVER tick off another member's planned entry", async () => {
+      const f = await seedHousehold('mark-done');
+      const recordId = await planVaccination(f);
+
+      await patch(f.caregiver, `${childScope(f)}/health-records/${recordId}`)
+        .send({ administeredAt: ADMINISTERED_AT })
+        .expect(200);
+    });
+
+    it("refuses a CAREGIVER changing any other field of another member's entry", async () => {
+      const f = await seedHousehold('mark-done-scope');
+      const recordId = await planVaccination(f);
+
+      await patch(f.caregiver, `${childScope(f)}/health-records/${recordId}`)
+        .send({ name: 'Renamed' })
+        .expect(403);
+      // Not even piggybacked onto the mark-as-done itself.
+      await patch(f.caregiver, `${childScope(f)}/health-records/${recordId}`)
+        .send({ administeredAt: ADMINISTERED_AT, note: 'sneaky' })
+        .expect(403);
+    });
+
+    it('still refuses an OBSERVER', async () => {
+      const f = await seedHousehold('mark-done-observer');
+      const recordId = await planVaccination(f);
+
+      await patch(f.observer, `${childScope(f)}/health-records/${recordId}`)
+        .send({ administeredAt: ADMINISTERED_AT })
+        .expect(403);
     });
   });
 
@@ -553,18 +608,18 @@ describe('Household roles (e2e)', () => {
     });
 
     /**
-     * ROL-6 — "the last owner can be neither demoted nor removed" holds over
-     * HTTP as a *structural* property rather than as a reachable 409:
+     * ROL-6 — "the last owner can be neither demoted nor removed" is enforced
+     * by `assertLastOwnerSurvives`, which re-counts owners *inside* the same
+     * transaction as the demotion/removal it guards. That is what makes it
+     * hold under concurrency: two owners demoting each other simultaneously
+     * would otherwise both read two owners and both commit.
      *
-     * - only an OWNER may call these routes (`@RequireRole(...OWNER_ROLES)`);
-     * - nobody may target themselves (ROL-7);
-     * - so whenever the target is an OWNER, the caller is a second one, and
-     *   the household can never drop below one owner.
-     *
-     * `HouseholdService.assertNotLastOwner` is therefore defence in depth, and
-     * is covered directly in `household.service.spec.ts` where the collaborator
-     * can be driven into the state the API cannot reach. What the tests below
-     * assert is the guarantee itself: ownership survives every legal sequence.
+     * Reaching the resulting 409 over HTTP takes a race these sequential tests
+     * cannot stage — the transactional guard is covered directly in
+     * `household.service.spec.ts` (including the count-before-write ordering).
+     * What the tests below assert is the user-visible guarantee: ownership
+     * survives every legal single-request sequence, and a sole owner has no
+     * route to strip the household of its last one.
      */
     it('always leaves the household with at least one owner (ROL-6)', async () => {
       const f = await seedHousehold('last-owner');

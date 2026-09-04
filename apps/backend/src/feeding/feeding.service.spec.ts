@@ -639,27 +639,28 @@ describe('FeedingService', () => {
   });
 
   describe('stop', () => {
-    it("rejects a CAREGIVER stopping another member's timer", async () => {
+    it("lets any recording role stop another member's running timer", async () => {
+      // Shift hand-off: whoever is with the child when the feed ends stops it,
+      // even though someone else started it. Leaving it running would corrupt
+      // the recorded duration — see the doc comment on `stop`.
+      const running = makeEvent({
+        userId: OTHER_USER_ID,
+        startedAt: new Date('2026-01-01T10:00:00.000Z'),
+        endedAt: null,
+        feedingDetail: {
+          eventId: EVENT_ID,
+          feedingType: FeedingType.BREAST,
+          side: FeedingSide.LEFT,
+          amountMl: null,
+          note: null,
+        },
+      });
       prisma.child.findUnique.mockResolvedValue(makeChild());
-      prisma.event.findUnique.mockResolvedValue(
-        makeEvent({
-          userId: OTHER_USER_ID,
-          startedAt: new Date('2026-01-01T10:00:00.000Z'),
-          endedAt: null,
-          feedingDetail: {
-            eventId: EVENT_ID,
-            feedingType: FeedingType.BREAST,
-            side: FeedingSide.LEFT,
-            amountMl: null,
-            note: null,
-          },
-        }),
-      );
+      prisma.event.findUnique.mockResolvedValue(running);
+      prisma.event.update.mockResolvedValue(running);
 
-      await expect(
-        service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-      expect(prisma.event.update).not.toHaveBeenCalled();
+      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).resolves.toBeDefined();
+      expect(prisma.event.update).toHaveBeenCalled();
     });
 
     it('sets endedAt to now for a running BREAST timer', async () => {
@@ -684,7 +685,7 @@ describe('FeedingService', () => {
         }),
       );
 
-      const result = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
+      const result = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -719,7 +720,7 @@ describe('FeedingService', () => {
         }),
       );
 
-      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR).then(
+      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID).then(
         () => undefined,
         (thrown: unknown) => thrown,
       );
@@ -734,7 +735,7 @@ describe('FeedingService', () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.event.findUnique.mockResolvedValue(makeEvent());
 
-      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR)).rejects.toThrow(
+      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         ConflictException,
       );
     });
@@ -742,7 +743,7 @@ describe('FeedingService', () => {
     it('throws NotFoundException when scoped to a different child/household', async () => {
       prisma.child.findUnique.mockResolvedValue(null);
 
-      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR)).rejects.toThrow(
+      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -771,7 +772,7 @@ describe('FeedingService', () => {
 
         // A stop captured offline at 10:15 but only resent later must record
         // 10:15 as endedAt — using `new Date()` here would inflate the duration.
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
           clientTimestamp: '2026-01-01T10:15:00.000Z',
         });
 
@@ -789,7 +790,7 @@ describe('FeedingService', () => {
         prisma.event.update.mockResolvedValue(running);
 
         const before = Date.now();
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
         const after = Date.now();
 
         const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
@@ -821,7 +822,7 @@ describe('FeedingService', () => {
         prisma.event.findUnique.mockResolvedValue(running);
         prisma.event.update.mockResolvedValue(running);
 
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
 
         expect(prisma.event.update).toHaveBeenCalled();
       });
@@ -832,7 +833,7 @@ describe('FeedingService', () => {
         prisma.event.findUnique.mockResolvedValue(running);
         prisma.event.update.mockResolvedValue(running);
 
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
           clientTimestamp: '2026-01-01T11:00:00.000Z',
         });
 
@@ -846,7 +847,7 @@ describe('FeedingService', () => {
         );
 
         await expect(
-          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
             clientTimestamp: '2026-01-01T11:00:00.000Z',
           }),
         ).rejects.toThrow(EventConflictException);

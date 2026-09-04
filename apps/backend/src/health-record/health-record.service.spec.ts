@@ -322,13 +322,77 @@ describe('HealthRecordService', () => {
       ).resolves.toBeDefined();
     });
 
-    it("rejects a CAREGIVER editing another member's record", async () => {
-      prisma.healthRecord.findUnique.mockResolvedValue(makeRecord({ userId: OTHER_USER_ID }));
+    it("lets a CAREGIVER mark another member's planned entry as done (MED-5 hand-off)", async () => {
+      // Whoever administers the dose is usually not whoever planned it, so
+      // ticking it off must survive a shift change.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
 
       await expect(
         service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
           administeredAt: ADMINISTERED_AT,
         }),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a CAREGIVER changing any other field of another member's record", async () => {
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, { name: 'Renamed' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a CAREGIVER smuggling another field alongside the mark-as-done', async () => {
+      // The exception is exactly "set administeredAt and nothing else" — a
+      // piggybacked edit must not ride along on it.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
+          administeredAt: ADMINISTERED_AT,
+          note: 'sneaky',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a CAREGIVER re-dating an administration someone else already logged', async () => {
+      // Not a completion but a rewrite of a foreign record: the stored
+      // `administeredAt` is already set.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: new Date(ADMINISTERED_AT) }),
+      );
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, RECORD_ID, CAREGIVER_ACTOR, {
+          administeredAt: ADMINISTERED_AT,
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.healthRecord.update).not.toHaveBeenCalled();
+    });
+
+    it('does not let an OBSERVER mark a foreign entry as done', async () => {
+      // Defensive: the route guard already rejects OBSERVER, but the mark-done
+      // exception must not be the hole that lets a read-only role write.
+      prisma.healthRecord.findUnique.mockResolvedValue(
+        makeRecord({ userId: OTHER_USER_ID, administeredAt: null }),
+      );
+
+      await expect(
+        service.update(
+          HOUSEHOLD_ID,
+          CHILD_ID,
+          RECORD_ID,
+          { userId: USER_ID, role: HouseholdRole.OBSERVER },
+          { administeredAt: ADMINISTERED_AT },
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.healthRecord.update).not.toHaveBeenCalled();
     });

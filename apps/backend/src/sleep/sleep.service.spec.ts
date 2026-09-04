@@ -409,20 +409,21 @@ describe('SleepService', () => {
   });
 
   describe('stop', () => {
-    it("rejects a CAREGIVER stopping another member's timer", async () => {
+    it("lets any recording role stop another member's running timer", async () => {
+      // Shift hand-off: whoever is with the child when they wake stops the
+      // timer, even though someone else started it — see the doc comment on
+      // `stop`.
+      const running = makeEvent({
+        userId: OTHER_USER_ID,
+        startedAt: new Date('2026-01-01T20:00:00.000Z'),
+        endedAt: null,
+      });
       prisma.child.findUnique.mockResolvedValue(makeChild());
-      prisma.event.findUnique.mockResolvedValue(
-        makeEvent({
-          userId: OTHER_USER_ID,
-          startedAt: new Date('2026-01-01T20:00:00.000Z'),
-          endedAt: null,
-        }),
-      );
+      prisma.event.findUnique.mockResolvedValue(running);
+      prisma.event.update.mockResolvedValue(running);
 
-      await expect(
-        service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-      expect(prisma.event.update).not.toHaveBeenCalled();
+      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).resolves.toBeDefined();
+      expect(prisma.event.update).toHaveBeenCalled();
     });
 
     it('sets endedAt to now for a running timer', async () => {
@@ -439,7 +440,7 @@ describe('SleepService', () => {
         }),
       );
 
-      const result = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
+      const result = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -466,7 +467,7 @@ describe('SleepService', () => {
         }),
       );
 
-      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR).then(
+      const error = await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID).then(
         () => undefined,
         (thrown: unknown) => thrown,
       );
@@ -480,7 +481,7 @@ describe('SleepService', () => {
     it('throws NotFoundException when scoped to a different child/household', async () => {
       prisma.child.findUnique.mockResolvedValue(null);
 
-      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR)).rejects.toThrow(
+      await expect(service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -499,7 +500,7 @@ describe('SleepService', () => {
         // A sleep-timer stop captured offline at 22:00 but resent hours later
         // must record 22:00 as endedAt — otherwise the night's sleep duration
         // is inflated by the whole offline gap (the core bug this fix closes).
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
           clientTimestamp: '2026-01-01T22:00:00.000Z',
         });
 
@@ -519,7 +520,7 @@ describe('SleepService', () => {
         prisma.event.update.mockResolvedValue(running);
 
         const before = Date.now();
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR);
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID);
         const after = Date.now();
 
         const endedAt = prisma.event.update.mock.calls[0][0].data.endedAt as Date;
@@ -540,7 +541,7 @@ describe('SleepService', () => {
         prisma.event.findUnique.mockResolvedValue(running);
         prisma.event.update.mockResolvedValue(running);
 
-        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+        await service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
           clientTimestamp: '2026-01-01T21:00:00.000Z',
         });
 
@@ -558,7 +559,7 @@ describe('SleepService', () => {
         );
 
         await expect(
-          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+          service.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
             clientTimestamp: '2026-01-01T21:00:00.000Z',
           }),
         ).rejects.toThrow(EventConflictException);

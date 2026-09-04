@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Child, HealthRecord, Prisma } from '@prisma/client';
-import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
+import { assertMayEditEntry, mayRecordEntries } from '../common/authorization/assert-entry-owner';
 import { MAX_UTC_OFFSET_MS } from '../common/validators/is-not-future-date.validator';
 import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
@@ -158,9 +158,18 @@ export class HealthRecordService {
     const { record, child } = await this.findRecordOrThrow(householdId, childId, recordId);
 
     // A CAREGIVER may only edit what they recorded themselves — a check the
-    // route-level role annotation cannot make, since it needs the row. This
-    // also gates "mark as done" (MED-5), which runs through this same PATCH.
-    assertMayEditEntry(actor, record.userId);
+    // route-level role annotation cannot make, since it needs the row.
+    //
+    // One deliberate exception, because MED-5 "mark as done" shares this PATCH:
+    // whoever actually gives the medication is often not whoever planned the
+    // appointment, so a caregiver has to be able to tick off someone else's
+    // planned entry after a shift hand-off. That is *recording* an
+    // administration, not editing a foreign record — so it is allowed only when
+    // the patch does nothing else (see `isMarkAsDoneOnly`), which keeps every
+    // other field of a foreign record off-limits.
+    if (!(isMarkAsDoneOnly(record, dto) && mayRecordEntries(actor))) {
+      assertMayEditEntry(actor, record.userId);
+    }
 
     const next: HealthRecordState = {
       administeredAt: mergeDate(dto.administeredAt, record.administeredAt),
@@ -251,6 +260,39 @@ function merge<T>(patched: T | null | undefined, stored: T | null): T | null {
 function mergeDate(patched: string | null | undefined, stored: Date | null): Date | null {
   if (patched === undefined) return stored;
   return patched === null ? null : new Date(patched);
+}
+
+/**
+ * Every editable field of `UpdateHealthRecordDto` *except* `administeredAt`.
+ * Listed explicitly rather than derived, so adding a field to the DTO without
+ * deciding whether a caregiver may set it on a foreign record is a compile
+ * error here rather than a silent widening of the mark-as-done exception.
+ */
+const NON_MARK_DONE_FIELDS: readonly (keyof Omit<UpdateHealthRecordDto, 'administeredAt'>)[] = [
+  'name',
+  'dueAt',
+  'doseAmount',
+  'doseUnit',
+  'vaccineBatch',
+  'note',
+  'reminderEnabled',
+];
+
+/**
+ * True when this PATCH is purely MED-5 "mark as done": it sets a real
+ * `administeredAt` on a record that had none, and touches nothing else.
+ *
+ * Both halves matter. Requiring the stored value to be `null` keeps it a
+ * *completion* rather than a re-dating of an administration someone else
+ * already logged; requiring every other key to be absent keeps the caregiver
+ * exception from becoming a general edit permission on foreign records.
+ */
+function isMarkAsDoneOnly(record: HealthRecord, dto: UpdateHealthRecordDto): boolean {
+  const setsAdministeredAt = dto.administeredAt !== undefined && dto.administeredAt !== null;
+  if (!setsAdministeredAt || record.administeredAt !== null) {
+    return false;
+  }
+  return NON_MARK_DONE_FIELDS.every((field) => dto[field] === undefined);
 }
 
 /** True when the PATCH actually moves the due date to a different instant. */

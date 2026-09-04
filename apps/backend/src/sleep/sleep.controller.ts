@@ -107,6 +107,8 @@ export class SleepController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  // No `@HouseholdActor()`: stopping a timer is recording, not editing
+  // someone else's entry, so it is role-gated only — see `SleepService.stop`.
   @RequireRole(...ENTRY_WRITE_ROLES)
   @Post(':eventId/stop')
   async stop(
@@ -114,8 +116,7 @@ export class SleepController {
     @Param('childId') childId: string,
     @Param('eventId') eventId: string,
     @Body() dto: StopEventDto,
-    @HouseholdActor() actor: HouseholdActor,
   ): Promise<SleepEventSummary> {
-    return this.sleepService.stop(householdId, childId, eventId, actor, dto);
+    return this.sleepService.stop(householdId, childId, eventId, dto);
   }
 }

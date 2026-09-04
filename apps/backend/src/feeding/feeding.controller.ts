@@ -107,6 +107,8 @@ export class FeedingController {
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  // No `@HouseholdActor()`: stopping a timer is recording, not editing
+  // someone else's entry, so it is role-gated only — see `FeedingService.stop`.
   @RequireRole(...ENTRY_WRITE_ROLES)
   @Post(':eventId/stop')
   async stop(
@@ -114,8 +116,7 @@ export class FeedingController {
     @Param('childId') childId: string,
     @Param('eventId') eventId: string,
     @Body() dto: StopEventDto,
-    @HouseholdActor() actor: HouseholdActor,
   ): Promise<FeedingEventSummary> {
-    return this.feedingService.stop(householdId, childId, eventId, actor, dto);
+    return this.feedingService.stop(householdId, childId, eventId, dto);
   }
 }

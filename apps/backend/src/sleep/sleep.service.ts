@@ -245,17 +245,20 @@ export class SleepService {
     householdId: string,
     childId: string,
     eventId: string,
-    actor: HouseholdActor,
     dto: StopEventDto = {},
   ): Promise<SleepEventSummary> {
+    // Deliberately no `assertMayEditEntry` here, unlike update(): stopping a
+    // running timer is part of *recording* the sleep, not editing someone
+    // else's entry. Whoever is with the child when they wake has to be able to
+    // stop it, even if a different member started it — that hand-off is the
+    // normal case across a shift change, and refusing it would leave a timer
+    // running for hours and corrupt the recorded duration. The route's
+    // `@RequireRole(...ENTRY_WRITE_ROLES)` still keeps OBSERVER out.
+    //
     // Same atomic read-check-write as update() — see its doc comment and
     // ADR-0011.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findSleepEventOrThrow(householdId, childId, eventId, tx);
-
-      // Stopping a timer mutates the entry, so it follows the same
-      // own-entries-only rule as update().
-      assertMayEditEntry(actor, existing.userId);
 
       // No "wrong type" guard needed here, unlike FeedingService.stop — every
       // Sleep event is timer-capable, there's no non-timer sub-type to reject.

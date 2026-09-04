@@ -12,6 +12,17 @@ export function mayEditAnyEntry(actor: HouseholdActor): boolean {
 }
 
 /**
+ * May this actor record entries at all? True for OWNER/CO_PARENT/CAREGIVER,
+ * false for OBSERVER. The route guard normally answers this already; the
+ * predicate exists so a service can widen `assertMayEditEntry` for a specific
+ * *recording*-flavoured mutation (see `HealthRecordService.update`'s mark-as-
+ * done hand-off) without accidentally opening it to read-only members too.
+ */
+export function mayRecordEntries(actor: HouseholdActor): boolean {
+  return hasRole(ENTRY_WRITE_ROLES, actor.role);
+}
+
+/**
  * Ownership check for editing an existing entry (event, growth measurement,
  * milestone, health record).
  *

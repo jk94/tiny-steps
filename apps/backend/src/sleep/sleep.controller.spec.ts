@@ -159,30 +159,18 @@ describe('SleepController', () => {
       sleepService.stop.mockResolvedValue(summary);
       const dto = { clientTimestamp: '2026-01-01T21:00:00.000Z' };
 
-      const result = await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto, OWNER_ACTOR);
+      const result = await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
 
-      expect(sleepService.stop).toHaveBeenCalledWith(
-        HOUSEHOLD_ID,
-        CHILD_ID,
-        EVENT_ID,
-        OWNER_ACTOR,
-        dto,
-      );
+      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
       expect(result).toBe(summary);
     });
 
     it('forwards an empty body for a plain online stop', async () => {
       sleepService.stop.mockResolvedValue(summary);
 
-      await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {}, OWNER_ACTOR);
+      await controller.stop(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {});
 
-      expect(sleepService.stop).toHaveBeenCalledWith(
-        HOUSEHOLD_ID,
-        CHILD_ID,
-        EVENT_ID,
-        OWNER_ACTOR,
-        {},
-      );
+      expect(sleepService.stop).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {});
     });
   });
 
