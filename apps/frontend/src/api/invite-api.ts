@@ -17,7 +17,11 @@ export interface InvitePreview {
 
 export interface AcceptedInvite {
   household: { id: string; name: string };
-  /** The role the invite granted — any of the four, since Phase 7.5. */
+  /**
+   * The role the invite granted: any invitable role (`INVITABLE_ROLES`) —
+   * never OWNER, which the backend's `CreateInviteDto` refuses, since
+   * ownership is only ever handed over on an existing member.
+   */
   role: HouseholdRole;
 }
 
