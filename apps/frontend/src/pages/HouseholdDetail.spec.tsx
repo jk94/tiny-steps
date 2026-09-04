@@ -5,15 +5,20 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { HouseholdDetail } from './HouseholdDetail';
 import * as householdApi from '../api/household-api';
 import * as childApi from '../api/child-api';
+import * as useAuthModule from '../auth/useAuth';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/household-api');
 vi.mock('../api/child-api');
 vi.mock('../realtime/useHouseholdRoom');
+// `MemberList` reads the signed-in user to hide the actions on its own row;
+// this page is rendered here without an `AuthProvider`.
+vi.mock('../auth/useAuth');
 
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedChildApi = vi.mocked(childApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 function renderHouseholdDetail(householdId = 'h1') {
   return render(
@@ -32,6 +37,21 @@ describe('HouseholdDetail', () => {
     queryClient.clear();
     mockedChildApi.listChildren.mockResolvedValue([]);
     mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([]);
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: 'me',
+        email: 'owner@example.com',
+        name: 'Alex Owner',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      updateName: vi.fn(),
+    });
   });
 
   afterEach(() => {

@@ -6,12 +6,18 @@ import { InviteGenerator } from './InviteGenerator';
 import * as householdApi from '../api/household-api';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
+import type { HouseholdRole } from '../lib/householdPermissions';
+import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../api/household-api');
 
+// The role picker is a Radix `Select`, whose popper needs layout/pointer APIs
+// jsdom doesn't implement.
+stubPopupLayoutApis();
+
 const mockedHouseholdApi = vi.mocked(householdApi);
 
-function renderInviteGenerator(role: 'OWNER' | 'CO_PARENT') {
+function renderInviteGenerator(role: HouseholdRole) {
   return render(
     <QueryClientProvider client={queryClient}>
       <InviteGenerator householdId="h1" role={role} />
@@ -35,10 +41,59 @@ describe('InviteGenerator', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it.each(['CAREGIVER', 'OBSERVER'] as const)('renders nothing for a %s', (role) => {
+    const { container } = renderInviteGenerator(role);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('renders the generate button for an OWNER', () => {
     renderInviteGenerator('OWNER');
 
     expect(screen.getByRole('button', { name: 'Generate invite link' })).toBeInTheDocument();
+  });
+
+  it('defaults the invited role to the co-parent, matching the backend default', () => {
+    renderInviteGenerator('OWNER');
+
+    expect(screen.getByRole('combobox', { name: 'Role for the invited person' })).toHaveTextContent(
+      'Member',
+    );
+    expect(
+      screen.getByText(
+        'Full access to all entries and child profiles, but cannot manage the household.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('never offers OWNER as an invitable role', async () => {
+    const user = userEvent.setup();
+    renderInviteGenerator('OWNER');
+
+    await user.click(screen.getByRole('combobox', { name: 'Role for the invited person' }));
+
+    expect(await screen.findByRole('option', { name: 'Carer' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Owner' })).not.toBeInTheDocument();
+  });
+
+  it('explains the selected role and sends it when generating the invite', async () => {
+    mockedHouseholdApi.createInvite.mockResolvedValueOnce({
+      token: 'raw-token-123',
+      expiresAt: '2026-01-08T00:00:00.000Z',
+    });
+    const user = userEvent.setup();
+    renderInviteGenerator('OWNER');
+
+    await user.click(screen.getByRole('combobox', { name: 'Role for the invited person' }));
+    await user.click(await screen.findByRole('option', { name: 'Viewer' }));
+
+    expect(
+      await screen.findByText('Read-only access, plus their own notification settings.'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Generate invite link' }));
+
+    expect(mockedHouseholdApi.createInvite).toHaveBeenCalledWith('h1', 'OBSERVER');
   });
 
   it('generates an invite and displays the link + expiry on success', async () => {

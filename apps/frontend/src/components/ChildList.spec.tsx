@@ -6,12 +6,13 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { ChildList } from './ChildList';
 import * as childApi from '../api/child-api';
 import { queryClient } from '../lib/query-client';
+import type { HouseholdRole } from '../lib/householdPermissions';
 
 vi.mock('../api/child-api');
 
 const mockedChildApi = vi.mocked(childApi);
 
-function renderChildList(role: 'OWNER' | 'CO_PARENT') {
+function renderChildList(role: HouseholdRole) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -153,10 +154,18 @@ describe('ChildList', () => {
     expect(screen.getByRole('link', { name: 'Add child' })).toBeInTheDocument();
   });
 
-  it('hides the "add child" link for a CO_PARENT', () => {
+  it('shows the "add child" link for a CO_PARENT, who may create children server-side', () => {
     mockedChildApi.listChildren.mockReturnValue(new Promise(() => {}));
 
     renderChildList('CO_PARENT');
+
+    expect(screen.getByRole('link', { name: 'Add child' })).toBeInTheDocument();
+  });
+
+  it.each(['CAREGIVER', 'OBSERVER'] as const)('hides the "add child" link for a %s', (role) => {
+    mockedChildApi.listChildren.mockReturnValue(new Promise(() => {}));
+
+    renderChildList(role);
 
     expect(screen.queryByRole('link', { name: 'Add child' })).not.toBeInTheDocument();
   });

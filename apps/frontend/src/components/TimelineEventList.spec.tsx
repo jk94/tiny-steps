@@ -62,8 +62,20 @@ const diaperEvent: TimelineEventSummary = {
 };
 
 const members = [
-  { userId: 'user-1', email: 'parent-one@example.com' },
-  { userId: 'user-2', email: 'parent-two@example.com' },
+  {
+    userId: 'user-1',
+    email: 'parent-one@example.com',
+    name: null,
+    role: 'OWNER' as const,
+    joinedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    userId: 'user-2',
+    email: 'parent-two@example.com',
+    name: null,
+    role: 'CO_PARENT' as const,
+    joinedAt: '2026-01-01T00:00:00.000Z',
+  },
 ];
 
 const ALL_TYPES = new Set<eventApi.EventType>(['FEEDING', 'SLEEP', 'DIAPER']);
