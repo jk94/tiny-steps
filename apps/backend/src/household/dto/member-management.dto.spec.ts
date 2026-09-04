@@ -1,3 +1,8 @@
+// Covers both member-management request bodies together — they are two halves
+// of the same OWNER-only surface, and the contrast between them (an invite can
+// never grant OWNER, a role change can) is the point worth asserting side by
+// side. Named after that surface rather than a `household-member.dto.ts`, which
+// does not exist.
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { HouseholdRole } from '../household-role.enum';

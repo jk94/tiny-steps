@@ -1,7 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
 import { HouseholdRole } from '../../household/household-role.enum';
-import { assertMayEditEntry } from './assert-entry-owner';
+import { assertMayEditEntry, mayEditAnyEntry } from './assert-entry-owner';
 
+/**
+ * The role axis is exhaustive on purpose: both branches are derived from the
+ * `FULL_WRITE_ROLES`/`ENTRY_WRITE_ROLES` bundles rather than naming a role, so
+ * these cases are what pins the derivation to the intended matrix.
+ */
 describe('assertMayEditEntry', () => {
   const actingUserId = 'user-acting';
   const otherUserId = 'user-other';
@@ -39,6 +44,17 @@ describe('assertMayEditEntry', () => {
         expect(() => assertMayEditEntry(actorWith(role), otherUserId)).toThrow(ForbiddenException);
       },
     );
+  });
+
+  describe('mayEditAnyEntry', () => {
+    it.each([
+      [HouseholdRole.OWNER, true],
+      [HouseholdRole.CO_PARENT, true],
+      [HouseholdRole.CAREGIVER, false],
+      [HouseholdRole.OBSERVER, false],
+    ] as const)('is %s for %s', (role, expected) => {
+      expect(mayEditAnyEntry(actorWith(role))).toBe(expected);
+    });
   });
 
   it('reports a machine-readable NOT_ENTRY_OWNER code', () => {

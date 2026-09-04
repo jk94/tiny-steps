@@ -1,27 +1,39 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { HouseholdActor } from '../../household/decorators/household-actor.decorator';
-import { FULL_WRITE_ROLES } from '../../household/household-permissions';
+import { ENTRY_WRITE_ROLES, FULL_WRITE_ROLES } from '../../household/household-permissions';
 import { HouseholdRole } from '../../household/household-role.enum';
+
+const hasRole = (roles: readonly HouseholdRole[], role: HouseholdRole): boolean =>
+  roles.includes(role);
+
+/** May this actor edit an entry, whoever recorded it? */
+export function mayEditAnyEntry(actor: HouseholdActor): boolean {
+  return hasRole(FULL_WRITE_ROLES, actor.role);
+}
 
 /**
  * Ownership check for editing an existing entry (event, growth measurement,
  * milestone, health record).
  *
- * Role alone cannot decide this: a CAREGIVER may edit entries — but only the
- * ones they recorded themselves — so `@RequireRole(...ENTRY_WRITE_ROLES)` on
- * the route has to be paired with this per-row check in the service, right
- * after the existing row is loaded.
+ * Role alone cannot decide this: a role may be allowed to record entries and
+ * edit its *own* without being allowed to touch anyone else's, so
+ * `@RequireRole(...ENTRY_WRITE_ROLES)` on the route has to be paired with this
+ * per-row check in the service, right after the existing row is loaded.
  *
- * - OWNER/CO_PARENT may edit any entry.
- * - CAREGIVER may edit only their own.
- * - Anyone else never may. The route guard already rejects those roles; this
+ * Both branches are derived from the role bundles rather than naming CAREGIVER
+ * directly, so a future fifth "may record and edit its own" role is covered by
+ * adding it to `ENTRY_WRITE_ROLES` alone:
+ * - a `FULL_WRITE_ROLES` member (OWNER/CO_PARENT) may edit any entry;
+ * - any other `ENTRY_WRITE_ROLES` member (today: CAREGIVER) may edit only their
+ *   own;
+ * - anyone else never may. The route guard already rejects those roles; that
  *   branch is a defensive backstop for a service called from elsewhere.
  */
 export function assertMayEditEntry(actor: HouseholdActor, entryOwnerUserId: string): void {
-  if ((FULL_WRITE_ROLES as readonly HouseholdRole[]).includes(actor.role)) {
+  if (mayEditAnyEntry(actor)) {
     return;
   }
-  if (actor.role === HouseholdRole.CAREGIVER && actor.userId === entryOwnerUserId) {
+  if (hasRole(ENTRY_WRITE_ROLES, actor.role) && actor.userId === entryOwnerUserId) {
     return;
   }
   throw new ForbiddenException({
