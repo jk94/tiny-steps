@@ -46,10 +46,30 @@ describe('InviteService', () => {
       const createCall = prisma.invite.create.mock.calls[0][0];
       expect(createCall.data.tokenHash).not.toBe(result.token);
       expect(createCall.data.tokenHash).toBe(hashInviteToken(result.token));
-      expect(createCall.data.role).toBe(HouseholdRole.CO_PARENT);
       expect(createCall.data.householdId).toBe(household.id);
       expect(createCall.data.createdByUserId).toBe('owner-1');
     });
+
+    it('defaults to CO_PARENT when no role is requested', async () => {
+      // Keeps every invite created before Phase 7.5 (and every body-less
+      // request) meaning exactly what it used to.
+      prisma.invite.create.mockResolvedValue({});
+
+      await service.create('owner-1', household.id);
+
+      expect(prisma.invite.create.mock.calls[0][0].data.role).toBe(HouseholdRole.CO_PARENT);
+    });
+
+    it.each([HouseholdRole.CO_PARENT, HouseholdRole.CAREGIVER, HouseholdRole.OBSERVER])(
+      'persists the requested role %s (ROL-8)',
+      async (role) => {
+        prisma.invite.create.mockResolvedValue({});
+
+        await service.create('owner-1', household.id, role);
+
+        expect(prisma.invite.create.mock.calls[0][0].data.role).toBe(role);
+      },
+    );
 
     it('sets expiresAt to roughly now + 7 days', async () => {
       prisma.invite.create.mockResolvedValue({});
