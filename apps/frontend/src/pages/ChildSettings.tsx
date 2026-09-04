@@ -17,6 +17,7 @@ import { Button, Card, Input } from '../components/ui';
 import { bumpPhotoCacheBust } from '../child/childPhotoCacheBust';
 import { mapChildError } from '../child/mapChildError';
 import { mapHouseholdError } from '../household/mapHouseholdError';
+import { canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -37,11 +38,17 @@ function notificationSettingsQueryKey(
 }
 
 /**
- * Per-child settings page: child-profile editing (name/photo/birthdate,
- * OWNER-only delete) plus notification preferences, merged into one page.
- * Formerly two standalone routes/pages (`ChildEdit` + `NotificationSettings`)
- * — `ChildList` now sends a click on the child item straight to the daily
- * timeline instead of an edit screen, so edit access moved here instead.
+ * Per-child settings page: child-profile editing (name/photo/birthdate plus
+ * delete) and notification preferences, merged into one page. Formerly two
+ * standalone routes/pages (`ChildEdit` + `NotificationSettings`) — `ChildList`
+ * now sends a click on the child item straight to the daily timeline instead
+ * of an edit screen, so edit access moved here instead.
+ *
+ * The two halves have different role requirements: the profile section needs
+ * `FULL_WRITE_ROLES` and is hidden without it, while the notification section
+ * is `ALL_ROLES` (everyone manages their own reminders). The page therefore
+ * stays reachable for every role, which is why its nav entry in `Layout` is
+ * not role-gated.
  */
 export function ChildSettings() {
   const { t } = useTranslation();
@@ -133,55 +140,60 @@ export function ChildSettings() {
       <h1 className="mb-4 text-xl font-bold text-foreground">{t('settings.title')}</h1>
 
       <div className="flex flex-col gap-3">
-        <Card>
-          <Card.Body className="flex flex-col gap-4">
-            <h2 className="text-sm font-bold text-foreground">
-              {t('settings.profileSectionTitle')}
-            </h2>
-            <ChildForm
-              mode="edit"
-              initialValues={{
-                name: child.name,
-                // `birthDate` arrives as a full ISO8601 datetime string; an
-                // `<input type="date">` value must be the date-only portion.
-                birthDate: child.birthDate.slice(0, 10),
-                sex: child.sex ?? CLEAR_CHILD_SEX,
-                childId: child.id,
-                householdId: household.id,
-                hasPhoto: child.hasPhoto,
-              }}
-              onSubmit={handleProfileSubmit}
-            />
+        {/* Editing and deleting a child profile both need `FULL_WRITE_ROLES`
+            server-side (`@RequireRole(...FULL_WRITE_ROLES)` on
+            `ChildController.update`/`remove`), i.e. OWNER and CO_PARENT. For a
+            CAREGIVER/OBSERVER the whole profile section is hidden rather than
+            rendered disabled or left interactive until a 403 comes back — the
+            notification section below stays, since managing one's *own*
+            reminders is `ALL_ROLES`. */}
+        {canWrite(household.role, FULL_WRITE_ROLES) && (
+          <Card>
+            <Card.Body className="flex flex-col gap-4">
+              <h2 className="text-sm font-bold text-foreground">
+                {t('settings.profileSectionTitle')}
+              </h2>
+              <ChildForm
+                mode="edit"
+                initialValues={{
+                  name: child.name,
+                  // `birthDate` arrives as a full ISO8601 datetime string; an
+                  // `<input type="date">` value must be the date-only portion.
+                  birthDate: child.birthDate.slice(0, 10),
+                  sex: child.sex ?? CLEAR_CHILD_SEX,
+                  childId: child.id,
+                  householdId: household.id,
+                  hasPhoto: child.hasPhoto,
+                }}
+                onSubmit={handleProfileSubmit}
+              />
 
-            {/* Child deletion is OWNER-only server-side (see `ChildController`) —
-                completely hidden for a CO_PARENT, not just disabled. */}
-            {household.role === 'OWNER' && (
-              <>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  {t('child.edit.deleteButton')}
-                </Button>
-                <ConfirmDialog
-                  isOpen={isDeleteDialogOpen}
-                  title={t('child.edit.deleteDialog.title')}
-                  description={t('child.edit.deleteDialog.description')}
-                  confirmLabel={t('child.edit.deleteDialog.confirmButton')}
-                  cancelLabel={t('child.edit.deleteDialog.cancelButton')}
-                  onConfirm={() => deleteMutation.mutate()}
-                  onCancel={() => setIsDeleteDialogOpen(false)}
-                  isConfirming={deleteMutation.isPending}
-                />
-                {deleteMutation.isError && (
-                  <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
-                )}
-              </>
-            )}
-          </Card.Body>
-        </Card>
+              {/* Deletion needs the same bundle as the edit form above, so it
+                  carries no extra role check of its own. */}
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('child.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('child.edit.deleteDialog.title')}
+                description={t('child.edit.deleteDialog.description')}
+                confirmLabel={t('child.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('child.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
+              )}
+            </Card.Body>
+          </Card>
+        )}
 
         <Button asChild variant="secondary" className="w-full">
           <Link to={`/households/${household.id}/children/${child.id}/settings/export`}>

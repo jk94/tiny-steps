@@ -131,24 +131,51 @@ describe('ChildSettings', () => {
     expect(screen.getByLabelText('Summary hour (0–23)')).toHaveValue(20);
   });
 
-  it('shows the delete button for an OWNER', async () => {
-    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
-    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+  it.each(['OWNER', 'CO_PARENT'] as const)(
+    'shows the editable profile section, including delete, for a %s',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
 
-    renderChildSettings();
+      renderChildSettings();
 
-    expect(await screen.findByRole('button', { name: 'Delete child profile' })).toBeInTheDocument();
-  });
+      expect(await screen.findByLabelText('Name')).toHaveValue('Alex');
+      expect(screen.getByRole('button', { name: 'Delete child profile' })).toBeInTheDocument();
+    },
+  );
 
-  it('hides the delete button for a CO_PARENT', async () => {
-    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'CO_PARENT' });
-    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+  it.each(['CAREGIVER', 'OBSERVER'] as const)(
+    'hides the whole profile section for a %s, who may not edit or delete server-side',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
 
-    renderChildSettings();
+      renderChildSettings();
 
-    await screen.findByLabelText('Name');
-    expect(screen.queryByRole('button', { name: 'Delete child profile' })).not.toBeInTheDocument();
-  });
+      // Wait on the part of the page that stays, so the absence assertions
+      // below can't pass merely because nothing has rendered yet.
+      await screen.findByRole('checkbox', { name: 'Feeding reminder' });
+      expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Delete child profile' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(['CAREGIVER', 'OBSERVER'] as const)(
+    'still lets a %s manage their own notification settings',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+      renderChildSettings();
+
+      // Own reminders are ALL_ROLES server-side, so the page keeps a purpose
+      // for these roles — which is why its nav entry stays unguarded.
+      expect(await screen.findByRole('checkbox', { name: 'Feeding reminder' })).toBeChecked();
+      expect(screen.getByLabelText('Remind after (hours)')).toHaveValue(4);
+    },
+  );
 
   it('opens the confirm dialog when Delete is clicked, and cancel closes it without deleting', async () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
