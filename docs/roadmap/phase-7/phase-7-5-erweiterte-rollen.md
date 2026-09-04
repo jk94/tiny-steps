@@ -135,43 +135,90 @@ Felder), aber die aufrufende Stelle in `DailyTimeline` ist mit zu prüfen.
 
 ## Offene Punkte
 
-- **Rechteprüfung auch für Kind-Fotos und Meilenstein-Fotos:** Diese laufen über eigene
-  Auslieferungs-Endpunkte. Lesen ist für alle Rollen erlaubt, aber die Endpunkte sind im Audit
-  ausdrücklich mitzuführen, damit sie nicht durchrutschen.
+- ~~**Rechteprüfung auch für Kind-Fotos und Meilenstein-Fotos:**~~ Erledigt im Backend-Audit
+  (Umsetzungsstand unten): Foto-Ausliefer-Endpunkte (Kind, Meilenstein) sind reine `GET`-Routen ohne
+  Rollenbeschränkung (Lesen für alle Rollen), Foto-*Upload* läuft über die bereits erfassten
+  `POST`/`PATCH`-Routen (`FULL_WRITE_ROLES` bzw. `ENTRY_WRITE_ROLES` je nach Endpunkt).
 - **PRD-Präzisierung:** Die Formulierung „Co-Parent: Schreibrecht auf zugewiesene Kindprofile" in
   PRD Abschnitt 3 ist im Zuge dieser Teilphase auf „alle Kinder des Haushalts" zu korrigieren, damit
-  Dokument und Implementierung übereinstimmen.
+  Dokument und Implementierung übereinstimmen. **Weiterhin offen**, siehe Umsetzungsstand unten.
+- **ADR-0003 ist durch diese Teilphase inhaltlich überholt:** Die dortige Rollenzuordnung „create/
+  delete sind Owner-only, read/edit sind jedes Mitglied" stimmt nicht mehr — `child`-Anlegen/-Ändern/
+  -Löschen ist jetzt `FULL_WRITE_ROLES` (OWNER+CO_PARENT). Braucht ein Addendum analog zu den
+  Sleep-/Diaper-Addenda in ADR-0006. **Neu gefunden während der Umsetzung, noch offen.**
 
 ## Aufgaben
 
-- [ ] `HouseholdRole` um `CAREGIVER`/`OBSERVER` erweitern
-- [ ] Rechtematrix (siehe oben) als Konstante im Code abbilden — genau eine Quelle für Backend-Prüfung und Frontend-Anzeige
-- [ ] Audit aller schreibenden Endpunkte inkl. der Module aus 7.1–7.3; Ergebnis als Tabelle im PR
-- [ ] `@RequireRole` an allen schreibenden Endpunkten setzen
-- [ ] Test, der unannotierte schreibende Handler erkennt (ROL-3)
-- [ ] Besitz-abhängige Prüfung („nur eigene Einträge") als gemeinsame Hilfsfunktion
-- [ ] Owner-Schutzregeln ROL-6/ROL-7 inkl. Tests
-- [ ] Endpunkte für Rollenänderung und Mitglieder-Entfernung
-- [ ] `GET .../members` um Rolle/Name/Beitrittsdatum erweitern; Aufrufer in `DailyTimeline` prüfen
-- [ ] Rollenwahl im Einladungsdialog
-- [ ] Mitgliederliste in `HouseholdDetail` (schließt den offenen M2-Punkt aus Phase 6)
-- [ ] Eigene Rolle zentral im Frontend bereitstellen; `canWrite`-Hilfsfunktion
-- [ ] Rollenabhängiges Ausblenden von Aktionen in allen betroffenen Screens
-- [ ] i18n-Texte (de/en) für Rollennamen und Erklärungen
+- [x] `HouseholdRole` um `CAREGIVER`/`OBSERVER` erweitern
+- [x] Rechtematrix (siehe oben) als Konstante im Code abbilden — genau eine Quelle für Backend-Prüfung und Frontend-Anzeige
+- [x] Audit aller schreibenden Endpunkte inkl. der Module aus 7.1–7.3; Ergebnis als Tabelle im PR
+- [x] `@RequireRole` an allen schreibenden Endpunkten setzen
+- [x] Test, der unannotierte schreibende Handler erkennt (ROL-3)
+- [x] Besitz-abhängige Prüfung („nur eigene Einträge") als gemeinsame Hilfsfunktion
+- [x] Owner-Schutzregeln ROL-6/ROL-7 inkl. Tests
+- [x] Endpunkte für Rollenänderung und Mitglieder-Entfernung
+- [x] `GET .../members` um Rolle/Name/Beitrittsdatum erweitern; Aufrufer in `DailyTimeline` prüfen
+- [x] Rollenwahl im Einladungsdialog
+- [x] Mitgliederliste in `HouseholdDetail` (schließt den offenen M2-Punkt aus Phase 6)
+- [x] Eigene Rolle zentral im Frontend bereitstellen; `canWrite`-Hilfsfunktion
+- [ ] Rollenabhängiges Ausblenden von Aktionen in allen betroffenen Screens — **teilweise**: Child-
+      Screens (`ChildList`/`ChildCreate`/`ChildSettings`), `MemberList`, `InviteGenerator`,
+      `HouseholdList` sind fertig; Feeding/Sleep/Diaper/Growth/Milestone/HealthRecord-Screens
+      (Edit/Delete/Export-Buttons) und der Export-Button auf `ChildSettings` (`EXPORT_ROLES`
+      schließt OBSERVER aus, wird dort noch angezeigt) stehen aus — siehe Umsetzungsstand unten.
+- [x] i18n-Texte (de/en) für Rollennamen und Erklärungen
 - [ ] ADR-0002 um ein Addendum ergänzen
 - [ ] PRD Abschnitt 3 präzisieren; offenen M2-Punkt in `phase-6-design-system-ux.md` abhaken
-- [ ] Tests je Rolle gegen einen repräsentativen Satz Endpunkte (erlaubt/verboten)
+- [x] Tests je Rolle gegen einen repräsentativen Satz Endpunkte (erlaubt/verboten)
+
+## Umsetzungsstand (Stand 2026-09-05)
+
+Backend und Frontend-Fundament sind implementiert, review-durchlaufen und lokal in `feature/version-2`
+gemerged (zwei Merge-Commits, **noch nicht gepusht**). Zwei separate `/develop`-Läufe:
+
+1. **Backend** (2 Review-Runden): `CAREGIVER`/`OBSERVER`, Rechtematrix-Konstanten
+   (`apps/backend/src/household/household-permissions.ts`), `@RequireRole` an allen schreibenden
+   Endpunkten inkl. Fail-closed-Guard (schreibende Route ohne Rollenangabe → 403 zur Laufzeit,
+   zusätzlich zum ROL-3-Test), gemeinsamer Ownership-Helper (`assertMayEditEntry`, aus den
+   Rollen-Bündeln abgeleitet statt eine Rolle hartzucodieren), Member-Endpunkte
+   (`PATCH`/`DELETE .../members/:userId`) inkl. transaktional abgesicherter Owner-Schutzregeln,
+   Invite mit Zielrolle. Review-Fixes: entfernte Mitglieder bekamen sonst weiter Push-Benachrichtigungen
+   mit Kind-Daten (Membership-Filter in den Notification-Schedulern ergänzt); Last-Owner-Prüfung war
+   ohne Transaktion racy (zwei gleichzeitige Owner konnten sich gegenseitig auf 0 Owner herabstufen);
+   Betreuer darf jetzt fremde laufende Timer stoppen und fremde geplante Medizin-Einträge als erledigt
+   markieren (bewusste Erweiterung — sonst wäre die Schichtübergabe zwischen Eltern und Betreuer
+   blockiert).
+2. **Frontend-Fundament** (2 Review-Runden): `lib/householdPermissions.ts` (Backend-Spiegel),
+   `useHouseholdRole`-Hook, Mitgliederliste mit Rolle/Name/Beitrittsdatum sowie Rollenänderung
+   (inklusive **Beförderung zu OWNER** — das Backend erlaubt das gezielt zum Teilen/Übertragen von
+   Eigentümerschaft zwischen bekannten Mitgliedern, im Unterschied zur Einladung, die OWNER bewusst
+   ausschließt) und Entfernen, Rollenwahl im Einladungsdialog, i18n. Reviews deckten zwei echte
+   Regressionen auf, die durch die Rollenlockerung selbst entstanden: `ChildCreate` blockte
+   CO_PARENT trotz sichtbarem „Kind hinzufügen"-Link (Sackgasse), und `ChildSettings` zeigte
+   CAREGIVER/OBSERVER ein voll editierbares, ungegatetes Profilformular (403 erst beim Absenden).
+   Beide behoben.
+
+**Für die Fortsetzung offen:**
+- Rollenabhängiges Ausblenden in den verbleibenden Domain-Screens (siehe Aufgaben-Checkbox oben) —
+  dritter `/develop`-Lauf, nutzt die in diesem Lauf bereits definierten, aber noch nicht konsumierten
+  Bündel `ENTRY_WRITE_ROLES`/`EXPORT_ROLES` aus `lib/householdPermissions.ts`.
+- Dokumentations-Lauf: ADR-0002-Addendum, **ADR-0003-Korrektur** (neu während der Umsetzung
+  gefunden, siehe „Offene Punkte" oben), PRD-Abschnitt-3-Präzisierung, M2-Haken in
+  `phase-6-design-system-ux.md`.
+- Branch lokal gemerged, aber **nicht gepusht** — Push/PR gegen `feature/version-2` steht noch aus.
 
 ## Definition of Done
 
-- Betreuer und Beobachter existieren, sind bei Einladung wählbar und nachträglich änderbar.
-- Jeder schreibende Endpunkt unterhalb von `/households/:householdId` trägt eine ausdrückliche
+- [x] Betreuer und Beobachter existieren, sind bei Einladung wählbar und nachträglich änderbar.
+- [x] Jeder schreibende Endpunkt unterhalb von `/households/:householdId` trägt eine ausdrückliche
   Rollenanforderung; der Test aus ROL-3 belegt das und verhindert Rückfälle.
-- Ein Beobachter kann nachweislich nichts schreiben, ein Betreuer nachweislich nichts löschen und
+- [x] Ein Beobachter kann nachweislich nichts schreiben, ein Betreuer nachweislich nichts löschen und
   nichts verwalten — je Rolle durch Tests gegen echte Endpunkte belegt.
-- Der letzte Owner eines Haushalts kann nicht entfernt oder herabgestuft werden.
-- Die Mitgliederliste zeigt alle Mitglieder mit Rolle; der offene M2-Punkt aus Phase 6 ist damit
-  geschlossen.
-- Die Oberfläche zeigt keine Aktionen an, die die eigene Rolle nicht ausführen darf.
-- Rollennamen und Erklärungen liegen in Deutsch und Englisch vor.
-- Keine Regression in der bestehenden Testsuite.
+- [x] Der letzte Owner eines Haushalts kann nicht entfernt oder herabgestuft werden.
+- [x] Die Mitgliederliste zeigt alle Mitglieder mit Rolle; der offene M2-Punkt aus Phase 6 ist damit
+  fachlich geschlossen (Checkbox in `phase-6-design-system-ux.md` steht noch aus, siehe oben).
+- [ ] Die Oberfläche zeigt keine Aktionen an, die die eigene Rolle nicht ausführen darf — **teilweise**,
+  siehe Umsetzungsstand.
+- [x] Rollennamen und Erklärungen liegen in Deutsch und Englisch vor.
+- [x] Keine Regression in der bestehenden Testsuite (Backend 1012/83 Unit + 155/12 e2e; Frontend
+  1100/148 — beide zuletzt grün).
