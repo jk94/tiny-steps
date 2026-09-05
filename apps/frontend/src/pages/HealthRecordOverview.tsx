@@ -10,13 +10,21 @@ import {
   updateHealthRecord,
   type HealthRecordSummary,
 } from '../api/health-record-api';
+import { useAuth } from '../auth/useAuth';
 import { mapChildError } from '../child/mapChildError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { HealthRecordRow } from '../components/health/HealthRecordRow';
 import { Button, Card, EmptyState, Skeleton, toast } from '../components/ui';
 import { mapHealthRecordError } from '../health/mapHealthRecordError';
 import { todayAsCalendarDate, toCalendarDateInputValue } from '../lib/calendarDate';
+import {
+  canEditEntry,
+  canWrite,
+  ENTRY_WRITE_ROLES,
+  FULL_WRITE_ROLES,
+} from '../lib/householdPermissions';
 
 /** A planned entry whose due day has passed (MED-6/MED-12). */
 function isOverdue(record: HealthRecordSummary, today: string): boolean {
@@ -38,6 +46,8 @@ function isOverdue(record: HealthRecordSummary, today: string): boolean {
 export function HealthRecordOverview() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  const { user } = useAuth();
+  const { role } = useHouseholdRole(householdId);
   const queryClient = useQueryClient();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -114,20 +124,29 @@ export function HealthRecordOverview() {
     .filter((record) => record.administeredAt !== null)
     .sort((a, b) => b.administeredAt!.localeCompare(a.administeredAt!));
 
-  const editLink = (record: HealthRecordSummary) => (
-    <Link
-      to={`${basePath}/${record.id}/edit`}
-      className="text-sm font-medium text-primary hover:underline"
-    >
-      {t('health.row.editLink')}
-    </Link>
-  );
+  const editLink = (record: HealthRecordSummary) =>
+    canEditEntry(role, record.userId, user?.id) && (
+      <Link
+        to={`${basePath}/${record.id}/edit`}
+        className="text-sm font-medium text-primary hover:underline"
+      >
+        {t('health.row.editLink')}
+      </Link>
+    );
 
-  const deleteButton = (record: HealthRecordSummary) => (
-    <Button type="button" variant="ghost" size="sm" onClick={() => setPendingDeleteId(record.id)}>
-      {t('health.row.deleteButton')}
-    </Button>
-  );
+  const deleteButton = (record: HealthRecordSummary) =>
+    canWrite(role, FULL_WRITE_ROLES) && (
+      <Button type="button" variant="ghost" size="sm" onClick={() => setPendingDeleteId(record.id)}>
+        {t('health.row.deleteButton')}
+      </Button>
+    );
+
+  // Deliberately role-only, with NO ownership check: the backend lets any
+  // ENTRY_WRITE_ROLES member (i.e. also a CAREGIVER) mark someone else's planned
+  // record as done, because `isMarkAsDoneOnly()` bypasses the ownership
+  // assertion for a PATCH that carries nothing but `administeredAt` — which is
+  // exactly what `markDoneMutation` sends. Do not "fix" this into canEditEntry.
+  const mayMarkAsDone = canWrite(role, ENTRY_WRITE_ROLES);
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -176,17 +195,19 @@ export function HealthRecordOverview() {
                       isOverdue={isOverdue(record, today)}
                       actions={
                         <>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            disabled={markDoneMutation.isPending}
-                            onClick={() => markDoneMutation.mutate(record.id)}
-                          >
-                            {markDoneMutation.isPending && markDoneMutation.variables === record.id
-                              ? t('health.row.markDonePending')
-                              : t('health.row.markDone')}
-                          </Button>
+                          {mayMarkAsDone && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={markDoneMutation.isPending}
+                              onClick={() => markDoneMutation.mutate(record.id)}
+                            >
+                              {markDoneMutation.isPending && markDoneMutation.variables === record.id
+                                ? t('health.row.markDonePending')
+                                : t('health.row.markDone')}
+                            </Button>
+                          )}
                           {editLink(record)}
                           {deleteButton(record)}
                         </>
