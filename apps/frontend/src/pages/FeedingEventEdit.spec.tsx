@@ -5,13 +5,17 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { FeedingEventEdit } from './FeedingEventEdit';
 import * as feedingApi from '../api/feeding-api';
+import * as householdApi from '../api/household-api';
 import { ApiError } from '../api/http-client';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/feeding-api');
+vi.mock('../api/household-api');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedFeedingApi = vi.mocked(feedingApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -52,6 +56,20 @@ const event: feedingApi.FeedingEventSummary = {
   updatedAt: '2026-01-01T10:00:00.000Z',
 };
 
+/**
+ * Resolves the household query `useHouseholdRole` shares with `HouseholdDetail`,
+ * so the page's role-gating sees a concrete role. Defaults to `OWNER` — the role
+ * the pre-existing delete tests were implicitly written against.
+ */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
 function renderFeedingEventEdit() {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -74,6 +92,7 @@ function renderFeedingEventEdit() {
 describe('FeedingEventEdit', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
   });
 
   afterEach(() => {
@@ -212,6 +231,39 @@ describe('FeedingEventEdit', () => {
         `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding`,
         { replace: true },
       ),
+    );
+  });
+
+  describe('role-dependent actions', () => {
+    it.each(['OWNER', 'CO_PARENT'] as const)('offers Delete to a %s', async (role) => {
+      givenHouseholdRole(role);
+      mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce(event);
+
+      renderFeedingEventEdit();
+
+      expect(await screen.findByRole('button', { name: 'Delete entry' })).toBeInTheDocument();
+    });
+
+    it.each(['CAREGIVER', 'OBSERVER'] as const)(
+      'hides Delete from a %s while keeping the entry readable and the form submittable',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce(event);
+        mockedFeedingApi.updateFeedingEventOptimistic.mockResolvedValueOnce(event);
+        const user = userEvent.setup();
+
+        renderFeedingEventEdit();
+
+        // The form is the only view of an entry's full fields, so it must stay
+        // available to every role — only the delete affordance disappears.
+        await screen.findByLabelText('Amount (ml)');
+        await vi.waitFor(() =>
+          expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument(),
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        expect(mockedFeedingApi.updateFeedingEventOptimistic).toHaveBeenCalled();
+      },
     );
   });
 });

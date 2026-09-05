@@ -5,17 +5,21 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { DiaperEventEdit } from './DiaperEventEdit';
 import * as diaperApi from '../api/diaper-api';
+import * as householdApi from '../api/household-api';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 import { chooseSelectOption } from '../test/chooseSelectOption';
 import { stubPopupLayoutApis } from '../test/stubPopupLayoutApis';
 
 vi.mock('../api/diaper-api');
+vi.mock('../api/household-api');
 vi.mock('../realtime/useHouseholdRoom');
 
 // The diaper-type field is a Radix combobox — see the helper's doc comment.
 stubPopupLayoutApis();
 
 const mockedDiaperApi = vi.mocked(diaperApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -51,6 +55,20 @@ const event: diaperApi.DiaperEventSummary = {
   updatedAt: '2026-01-01T10:00:00.000Z',
 };
 
+/**
+ * Resolves the household query `useHouseholdRole` shares with `HouseholdDetail`,
+ * so the page's role-gating sees a concrete role. Defaults to `OWNER` — the role
+ * the pre-existing delete tests were implicitly written against.
+ */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
 function renderDiaperEventEdit() {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -73,6 +91,7 @@ function renderDiaperEventEdit() {
 describe('DiaperEventEdit', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
   });
 
   afterEach(() => {
@@ -178,5 +197,38 @@ describe('DiaperEventEdit', () => {
     renderDiaperEventEdit();
 
     expect(await screen.findByLabelText('Diaper type')).toHaveTextContent('Pee');
+  });
+
+  describe('role-dependent actions', () => {
+    it.each(['OWNER', 'CO_PARENT'] as const)('offers Delete to a %s', async (role) => {
+      givenHouseholdRole(role);
+      mockedDiaperApi.fetchDiaperEvent.mockResolvedValueOnce(event);
+
+      renderDiaperEventEdit();
+
+      expect(await screen.findByRole('button', { name: 'Delete entry' })).toBeInTheDocument();
+    });
+
+    it.each(['CAREGIVER', 'OBSERVER'] as const)(
+      'hides Delete from a %s while keeping the entry readable and the form submittable',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedDiaperApi.fetchDiaperEvent.mockResolvedValueOnce(event);
+        mockedDiaperApi.updateDiaperEventOptimistic.mockResolvedValueOnce(event);
+        const user = userEvent.setup();
+
+        renderDiaperEventEdit();
+
+        // The form is the only view of an entry's full fields, so it must stay
+        // available to every role — only the delete affordance disappears.
+        await screen.findByLabelText('Diaper type');
+        await vi.waitFor(() =>
+          expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument(),
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        expect(mockedDiaperApi.updateDiaperEventOptimistic).toHaveBeenCalled();
+      },
+    );
   });
 });

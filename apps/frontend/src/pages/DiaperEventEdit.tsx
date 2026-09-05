@@ -15,6 +15,8 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Button, Card } from '../components/ui';
 import { mapDiaperError } from '../diaper/mapDiaperError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
@@ -28,6 +30,7 @@ export function DiaperEventEdit() {
   }>();
   useHouseholdRoom(householdId);
   const navigate = useNavigate();
+  const { role } = useHouseholdRole(householdId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const listQueryKey = ['households', householdId, 'children', childId, 'diaper-events'];
@@ -120,26 +123,31 @@ export function DiaperEventEdit() {
             onSubmit={handleSubmit}
           />
 
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            {t('diaper.edit.deleteButton')}
-          </Button>
-          <ConfirmDialog
-            isOpen={isDeleteDialogOpen}
-            title={t('diaper.edit.deleteDialog.title')}
-            description={t('diaper.edit.deleteDialog.description')}
-            confirmLabel={t('diaper.edit.deleteDialog.confirmButton')}
-            cancelLabel={t('diaper.edit.deleteDialog.cancelButton')}
-            onConfirm={() => deleteMutation.mutate()}
-            onCancel={() => setIsDeleteDialogOpen(false)}
-            isConfirming={deleteMutation.isPending}
-          />
-          {deleteMutation.isError && (
-            <ErrorMessage message={t(mapDiaperError(deleteMutation.error, 'delete'))} />
+          {/* Delete only — the form stays readable for every role, see FeedingEventEdit. */}
+          {canWrite(role, FULL_WRITE_ROLES) && (
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('diaper.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('diaper.edit.deleteDialog.title')}
+                description={t('diaper.edit.deleteDialog.description')}
+                confirmLabel={t('diaper.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('diaper.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapDiaperError(deleteMutation.error, 'delete'))} />
+              )}
+            </>
           )}
         </Card.Body>
       </Card>

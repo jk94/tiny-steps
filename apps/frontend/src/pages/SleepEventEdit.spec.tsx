@@ -5,12 +5,16 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { SleepEventEdit } from './SleepEventEdit';
 import * as sleepApi from '../api/sleep-api';
+import * as householdApi from '../api/household-api';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
+vi.mock('../api/household-api');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedSleepApi = vi.mocked(sleepApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -47,6 +51,20 @@ const event: sleepApi.SleepEventSummary = {
   updatedAt: '2026-01-01T20:00:00.000Z',
 };
 
+/**
+ * Resolves the household query `useHouseholdRole` shares with `HouseholdDetail`,
+ * so the page's role-gating sees a concrete role. Defaults to `OWNER` — the role
+ * the pre-existing delete tests were implicitly written against.
+ */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
 function renderSleepEventEdit() {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -67,6 +85,7 @@ function renderSleepEventEdit() {
 describe('SleepEventEdit', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
   });
 
   afterEach(() => {
@@ -178,5 +197,39 @@ describe('SleepEventEdit', () => {
 
     // The form (its Save button) renders from cache rather than the error state.
     expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+  });
+
+  describe('role-dependent actions', () => {
+    it.each(['OWNER', 'CO_PARENT'] as const)('offers Delete to a %s', async (role) => {
+      givenHouseholdRole(role);
+      mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
+
+      renderSleepEventEdit();
+
+      expect(await screen.findByRole('button', { name: 'Delete entry' })).toBeInTheDocument();
+    });
+
+    it.each(['CAREGIVER', 'OBSERVER'] as const)(
+      'hides Delete from a %s while keeping the entry readable and the form submittable',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
+        mockedSleepApi.updateSleepEventOptimistic.mockResolvedValueOnce(event);
+        const user = userEvent.setup();
+
+        renderSleepEventEdit();
+
+        // The form is the only view of an entry's full fields, so it must stay
+        // available to every role — only the delete affordance disappears.
+        const saveButton = await screen.findByRole('button', { name: 'Save' });
+        await vi.waitFor(() =>
+          expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument(),
+        );
+        expect(screen.getByLabelText('End time (optional)')).toBeInTheDocument();
+
+        await user.click(saveButton);
+        expect(mockedSleepApi.updateSleepEventOptimistic).toHaveBeenCalled();
+      },
+    );
   });
 });
