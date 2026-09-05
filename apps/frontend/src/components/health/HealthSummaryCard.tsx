@@ -12,6 +12,8 @@ import {
   toCalendarDateInputValue,
 } from '../../lib/calendarDate';
 import { OVERDUE_BADGE_VARIANT } from '../../lib/healthRecordVisuals';
+import { useHouseholdRole } from '../../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../../lib/householdPermissions';
 import { Badge, Card, EmptyState, Skeleton } from '../ui';
 
 export interface HealthSummaryCardProps {
@@ -45,6 +47,7 @@ function findNextDue(records: HealthRecordSummary[]): HealthRecordSummary | null
  */
 export function HealthSummaryCard({ householdId, childId }: HealthSummaryCardProps) {
   const { t, i18n } = useTranslation();
+  const { role } = useHouseholdRole(householdId);
 
   const recordsQuery = useQuery({
     queryKey: healthRecordsQueryKey(householdId, childId),
@@ -115,13 +118,17 @@ export function HealthSummaryCard({ householdId, childId }: HealthSummaryCardPro
         ) : (
           <EmptyState
             description={t('health.card.empty')}
+            // The "nothing recorded yet" statement stays for every role; only
+            // the call to action a read-only role couldn't follow is dropped.
             action={
-              <Link
-                to={`${basePath}/new`}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {t('health.card.cta')}
-              </Link>
+              canWrite(role, ENTRY_WRITE_ROLES) ? (
+                <Link
+                  to={`${basePath}/new`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {t('health.card.cta')}
+                </Link>
+              ) : undefined
             }
           />
         )}

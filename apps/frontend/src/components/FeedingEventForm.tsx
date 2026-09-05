@@ -63,6 +63,14 @@ export interface FeedingEventFormProps {
   mode: 'create' | 'edit';
   initialValues?: FeedingEventFormInitialValues;
   onSubmit: (output: FeedingEventFormOutput) => Promise<void>;
+  /**
+   * Renders the entry as a read-only detail view: every field is disabled and
+   * the submit button is not rendered at all. Used on the edit page for a role
+   * that may not edit this entry (OBSERVER, or CAREGIVER on someone else's
+   * entry) — the page is the only place an entry's full fields are visible, so
+   * the values still have to be readable.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -71,7 +79,12 @@ export interface FeedingEventFormProps {
  * starting a new running timer is exclusively `FeedingQuickEntry`'s job,
  * never this form's.
  */
-export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEventFormProps) {
+export function FeedingEventForm({
+  mode,
+  initialValues,
+  onSubmit,
+  readOnly = false,
+}: FeedingEventFormProps) {
   const { t } = useTranslation();
   const [feedingType, setFeedingType] = useState<FeedingType | ''>(
     initialValues?.feedingType ?? '',
@@ -93,6 +106,10 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
   const [fieldErrorKeys, setFieldErrorKeys] = useState<FieldErrorKeys>({});
   const [formErrorKey, setFormErrorKey] = useState<FeedingErrorKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // One switch for every field: a read-only render and an in-flight submit both
+  // mean "don't let the user change anything right now".
+  const isFieldDisabled = readOnly || isSubmitting;
 
   const clearFieldError = (field: keyof FieldErrorKeys) => {
     setFieldErrorKeys((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -148,6 +165,12 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (readOnly) {
+      // Belt-and-braces: the submit button isn't rendered at all, but an
+      // implicit form submit must not slip past the role gate either.
+      return;
+    }
 
     const nextFieldErrorKeys = validate();
     if (Object.values(nextFieldErrorKeys).some(Boolean)) {
@@ -216,7 +239,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
         placeholder={t('feeding.fields.feedingTypePlaceholder')}
         required
         value={feedingType}
-        disabled={mode === 'edit' || isSubmitting}
+        disabled={mode === 'edit' || isFieldDisabled}
         onValueChange={(value) => {
           setFeedingType(value as FeedingType);
           clearFieldError('feedingType');
@@ -240,7 +263,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
           clearFieldError('occurredAt');
         }}
         error={fieldErrorKeys.occurredAt ? t(fieldErrorKeys.occurredAt) : undefined}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
       />
 
       {feedingType === 'BREAST' && (
@@ -260,7 +283,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
                     setSide('LEFT');
                     clearFieldError('side');
                   }}
-                  disabled={isSubmitting}
+                  disabled={isFieldDisabled}
                   className="h-4 w-4 accent-primary"
                 />
                 {t('feeding.fields.sideLeftOption')}
@@ -275,7 +298,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
                     setSide('RIGHT');
                     clearFieldError('side');
                   }}
-                  disabled={isSubmitting}
+                  disabled={isFieldDisabled}
                   className="h-4 w-4 accent-primary"
                 />
                 {t('feeding.fields.sideRightOption')}
@@ -294,7 +317,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
               setStartedAt(event.target.value);
               clearFieldError('endedAt');
             }}
-            disabled={isSubmitting}
+            disabled={isFieldDisabled}
           />
 
           <Input
@@ -308,7 +331,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
               clearFieldError('endedAt');
             }}
             error={fieldErrorKeys.endedAt ? t(fieldErrorKeys.endedAt) : undefined}
-            disabled={isSubmitting}
+            disabled={isFieldDisabled}
           />
         </>
       )}
@@ -326,7 +349,7 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
             clearFieldError('amountMl');
           }}
           error={fieldErrorKeys.amountMl ? t(fieldErrorKeys.amountMl) : undefined}
-          disabled={isSubmitting}
+          disabled={isFieldDisabled}
         />
       )}
 
@@ -339,15 +362,17 @@ export function FeedingEventForm({ mode, initialValues, onSubmit }: FeedingEvent
           clearFieldError('note');
         }}
         error={fieldErrorKeys.note ? t(fieldErrorKeys.note) : undefined}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
         rows={3}
       />
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
-        {t(submitButtonTextKey)}
-      </Button>
+      {!readOnly && (
+        <Button type="submit" variant="primary" className="w-full" disabled={isFieldDisabled}>
+          {t(submitButtonTextKey)}
+        </Button>
+      )}
     </form>
   );
 }

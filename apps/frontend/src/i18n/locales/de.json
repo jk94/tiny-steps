@@ -19,6 +19,9 @@
     "conflict": {
       "message": "Deine Änderung wurde überschrieben, weil dieser Eintrag zwischenzeitlich an anderer Stelle aktualisiert wurde.",
       "dismiss": "Hinweis schließen"
+    },
+    "forbidden": {
+      "message": "Deine Änderung wurde nicht gespeichert: Deine Rolle in diesem Haushalt erlaubt diese Aktion nicht."
     }
   },
   "nav": {

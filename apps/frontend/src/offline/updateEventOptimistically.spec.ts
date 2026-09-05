@@ -142,6 +142,25 @@ describe('updateEventOptimistically', () => {
     });
   });
 
+  it('on a 403 deletes the record, records a forbidden notice, and rethrows — never leaving a permanent failed overlay', async () => {
+    const forbidden = new ApiError(403, { message: 'Forbidden' });
+    const apiCall = vi.fn().mockRejectedValue(forbidden);
+
+    await expect(run(apiCall)).rejects.toBe(forbidden);
+
+    const localId = mockedDb.putPendingEvent.mock.calls[0][0].localId;
+    expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith(localId);
+    expect(mockedDb.markPendingEventFailed).not.toHaveBeenCalled();
+    expect(mockedConflictNotices.recordForbiddenNotice).toHaveBeenCalledWith(
+      'FEEDING',
+      TARGET_EVENT_ID,
+    );
+    expect(mockedConflictNotices.recordConflictNotice).not.toHaveBeenCalled();
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      queryKey: ['households', HOUSEHOLD_ID, 'children', CHILD_ID, 'feeding-events'],
+    });
+  });
+
   it('reuses an existing pending record’s localId for a second edit of the same event (JC-4)', async () => {
     mockedDb.findPendingUpdateForEvent.mockResolvedValue({
       localId: 'local-existing',

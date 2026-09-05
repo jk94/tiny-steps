@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedingEventSummary } from '../api/feeding-api';
 import { ApiError } from '../api/http-client';
+import * as conflictNotices from './conflictNotices';
 import { createEventOptimistically } from './createEventOptimistically';
 import * as db from './pendingEvents.db';
 import * as pendingQuery from './usePendingLocalEvents';
 
 vi.mock('./pendingEvents.db');
 vi.mock('./usePendingLocalEvents');
+vi.mock('./conflictNotices');
 
 const mockedDb = vi.mocked(db);
 const mockedPendingQuery = vi.mocked(pendingQuery);
+const mockedConflictNotices = vi.mocked(conflictNotices);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -121,5 +124,33 @@ describe('createEventOptimistically', () => {
     const bufferedLocalId = mockedDb.putPendingEvent.mock.calls[0][0].localId;
     expect(mockedDb.markPendingEventFailed).toHaveBeenCalledWith(bufferedLocalId);
     expect(mockedDb.deletePendingEvent).not.toHaveBeenCalled();
+  });
+
+  it('drops the buffered copy and records a forbidden notice on a 403 instead of stranding a failed record', async () => {
+    const forbidden = new ApiError(403, { message: 'Forbidden' });
+    const apiCall = vi.fn().mockRejectedValue(forbidden);
+
+    await expect(
+      createEventOptimistically({
+        householdId: HOUSEHOLD_ID,
+        childId: CHILD_ID,
+        eventType: 'FEEDING',
+        buildOptimisticSummary: optimisticSummary,
+        apiCall,
+        createInput: CREATE_INPUT,
+      }),
+    ).rejects.toBe(forbidden);
+
+    const bufferedLocalId = mockedDb.putPendingEvent.mock.calls[0][0].localId;
+    expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith(bufferedLocalId);
+    expect(mockedDb.markPendingEventFailed).not.toHaveBeenCalled();
+    expect(mockedConflictNotices.recordForbiddenNotice).toHaveBeenCalledWith(
+      'FEEDING',
+      bufferedLocalId,
+    );
+    expect(mockedPendingQuery.invalidatePendingEventsQuery).toHaveBeenCalledWith(
+      HOUSEHOLD_ID,
+      CHILD_ID,
+    );
   });
 });

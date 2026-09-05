@@ -17,7 +17,7 @@ import { Button, Card, Input } from '../components/ui';
 import { bumpPhotoCacheBust } from '../child/childPhotoCacheBust';
 import { mapChildError } from '../child/mapChildError';
 import { mapHouseholdError } from '../household/mapHouseholdError';
-import { canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
+import { canWrite, EXPORT_ROLES, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -195,11 +195,13 @@ export function ChildSettings() {
           </Card>
         )}
 
-        <Button asChild variant="secondary" className="w-full">
-          <Link to={`/households/${household.id}/children/${child.id}/settings/export`}>
-            {t('settings.exportButton')}
-          </Link>
-        </Button>
+        {canWrite(household.role, EXPORT_ROLES) && (
+          <Button asChild variant="secondary" className="w-full">
+            <Link to={`/households/${household.id}/children/${child.id}/settings/export`}>
+              {t('settings.exportButton')}
+            </Link>
+          </Button>
+        )}
 
         <h2 className="text-sm font-bold text-foreground">
           {t('settings.notificationsSectionTitle')}

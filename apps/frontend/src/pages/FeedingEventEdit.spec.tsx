@@ -5,13 +5,20 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { FeedingEventEdit } from './FeedingEventEdit';
 import * as feedingApi from '../api/feeding-api';
+import * as householdApi from '../api/household-api';
+import * as useAuthModule from '../auth/useAuth';
 import { ApiError } from '../api/http-client';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/feeding-api');
+vi.mock('../api/household-api');
+vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedFeedingApi = vi.mocked(feedingApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -34,11 +41,15 @@ beforeEach(() => {
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
 const EVENT_ID = 'e1';
+/** The signed-in user — also the author of `event` below (an "own" entry). */
+const CURRENT_USER_ID = 'u1';
+/** Another household member, so `event` can be turned into a "foreign" entry. */
+const OTHER_USER_ID = 'u2';
 
 const event: feedingApi.FeedingEventSummary = {
   id: EVENT_ID,
   childId: CHILD_ID,
-  userId: 'u1',
+  userId: CURRENT_USER_ID,
   type: 'FEEDING',
   feedingType: 'BOTTLE',
   occurredAt: '2026-01-01T10:00:00.000Z',
@@ -51,6 +62,34 @@ const event: feedingApi.FeedingEventSummary = {
   createdAt: '2026-01-01T10:00:00.000Z',
   updatedAt: '2026-01-01T10:00:00.000Z',
 };
+
+/**
+ * Resolves the household query `useHouseholdRole` shares with `HouseholdDetail`,
+ * so the page's role-gating sees a concrete role. Defaults to `OWNER` — the role
+ * the pre-existing delete tests were implicitly written against.
+ */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
+/** Signs a user in, so the page's ownership check has a concrete id to compare. */
+function givenSignedInUser(id: string = CURRENT_USER_ID) {
+  mockedUseAuth.mockReturnValue({
+    user: { id, email: 'parent@example.com', name: 'Bernd', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 function renderFeedingEventEdit() {
   return render(
@@ -74,6 +113,8 @@ function renderFeedingEventEdit() {
 describe('FeedingEventEdit', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
+    givenSignedInUser();
   });
 
   afterEach(() => {
@@ -213,5 +254,78 @@ describe('FeedingEventEdit', () => {
         { replace: true },
       ),
     );
+  });
+
+  describe('role-dependent actions', () => {
+    it.each(['OWNER', 'CO_PARENT'] as const)('offers Delete to a %s', async (role) => {
+      givenHouseholdRole(role);
+      mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce(event);
+
+      renderFeedingEventEdit();
+
+      expect(await screen.findByRole('button', { name: 'Delete entry' })).toBeInTheDocument();
+    });
+
+    it.each(['CAREGIVER', 'OBSERVER'] as const)('hides Delete from a %s', async (role) => {
+      givenHouseholdRole(role);
+      mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce(event);
+
+      renderFeedingEventEdit();
+
+      await screen.findByLabelText('Amount (ml)');
+      expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument();
+    });
+
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'lets a %s edit and save an entry logged by someone else',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce({
+          ...event,
+          userId: OTHER_USER_ID,
+        });
+
+        renderFeedingEventEdit();
+
+        expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+        expect(screen.getByLabelText('Amount (ml)')).toBeEnabled();
+      },
+    );
+
+    it('lets a CAREGIVER edit and save their own entry', async () => {
+      givenHouseholdRole('CAREGIVER');
+      mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce(event);
+
+      renderFeedingEventEdit();
+
+      expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Amount (ml)')).toBeEnabled();
+    });
+
+    it("hides Save from a CAREGIVER on someone else's entry, but keeps the fields readable", async () => {
+      givenHouseholdRole('CAREGIVER');
+      mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce({ ...event, userId: OTHER_USER_ID });
+
+      renderFeedingEventEdit();
+
+      // This page is the only view of an entry's full fields, so they stay
+      // rendered — just disabled, with no way to submit a change.
+      const amountField = await screen.findByLabelText('Amount (ml)');
+      expect(amountField).toBeDisabled();
+      expect(amountField).toHaveValue(event.amountMl);
+      expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    });
+
+    it('hides Save from an OBSERVER, but keeps the fields readable', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedFeedingApi.fetchFeedingEvent.mockResolvedValueOnce(event);
+
+      renderFeedingEventEdit();
+
+      const amountField = await screen.findByLabelText('Amount (ml)');
+      expect(amountField).toBeDisabled();
+      expect(amountField).toHaveValue(event.amountMl);
+      expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    });
   });
 });

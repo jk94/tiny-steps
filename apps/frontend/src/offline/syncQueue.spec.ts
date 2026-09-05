@@ -133,6 +133,19 @@ describe('drainPendingEventQueue', () => {
     expect(mockedDb.deletePendingEvent).not.toHaveBeenCalled();
   });
 
+  it('drops a buffered create rejected with 403 (keyed on its localId) rather than keeping it forever', async () => {
+    mockedDb.listAllPendingEvents.mockResolvedValue([makeRecord()]);
+    mockedFeedingApi.createFeedingEvent.mockRejectedValue(
+      new ApiError(403, { message: 'Forbidden' }),
+    );
+
+    await drainPendingEventQueue();
+
+    expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-1');
+    expect(mockedConflictNotices.recordForbiddenNotice).toHaveBeenCalledWith('FEEDING', 'local-1');
+    expect(mockedDb.markPendingEventRetryScheduled).not.toHaveBeenCalled();
+  });
+
   it('stops resending a record once the retry cap is reached across repeated drains', async () => {
     // A single stateful record whose retry bookkeeping the mocked db mutates,
     // with the backoff window treated as always-elapsed so every drain re-tries.
@@ -277,6 +290,22 @@ describe('drainPendingEventQueue', () => {
 
       expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-upd');
       expect(mockedConflictNotices.recordConflictNotice).toHaveBeenCalledWith('FEEDING', TARGET_ID);
+      expect(mockedDb.markPendingEventRetryScheduled).not.toHaveBeenCalled();
+    });
+
+    it('drops a buffered update rejected with 403 instead of abandoning it as a permanent failed record', async () => {
+      mockedDb.listAllPendingEvents.mockResolvedValue([updateRecord()]);
+      mockedFeedingApi.updateFeedingEvent.mockRejectedValue(
+        new ApiError(403, { message: 'Forbidden' }),
+      );
+
+      await drainPendingEventQueue();
+
+      expect(mockedDb.deletePendingEvent).toHaveBeenCalledWith('local-upd');
+      expect(mockedConflictNotices.recordForbiddenNotice).toHaveBeenCalledWith(
+        'FEEDING',
+        TARGET_ID,
+      );
       expect(mockedDb.markPendingEventRetryScheduled).not.toHaveBeenCalled();
     });
 

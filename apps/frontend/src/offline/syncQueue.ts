@@ -8,6 +8,7 @@ import {
   EVENT_TYPE_QUERY_KEY_SEGMENT,
   isEventAlreadyStoppedError,
   isEventConflictError,
+  isForbiddenError,
   type EventType,
   type TimelineEventSummary,
 } from '../api/event-api';
@@ -28,7 +29,7 @@ import {
 } from '../api/sleep-api';
 import { queryClient } from '../lib/query-client';
 import { clearActiveTimerCache } from './activeTimerCache';
-import { recordConflictNotice } from './conflictNotices';
+import { recordConflictNotice, recordForbiddenNotice } from './conflictNotices';
 import {
   deletePendingEvent,
   listAllPendingEvents,
@@ -246,6 +247,26 @@ async function resolveResendConflict(record: PendingEventRecord): Promise<undefi
   return undefined;
 }
 
+/**
+ * Resolves a 403 hit while resending a buffered create/edit/stop: the user's
+ * household role may not perform this write, so the identical payload can never
+ * succeed. `recordResendFailure` would abandon it too (a 4xx is not retryable),
+ * but it *keeps* the record — leaving a permanent "not saved" ghost row no UI
+ * can clear. So it is dropped like a lost LWW conflict, with its own notice.
+ * Same ordering/active-timer handling as `resolveResendConflict`.
+ */
+async function resolveResendForbidden(record: PendingEventRecord): Promise<undefined> {
+  if (record.operation === 'stop') {
+    await clearActiveTimerCache(record.householdId, record.childId, record.eventType);
+  }
+  await invalidateDomainQuery(record);
+  await deletePendingEvent(record.localId);
+  // A create has no server id yet — its localId is the notice's dedup key.
+  recordForbiddenNotice(record.eventType, record.targetEventId ?? record.localId);
+  await invalidatePendingEventsQuery(record.householdId, record.childId);
+  return undefined;
+}
+
 /** Resends a buffered create (the original ADR-0010 path). */
 async function resendCreate(record: PendingEventRecord): Promise<string | undefined> {
   if (record.createInput === undefined) {
@@ -257,6 +278,9 @@ async function resendCreate(record: PendingEventRecord): Promise<string | undefi
   try {
     await createEvent(record.householdId, record.childId, record.createInput);
   } catch (error) {
+    if (isForbiddenError(error)) {
+      return resolveResendForbidden(record);
+    }
     return recordResendFailure(record, error);
   }
   await confirmResend(record);
@@ -274,6 +298,9 @@ async function resendUpdate(record: PendingEventRecord): Promise<string | undefi
   } catch (error) {
     if (isEventConflictError(error)) {
       return resolveResendConflict(record);
+    }
+    if (isForbiddenError(error)) {
+      return resolveResendForbidden(record);
     }
     return recordResendFailure(record, error);
   }
@@ -311,6 +338,9 @@ async function resendStop(record: PendingEventRecord): Promise<string | undefine
       // never be cleaned up — the permanent "not saved" ghost row this fixes).
       await confirmResend(record);
       return undefined;
+    }
+    if (isForbiddenError(error)) {
+      return resolveResendForbidden(record);
     }
     return recordResendFailure(record, error);
   }

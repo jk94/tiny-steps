@@ -7,6 +7,8 @@ import { MilestoneEdit } from './MilestoneEdit';
 import type { MilestoneSummary } from '../api/milestone-api';
 import * as childApi from '../api/child-api';
 import * as milestoneApi from '../api/milestone-api';
+import * as householdApi from '../api/household-api';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 import { clearPhotoRetryQueue, stashPhotoRetryQueue } from '../milestone/photoRetryHandoff';
 
@@ -24,9 +26,11 @@ vi.mock('../api/milestone-api', async () => {
     uploadMilestonePhoto: vi.fn(),
   };
 });
+vi.mock('../api/household-api');
 
 const mockedChildApi = vi.mocked(childApi);
 const mockedMilestoneApi = vi.mocked(milestoneApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -50,6 +54,19 @@ function makeMilestone(overrides: Partial<MilestoneSummary> = {}): MilestoneSumm
     photos: [],
     ...overrides,
   };
+}
+
+/**
+ * Resolves the household query `useHouseholdRole` shares with `HouseholdDetail`.
+ * Defaults to `OWNER` — the role the pre-existing photo-delete tests assume.
+ */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2025-01-01T00:00:00.000Z',
+  });
 }
 
 function LocationProbe() {
@@ -81,6 +98,7 @@ function renderPage() {
 describe('MilestoneEdit', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
     mockedChildApi.fetchChild.mockResolvedValue({
       id: CHILD_ID,
       householdId: HOUSEHOLD_ID,
@@ -229,5 +247,41 @@ describe('MilestoneEdit', () => {
     expect(
       await screen.findByText('Something went wrong. Please try again later.'),
     ).toBeInTheDocument();
+  });
+
+  describe('role-dependent photo deletion', () => {
+    const withPhoto = () =>
+      mockedMilestoneApi.fetchMilestone.mockResolvedValue(
+        makeMilestone({ photos: [{ id: 'p1', sortIndex: 0, mimeType: 'image/png' }] }),
+      );
+
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'offers a %s the photo delete action',
+      async (role) => {
+        givenHouseholdRole(role);
+        withPhoto();
+
+        renderPage();
+
+        expect(await screen.findByRole('button', { name: 'Delete photo' })).toBeInTheDocument();
+      },
+    );
+
+    it.each(['CAREGIVER', 'OBSERVER'] as const)(
+      'hides the photo delete action from a %s, since the endpoint has no ownership exception',
+      async (role) => {
+        givenHouseholdRole(role);
+        withPhoto();
+
+        renderPage();
+
+        // The form still loads — only the delete affordance is withheld.
+        await screen.findByRole('button', { name: 'Save changes' });
+        await waitFor(() => {
+          expect(screen.queryByRole('button', { name: 'Delete photo' })).not.toBeInTheDocument();
+        });
+        expect(mockedMilestoneApi.deleteMilestonePhoto).not.toHaveBeenCalled();
+      },
+    );
   });
 });

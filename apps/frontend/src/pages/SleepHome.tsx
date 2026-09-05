@@ -10,6 +10,8 @@ import { SleepQuickEntry } from '../components/SleepQuickEntry';
 import { SleepTimer } from '../components/SleepTimer';
 import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
 import { Skeleton } from '../components/ui';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -25,6 +27,7 @@ export function SleepHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
   useHouseholdRoom(householdId);
+  const { role } = useHouseholdRole(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -101,17 +104,29 @@ export function SleepHome() {
               </p>
             </section>
           ) : activeTimer ? (
-            <SleepTimer householdId={householdId!} childId={childId!} event={activeTimer} />
+            <SleepTimer
+              householdId={householdId!}
+              childId={childId!}
+              event={activeTimer}
+              role={role}
+            />
           ) : (
-            <SleepQuickEntry householdId={householdId!} childId={childId!} />
+            // Starting a timer creates an event, so the whole quick-entry block
+            // is gated. A running timer above stays visible to every role —
+            // only its Stop button is gated (in `SleepTimer`).
+            canWrite(role, ENTRY_WRITE_ROLES) && (
+              <SleepQuickEntry householdId={householdId!} childId={childId!} />
+            )
           )}
 
-          <Link
-            to={`/households/${householdId}/children/${childId}/sleep/new`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {t('sleep.home.backfillLink')}
-          </Link>
+          {canWrite(role, ENTRY_WRITE_ROLES) && (
+            <Link
+              to={`/households/${householdId}/children/${childId}/sleep/new`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t('sleep.home.backfillLink')}
+            </Link>
+          )}
         </div>
 
         <div className="flex-1">

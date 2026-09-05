@@ -7,6 +7,7 @@ import { GrowthMeasurementList } from './GrowthMeasurementList';
 import type { GrowthMeasurementSummary } from '../../api/growth-api';
 import * as growthApi from '../../api/growth-api';
 import * as householdApi from '../../api/household-api';
+import type { HouseholdRole } from '../../lib/householdPermissions';
 import { queryClient } from '../../lib/query-client';
 
 vi.mock('../../api/growth-api', async () => {
@@ -49,7 +50,15 @@ function makeMeasurement(
   };
 }
 
-function renderList(measurements: GrowthMeasurementSummary[], isLoading = false) {
+/**
+ * Defaults to an `OWNER` viewing their own measurement (the fixture's `userId`),
+ * which is the situation the pre-existing edit/delete tests assume.
+ */
+function renderList(
+  measurements: GrowthMeasurementSummary[],
+  isLoading = false,
+  { role = 'OWNER' as HouseholdRole | undefined, currentUserId = 'u1' as string | undefined } = {},
+) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -59,6 +68,8 @@ function renderList(measurements: GrowthMeasurementSummary[], isLoading = false)
           birthDate={BIRTH_DATE}
           measurements={measurements}
           isLoading={isLoading}
+          role={role}
+          currentUserId={currentUserId}
         />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -209,6 +220,77 @@ describe('GrowthMeasurementList', () => {
       expect(
         await screen.findByText('The measurement could not be deleted. Please try again.'),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe('role-dependent actions', () => {
+    const OWN_ID = 'u1';
+    const FOREIGN_ID = 'u2';
+
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'offers a %s both Edit and Delete on an entry recorded by someone else',
+      (role) => {
+        renderList([makeMeasurement({ userId: FOREIGN_ID })], false, {
+          role,
+          currentUserId: OWN_ID,
+        });
+
+        expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+      },
+    );
+
+    it('lets a CAREGIVER edit their own entry but never delete it', () => {
+      renderList([makeMeasurement({ userId: OWN_ID })], false, {
+        role: 'CAREGIVER',
+        currentUserId: OWN_ID,
+      });
+
+      expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it("offers a CAREGIVER neither action on someone else's entry", () => {
+      renderList([makeMeasurement({ userId: FOREIGN_ID })], false, {
+        role: 'CAREGIVER',
+        currentUserId: OWN_ID,
+      });
+
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it.each([OWN_ID, FOREIGN_ID])(
+      'offers an OBSERVER no action at all, even on the entry with userId %s',
+      (userId) => {
+        renderList([makeMeasurement({ userId })], false, {
+          role: 'OBSERVER',
+          currentUserId: OWN_ID,
+        });
+
+        expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+        // Reading the recorded values stays available to every role.
+        expect(screen.getByText('Weight: 6.4 kg')).toBeInTheDocument();
+      },
+    );
+
+    it('gates each row on its own author, not on the list as a whole', () => {
+      renderList(
+        [
+          makeMeasurement({ id: 'own', userId: OWN_ID }),
+          makeMeasurement({ id: 'foreign', userId: FOREIGN_ID }),
+        ],
+        false,
+        { role: 'CAREGIVER', currentUserId: OWN_ID },
+      );
+
+      const editLinks = screen.getAllByRole('link', { name: 'Edit' });
+      expect(editLinks).toHaveLength(1);
+      expect(editLinks[0]).toHaveAttribute(
+        'href',
+        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/growth/own/edit`,
+      );
     });
   });
 });

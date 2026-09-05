@@ -7,6 +7,7 @@ import { MilestoneTimelineList } from './MilestoneTimelineList';
 import type { MilestoneSummary } from '../../api/milestone-api';
 import * as milestoneApi from '../../api/milestone-api';
 import * as householdApi from '../../api/household-api';
+import type { HouseholdRole } from '../../lib/householdPermissions';
 import { queryClient } from '../../lib/query-client';
 
 vi.mock('../../api/milestone-api', async () => {
@@ -43,7 +44,15 @@ function makeMilestone(overrides: Partial<MilestoneSummary> = {}): MilestoneSumm
   };
 }
 
-function renderList(milestones: MilestoneSummary[], isLoading = false) {
+/**
+ * Defaults to an `OWNER` viewing their own milestone (the fixture's `userId`),
+ * which is the situation the pre-existing edit/delete tests assume.
+ */
+function renderList(
+  milestones: MilestoneSummary[],
+  isLoading = false,
+  { role = 'OWNER' as HouseholdRole | undefined, currentUserId = 'u1' as string | undefined } = {},
+) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -52,6 +61,8 @@ function renderList(milestones: MilestoneSummary[], isLoading = false) {
           childId={CHILD_ID}
           milestones={milestones}
           isLoading={isLoading}
+          role={role}
+          currentUserId={currentUserId}
         />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -150,5 +161,76 @@ describe('MilestoneTimelineList (M-11)', () => {
       'href',
       `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones/new`,
     );
+  });
+
+  describe('role-dependent actions', () => {
+    const OWN_ID = 'u1';
+    const FOREIGN_ID = 'u2';
+
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'offers a %s both Edit and Delete on a milestone recorded by someone else',
+      (role) => {
+        renderList([makeMilestone({ userId: FOREIGN_ID })], false, {
+          role,
+          currentUserId: OWN_ID,
+        });
+
+        expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+      },
+    );
+
+    it('lets a CAREGIVER edit their own milestone but never delete it', () => {
+      renderList([makeMilestone({ userId: OWN_ID })], false, {
+        role: 'CAREGIVER',
+        currentUserId: OWN_ID,
+      });
+
+      expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it("offers a CAREGIVER neither action on someone else's milestone", () => {
+      renderList([makeMilestone({ userId: FOREIGN_ID })], false, {
+        role: 'CAREGIVER',
+        currentUserId: OWN_ID,
+      });
+
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it.each([OWN_ID, FOREIGN_ID])(
+      'offers an OBSERVER no action at all, even on the milestone with userId %s',
+      (userId) => {
+        renderList([makeMilestone({ userId })], false, {
+          role: 'OBSERVER',
+          currentUserId: OWN_ID,
+        });
+
+        expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+        // Remembering what was achieved stays available to every role.
+        expect(screen.getByText('First steps')).toBeInTheDocument();
+      },
+    );
+
+    it('gates each row on its own author, not on the list as a whole', () => {
+      renderList(
+        [
+          makeMilestone({ id: 'own', templateKey: null, userId: OWN_ID }),
+          makeMilestone({ id: 'foreign', userId: FOREIGN_ID }),
+        ],
+        false,
+        { role: 'CAREGIVER', currentUserId: OWN_ID },
+      );
+
+      const editLinks = screen.getAllByRole('link', { name: 'Edit' });
+      expect(editLinks).toHaveLength(1);
+      expect(editLinks[0]).toHaveAttribute(
+        'href',
+        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones/own/edit`,
+      );
+    });
   });
 });

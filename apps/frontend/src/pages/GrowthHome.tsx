@@ -10,7 +10,10 @@ import {
   listGrowthMeasurements,
   type GrowthIndicator,
 } from '../api/growth-api';
+import { useAuth } from '../auth/useAuth';
 import { mapChildError } from '../child/mapChildError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { GrowthMeasurementList } from '../components/growth/GrowthMeasurementList';
 import { toGrowthSeries } from '../components/growth/growthChartData';
@@ -51,6 +54,8 @@ const REFERENCE_STALE_TIME_MS = 24 * 60 * 60 * 1000;
 export function GrowthHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  const { user } = useAuth();
+  const { role } = useHouseholdRole(householdId);
   const [measure, setMeasure] = useState<GrowthMeasure>('WEIGHT');
 
   const childQuery = useQuery({
@@ -188,12 +193,16 @@ export function GrowthHome() {
         ))}
       </Tabs>
 
-      <Link
-        to={`/households/${householdId}/children/${childId}/growth/new`}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        {t('growth.home.addLink')}
-      </Link>
+      {/* The chart and the list above stay visible to every role — only the
+          invitation to record a new measurement is gated. */}
+      {canWrite(role, ENTRY_WRITE_ROLES) && (
+        <Link
+          to={`/households/${householdId}/children/${childId}/growth/new`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('growth.home.addLink')}
+        </Link>
+      )}
 
       {measurementsQuery.error ? (
         <ErrorMessage message={t('growth.validation.loadFailed')} />
@@ -204,6 +213,8 @@ export function GrowthHome() {
           birthDate={child.birthDate}
           measurements={measurements}
           isLoading={measurementsQuery.isLoading}
+          role={role}
+          currentUserId={user?.id}
         />
       )}
     </section>

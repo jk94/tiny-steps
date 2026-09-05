@@ -19,6 +19,9 @@
     "conflict": {
       "message": "Your change was overridden because this entry was updated elsewhere in the meantime.",
       "dismiss": "Dismiss notice"
+    },
+    "forbidden": {
+      "message": "Your change was not saved: your role in this household does not allow this action."
     }
   },
   "nav": {

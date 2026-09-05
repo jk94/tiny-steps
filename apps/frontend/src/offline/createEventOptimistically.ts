@@ -1,4 +1,5 @@
-import type { EventType, TimelineEventSummary } from '../api/event-api';
+import { isForbiddenError, type EventType, type TimelineEventSummary } from '../api/event-api';
+import { recordForbiddenNotice } from './conflictNotices';
 import { deletePendingEvent, markPendingEventFailed, putPendingEvent } from './pendingEvents.db';
 import { invalidatePendingEventsQuery } from './usePendingLocalEvents';
 
@@ -37,12 +38,18 @@ export interface CreateEventOptimisticallyParams<T extends TimelineEventSummary>
  * `invalidateQueries` on the real feeding/sleep/diaper-events key (unchanged)
  * then refetches the authoritative server row.
  *
- * On failure the buffered copy is deliberately NOT rolled back (a deviation from
- * the textbook TanStack Query optimistic-update recipe): the whole point of
- * "lokale Zwischenspeicherung" is that the entry must not vanish from the local
- * UI just because the network request failed. It is flipped to `status: 'failed'`
- * instead and kept — a future sync-queue slice acts on such records. No
- * retry/backoff is scheduled here.
+ * On an ordinary failure the buffered copy is deliberately NOT rolled back (a
+ * deviation from the textbook TanStack Query optimistic-update recipe): the
+ * whole point of "lokale Zwischenspeicherung" is that the entry must not vanish
+ * from the local UI just because the network request failed. It is flipped to
+ * `status: 'failed'` instead and kept — the sync-queue (`syncQueue.ts`) retries
+ * such records. No retry/backoff is scheduled here.
+ *
+ * The one exception is a 403 (`isForbiddenError`): the user's household role may
+ * not record this entry at all, so resending the identical payload can never
+ * succeed. Keeping it would strand a permanent "not saved" row the user has no
+ * way to discard, so it is dropped and a dismissible notice is recorded instead
+ * — mirroring how `updateEventOptimistically` resolves a Last-Write-Wins loss.
  */
 export async function createEventOptimistically<T extends TimelineEventSummary>(
   params: CreateEventOptimisticallyParams<T>,
@@ -72,6 +79,14 @@ export async function createEventOptimistically<T extends TimelineEventSummary>(
     await invalidatePendingEventsQuery(householdId, childId);
     return serverSummary;
   } catch (error) {
+    if (isForbiddenError(error)) {
+      // Not permitted for this role — never retryable, so drop it rather than
+      // stranding an undismissable "not saved" row, and surface a notice.
+      await deletePendingEvent(localId);
+      recordForbiddenNotice(eventType, localId);
+      await invalidatePendingEventsQuery(householdId, childId);
+      throw error;
+    }
     // Failure: keep it (marked failed) both in IndexedDB and, via the merge
     // hook, in the UI. Rethrow the unchanged error so existing error-mapping/
     // `ErrorMessage` handling still works.

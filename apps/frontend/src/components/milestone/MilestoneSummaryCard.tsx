@@ -4,6 +4,8 @@ import { Link } from 'react-router';
 import { listMilestones, milestonesQueryKey } from '../../api/milestone-api';
 import { formatCalendarDate } from '../../lib/calendarDate';
 import { milestoneCategoryVisuals } from '../../lib/milestoneCategoryVisuals';
+import { useHouseholdRole } from '../../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../../lib/householdPermissions';
 import { Badge, Card, EmptyState, Skeleton } from '../ui';
 
 export interface MilestoneSummaryCardProps {
@@ -24,6 +26,7 @@ export interface MilestoneSummaryCardProps {
  */
 export function MilestoneSummaryCard({ householdId, childId }: MilestoneSummaryCardProps) {
   const { t, i18n } = useTranslation();
+  const { role } = useHouseholdRole(householdId);
 
   const milestonesQuery = useQuery({
     queryKey: milestonesQueryKey(householdId, childId),
@@ -86,13 +89,17 @@ export function MilestoneSummaryCard({ householdId, childId }: MilestoneSummaryC
         ) : (
           <EmptyState
             description={t('milestone.card.empty')}
+            // The "nothing recorded yet" statement stays for every role; only
+            // the call to action a read-only role couldn't follow is dropped.
             action={
-              <Link
-                to={`${milestonePath}/new`}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {t('milestone.card.cta')}
-              </Link>
+              canWrite(role, ENTRY_WRITE_ROLES) ? (
+                <Link
+                  to={`${milestonePath}/new`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {t('milestone.card.cta')}
+                </Link>
+              ) : undefined
             }
           />
         )}

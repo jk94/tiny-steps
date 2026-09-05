@@ -14,7 +14,10 @@ import type { DiaperEventFormOutput } from '../components/DiaperEventForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Button, Card } from '../components/ui';
+import { useAuth } from '../auth/useAuth';
 import { mapDiaperError } from '../diaper/mapDiaperError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canEditEntry, canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
@@ -28,6 +31,8 @@ export function DiaperEventEdit() {
   }>();
   useHouseholdRoom(householdId);
   const navigate = useNavigate();
+  const { role } = useHouseholdRole(householdId);
+  const { user } = useAuth();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const listQueryKey = ['households', householdId, 'children', childId, 'diaper-events'];
@@ -75,6 +80,7 @@ export function DiaperEventEdit() {
   }
 
   const event = eventQuery.data;
+  const canEdit = canEditEntry(role, event.userId, user?.id);
 
   const handleSubmit = async (output: DiaperEventFormOutput) => {
     // Unlike Feeding's edit page, diaperType IS forwarded here — it's editable
@@ -118,28 +124,34 @@ export function DiaperEventEdit() {
               note: event.note ?? undefined,
             }}
             onSubmit={handleSubmit}
+            readOnly={!canEdit}
           />
 
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            {t('diaper.edit.deleteButton')}
-          </Button>
-          <ConfirmDialog
-            isOpen={isDeleteDialogOpen}
-            title={t('diaper.edit.deleteDialog.title')}
-            description={t('diaper.edit.deleteDialog.description')}
-            confirmLabel={t('diaper.edit.deleteDialog.confirmButton')}
-            cancelLabel={t('diaper.edit.deleteDialog.cancelButton')}
-            onConfirm={() => deleteMutation.mutate()}
-            onCancel={() => setIsDeleteDialogOpen(false)}
-            isConfirming={deleteMutation.isPending}
-          />
-          {deleteMutation.isError && (
-            <ErrorMessage message={t(mapDiaperError(deleteMutation.error, 'delete'))} />
+          {/* Delete only — the form stays readable (read-only) for every role, see FeedingEventEdit. */}
+          {canWrite(role, FULL_WRITE_ROLES) && (
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('diaper.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('diaper.edit.deleteDialog.title')}
+                description={t('diaper.edit.deleteDialog.description')}
+                confirmLabel={t('diaper.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('diaper.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapDiaperError(deleteMutation.error, 'delete'))} />
+              )}
+            </>
           )}
         </Card.Body>
       </Card>

@@ -14,7 +14,10 @@ import { FeedingEventForm } from '../components/FeedingEventForm';
 import type { FeedingEventFormOutput } from '../components/FeedingEventForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Button, Card } from '../components/ui';
+import { useAuth } from '../auth/useAuth';
 import { mapFeedingError } from '../feeding/mapFeedingError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canEditEntry, canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
@@ -28,6 +31,8 @@ export function FeedingEventEdit() {
   }>();
   useHouseholdRoom(householdId);
   const navigate = useNavigate();
+  const { role } = useHouseholdRole(householdId);
+  const { user } = useAuth();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const listQueryKey = ['households', householdId, 'children', childId, 'feeding-events'];
@@ -79,6 +84,7 @@ export function FeedingEventEdit() {
   }
 
   const event = eventQuery.data;
+  const canEdit = canEditEntry(role, event.userId, user?.id);
 
   const handleSubmit = async (output: FeedingEventFormOutput) => {
     // feedingType is immutable after creation (see UpdateFeedingEventDto) —
@@ -131,28 +137,43 @@ export function FeedingEventEdit() {
               note: event.note ?? undefined,
             }}
             onSubmit={handleSubmit}
+            readOnly={!canEdit}
           />
 
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            {t('feeding.edit.deleteButton')}
-          </Button>
-          <ConfirmDialog
-            isOpen={isDeleteDialogOpen}
-            title={t('feeding.edit.deleteDialog.title')}
-            description={t('feeding.edit.deleteDialog.description')}
-            confirmLabel={t('feeding.edit.deleteDialog.confirmButton')}
-            cancelLabel={t('feeding.edit.deleteDialog.cancelButton')}
-            onConfirm={() => deleteMutation.mutate()}
-            onCancel={() => setIsDeleteDialogOpen(false)}
-            isConfirming={deleteMutation.isPending}
-          />
-          {deleteMutation.isError && (
-            <ErrorMessage message={t(mapFeedingError(deleteMutation.error, 'delete'))} />
+          {/*
+            A role that may not edit this entry (OBSERVER, or CAREGIVER on
+            someone else's entry) still gets the form rendered — read-only, with
+            no submit button: the list wraps each row in a Link straight to this
+            page and there is no separate detail view, so this is the only place
+            any member can see an entry's full fields.
+
+            The delete affordance is gated separately on FULL_WRITE_ROLES, with
+            no ownership exception (see `canEditEntry`'s doc comment).
+          */}
+          {canWrite(role, FULL_WRITE_ROLES) && (
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('feeding.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('feeding.edit.deleteDialog.title')}
+                description={t('feeding.edit.deleteDialog.description')}
+                confirmLabel={t('feeding.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('feeding.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapFeedingError(deleteMutation.error, 'delete'))} />
+              )}
+            </>
           )}
         </Card.Body>
       </Card>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -7,6 +7,9 @@ import { HealthRecordOverview } from './HealthRecordOverview';
 import type { HealthRecordSummary } from '../api/health-record-api';
 import * as healthRecordApi from '../api/health-record-api';
 import * as childApi from '../api/child-api';
+import * as householdApi from '../api/household-api';
+import * as useAuthModule from '../auth/useAuth';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/health-record-api', async () => {
@@ -22,9 +25,13 @@ vi.mock('../api/child-api', async () => {
   const actual = await vi.importActual<typeof childApi>('../api/child-api');
   return { ...actual, fetchChild: vi.fn() };
 });
+vi.mock('../api/household-api');
+vi.mock('../auth/useAuth');
 
 const mockedHealthRecordApi = vi.mocked(healthRecordApi);
 const mockedChildApi = vi.mocked(childApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -60,6 +67,35 @@ function makeRecord(overrides: Partial<HealthRecordSummary> = {}): HealthRecordS
   };
 }
 
+const CURRENT_USER_ID = 'u1';
+const OTHER_USER_ID = 'u2';
+
+/**
+ * Resolves the household query `useHouseholdRole` shares with `HouseholdDetail`.
+ * Defaults to `OWNER` — the role the pre-existing action tests assume.
+ */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2025-01-01T00:00:00.000Z',
+  });
+}
+
+function givenSignedInUser(id = CURRENT_USER_ID) {
+  mockedUseAuth.mockReturnValue({
+    user: { id, email: 'parent@example.com', name: 'Bernd', createdAt: '2025-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
+  });
+}
+
 function renderOverview() {
   return render(
     <MemoryRouter initialEntries={[`/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/health`]}>
@@ -92,6 +128,8 @@ describe('HealthRecordOverview', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(TODAY);
     queryClient.clear();
+    givenHouseholdRole();
+    givenSignedInUser();
     mockedChildApi.fetchChild.mockResolvedValue(child);
     mockedHealthRecordApi.listHealthRecords.mockResolvedValue([]);
   });
@@ -209,5 +247,111 @@ describe('HealthRecordOverview', () => {
 
     expect(await screen.findByText('The entries could not be loaded.')).toBeInTheDocument();
     expect(screen.queryByText('No appointment planned.')).not.toBeInTheDocument();
+  });
+
+  describe('role-dependent actions', () => {
+    /**
+     * Renders a single planned (and therefore markable-as-done) record authored
+     * by `authorId`, viewed by a member holding `role`, and reports which of the
+     * three row actions are offered.
+     */
+    async function visibleActionsFor(role: HouseholdRole, authorId: string) {
+      givenHouseholdRole(role);
+      mockedHealthRecordApi.listHealthRecords.mockResolvedValue([
+        makeRecord({ name: 'Planned shot', userId: authorId }),
+      ]);
+
+      renderOverview();
+      await screen.findByText('Planned shot');
+
+      return {
+        markDone: screen.queryByRole('button', { name: 'Mark as done' }) !== null,
+        edit: screen.queryByRole('link', { name: 'Edit' }) !== null,
+        delete: screen.queryByRole('button', { name: 'Delete' }) !== null,
+      };
+    }
+
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'offers a %s every action on an entry recorded by someone else',
+      async (role) => {
+        expect(await visibleActionsFor(role, OTHER_USER_ID)).toEqual({
+          markDone: true,
+          edit: true,
+          delete: true,
+        });
+      },
+    );
+
+    it('lets a CAREGIVER edit and mark done their own entry, but not delete it', async () => {
+      expect(await visibleActionsFor('CAREGIVER', CURRENT_USER_ID)).toEqual({
+        markDone: true,
+        edit: true,
+        delete: false,
+      });
+    });
+
+    it("lets a CAREGIVER mark someone else's entry as done, but neither edit nor delete it", async () => {
+      // The deliberate backend exception: `isMarkAsDoneOnly()` bypasses the
+      // ownership check for a PATCH carrying only `administeredAt`, so a
+      // caregiver can close out an appointment recorded by a parent.
+      expect(await visibleActionsFor('CAREGIVER', OTHER_USER_ID)).toEqual({
+        markDone: true,
+        edit: false,
+        delete: false,
+      });
+    });
+
+    it.each([CURRENT_USER_ID, OTHER_USER_ID])(
+      'offers an OBSERVER no action at all on the entry authored by %s',
+      async (authorId) => {
+        expect(await visibleActionsFor('OBSERVER', authorId)).toEqual({
+          markDone: false,
+          edit: false,
+          delete: false,
+        });
+        // Reading the planned appointment stays available to every role.
+        expect(screen.getByText('Planned shot')).toBeInTheDocument();
+      },
+    );
+
+    it('renders no action container at all when a role has no action on the row', async () => {
+      const actionContainer = 'div.justify-end.gap-3';
+
+      // Sanity-check the selector: an OWNER does get the container…
+      await visibleActionsFor('OWNER', OTHER_USER_ID);
+      expect(document.querySelector(actionContainer)).not.toBeNull();
+
+      cleanup();
+      queryClient.clear();
+
+      // …while an OBSERVER gets no empty flex box still consuming the card's
+      // gap and leaving a dead strip under every row.
+      await visibleActionsFor('OBSERVER', OTHER_USER_ID);
+      expect(document.querySelector(actionContainer)).toBeNull();
+    });
+
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'offers the "add entry" link to a %s',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedHealthRecordApi.listHealthRecords.mockResolvedValue([]);
+
+        renderOverview();
+
+        expect(await screen.findByRole('link', { name: 'Add entry' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides the "add entry" link from an OBSERVER while keeping both sections readable', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedHealthRecordApi.listHealthRecords.mockResolvedValue([
+        makeRecord({ name: 'Planned shot', userId: OTHER_USER_ID }),
+      ]);
+
+      renderOverview();
+
+      expect(await screen.findByText('Planned shot')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Add entry' })).not.toBeInTheDocument();
+    });
   });
 });
