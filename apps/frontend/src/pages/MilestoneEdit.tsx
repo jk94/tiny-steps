@@ -19,7 +19,9 @@ import { LoadingIndicator } from '../components/LoadingIndicator';
 import { MilestoneForm } from '../components/milestone/MilestoneForm';
 import type { MilestoneFormOutput } from '../components/milestone/MilestoneForm';
 import { Button, Card, toast } from '../components/ui';
+import { useHouseholdRole } from '../household/useHouseholdRole';
 import { toCalendarDateInputValue } from '../lib/calendarDate';
+import { canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { mapMilestoneError } from '../milestone/mapMilestoneError';
 import { takePhotoRetryQueue } from '../milestone/photoRetryHandoff';
 import { countPendingPhotos, uploadQueuedPhotos } from '../milestone/uploadQueuedPhotos';
@@ -45,6 +47,7 @@ export function MilestoneEdit() {
   }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { role } = useHouseholdRole(householdId);
 
   // Seeded once from the create page's handoff, when the user arrived here
   // after a partial photo-upload failure: the still-unuploaded `File` objects
@@ -158,14 +161,23 @@ export function MilestoneEdit() {
                       aria-hidden="true"
                       className="h-16 w-16 rounded object-cover"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPendingPhotoDeleteId(photo.id)}
-                    >
-                      {t('milestone.form.photos.deleteExisting')}
-                    </Button>
+                    {/*
+                      Deleting an uploaded photo hits
+                      `DELETE .../milestones/:id/photos/:photoId`, which the
+                      backend guards with FULL_WRITE_ROLES and — unlike editing
+                      the milestone itself — grants no ownership exception. The
+                      thumbnail stays visible to every role.
+                    */}
+                    {canWrite(role, FULL_WRITE_ROLES) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPendingPhotoDeleteId(photo.id)}
+                      >
+                        {t('milestone.form.photos.deleteExisting')}
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -193,20 +205,22 @@ export function MilestoneEdit() {
         </Card.Body>
       </Card>
 
-      <ConfirmDialog
-        isOpen={pendingPhotoDeleteId !== null}
-        title={t('milestone.gallery.deleteConfirm.title')}
-        description={t('milestone.gallery.deleteConfirm.description')}
-        confirmLabel={t('milestone.gallery.deleteConfirm.confirmButton')}
-        cancelLabel={t('milestone.gallery.deleteConfirm.cancelButton')}
-        isConfirming={deletePhotoMutation.isPending}
-        onCancel={() => setPendingPhotoDeleteId(null)}
-        onConfirm={() => {
-          if (pendingPhotoDeleteId) {
-            deletePhotoMutation.mutate(pendingPhotoDeleteId);
-          }
-        }}
-      />
+      {canWrite(role, FULL_WRITE_ROLES) && (
+        <ConfirmDialog
+          isOpen={pendingPhotoDeleteId !== null}
+          title={t('milestone.gallery.deleteConfirm.title')}
+          description={t('milestone.gallery.deleteConfirm.description')}
+          confirmLabel={t('milestone.gallery.deleteConfirm.confirmButton')}
+          cancelLabel={t('milestone.gallery.deleteConfirm.cancelButton')}
+          isConfirming={deletePhotoMutation.isPending}
+          onCancel={() => setPendingPhotoDeleteId(null)}
+          onConfirm={() => {
+            if (pendingPhotoDeleteId) {
+              deletePhotoMutation.mutate(pendingPhotoDeleteId);
+            }
+          }}
+        />
+      )}
     </section>
   );
 }

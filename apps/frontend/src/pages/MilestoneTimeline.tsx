@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { fetchChild } from '../api/child-api';
 import { listMilestones, milestonesQueryKey } from '../api/milestone-api';
+import { useAuth } from '../auth/useAuth';
 import { mapChildError } from '../child/mapChildError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { MilestoneCatalogView } from '../components/milestone/MilestoneCatalogView';
 import { MilestoneTimelineList } from '../components/milestone/MilestoneTimelineList';
@@ -24,6 +26,8 @@ import { Skeleton, Tabs } from '../components/ui';
 export function MilestoneTimeline() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  const { user } = useAuth();
+  const { role } = useHouseholdRole(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -93,6 +97,8 @@ export function MilestoneTimeline() {
               childId={childId!}
               milestones={milestones}
               isLoading={milestonesQuery.isLoading}
+              role={role}
+              currentUserId={user?.id}
             />
           )}
         </Tabs.Panel>

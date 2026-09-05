@@ -10,6 +10,12 @@ import {
 } from '../../api/milestone-api';
 import { listHouseholdMembers, type HouseholdMemberSummary } from '../../api/household-api';
 import { formatCalendarDate } from '../../lib/calendarDate';
+import {
+  canEditEntry,
+  canWrite,
+  FULL_WRITE_ROLES,
+  type HouseholdRole,
+} from '../../lib/householdPermissions';
 import { milestoneCategoryVisuals } from '../../lib/milestoneCategoryVisuals';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ErrorMessage } from '../ErrorMessage';
@@ -25,6 +31,10 @@ export interface MilestoneTimelineListProps {
   /** Already newest-first — the API returns them in timeline order (M-11). */
   milestones: MilestoneSummary[];
   isLoading: boolean;
+  /** The signed-in user's role in this household; gates edit/delete. */
+  role: HouseholdRole | undefined;
+  /** The signed-in user's id, for the ownership half of the edit check. */
+  currentUserId: string | undefined;
 }
 
 /**
@@ -53,6 +63,8 @@ export function MilestoneTimelineList({
   childId,
   milestones,
   isLoading,
+  role,
+  currentUserId,
 }: MilestoneTimelineListProps) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -213,20 +225,24 @@ export function MilestoneTimelineList({
                       })}
                     </span>
                     <span className="flex items-center gap-3">
-                      <Link
-                        to={`/households/${householdId}/children/${childId}/milestones/${milestone.id}/edit`}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        {t('milestone.list.editLink')}
-                      </Link>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPendingDeleteId(milestone.id)}
-                      >
-                        {t('milestone.list.deleteButton')}
-                      </Button>
+                      {canEditEntry(role, milestone.userId, currentUserId) && (
+                        <Link
+                          to={`/households/${householdId}/children/${childId}/milestones/${milestone.id}/edit`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {t('milestone.list.editLink')}
+                        </Link>
+                      )}
+                      {canWrite(role, FULL_WRITE_ROLES) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPendingDeleteId(milestone.id)}
+                        >
+                          {t('milestone.list.deleteButton')}
+                        </Button>
+                      )}
                     </span>
                   </div>
                 </Card.Body>

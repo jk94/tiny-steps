@@ -9,6 +9,7 @@ import * as childApi from '../api/child-api';
 import * as householdApi from '../api/household-api';
 import * as milestoneApi from '../api/milestone-api';
 import * as realtime from '../realtime/useHouseholdRoom';
+import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api', async () => {
@@ -21,14 +22,16 @@ vi.mock('../api/milestone-api', async () => {
 });
 vi.mock('../api/household-api', async () => {
   const actual = await vi.importActual<typeof householdApi>('../api/household-api');
-  return { ...actual, listHouseholdMembers: vi.fn() };
+  return { ...actual, listHouseholdMembers: vi.fn(), fetchHousehold: vi.fn() };
 });
 vi.mock('../realtime/useHouseholdRoom', () => ({ useHouseholdRoom: vi.fn() }));
+vi.mock('../auth/useAuth');
 
 const mockedChildApi = vi.mocked(childApi);
 const mockedMilestoneApi = vi.mocked(milestoneApi);
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedRealtime = vi.mocked(realtime);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -78,6 +81,27 @@ describe('MilestoneTimeline', () => {
       createdAt: '2025-01-21T00:00:00.000Z',
     });
     mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([] as never);
+    mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+      id: HOUSEHOLD_ID,
+      name: 'Team Müller',
+      role: 'OWNER',
+      createdAt: '2025-01-01T00:00:00.000Z',
+    });
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: 'u1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2025-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      updateName: vi.fn(),
+      logout: vi.fn(),
+    });
     mockedMilestoneApi.listMilestones.mockResolvedValue([milestone]);
   });
 
