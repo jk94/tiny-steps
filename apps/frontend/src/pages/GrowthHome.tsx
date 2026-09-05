@@ -10,7 +10,9 @@ import {
   listGrowthMeasurements,
   type GrowthIndicator,
 } from '../api/growth-api';
+import { useAuth } from '../auth/useAuth';
 import { mapChildError } from '../child/mapChildError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { GrowthMeasurementList } from '../components/growth/GrowthMeasurementList';
 import { toGrowthSeries } from '../components/growth/growthChartData';
@@ -51,6 +53,8 @@ const REFERENCE_STALE_TIME_MS = 24 * 60 * 60 * 1000;
 export function GrowthHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
+  const { user } = useAuth();
+  const { role } = useHouseholdRole(householdId);
   const [measure, setMeasure] = useState<GrowthMeasure>('WEIGHT');
 
   const childQuery = useQuery({
@@ -204,6 +208,8 @@ export function GrowthHome() {
           birthDate={child.birthDate}
           measurements={measurements}
           isLoading={measurementsQuery.isLoading}
+          role={role}
+          currentUserId={user?.id}
         />
       )}
     </section>

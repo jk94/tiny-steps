@@ -9,10 +9,12 @@ import type { GrowthMeasurementSummary, GrowthReferenceResponse } from '../api/g
 import * as childApi from '../api/child-api';
 import * as growthApi from '../api/growth-api';
 import * as householdApi from '../api/household-api';
+import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
 vi.mock('../api/household-api');
+vi.mock('../auth/useAuth');
 vi.mock('../api/growth-api', async () => {
   const actual = await vi.importActual<typeof growthApi>('../api/growth-api');
   return {
@@ -31,6 +33,7 @@ vi.mock('../components/growth/GrowthChart', () => ({
 const mockedChildApi = vi.mocked(childApi);
 const mockedGrowthApi = vi.mocked(growthApi);
 const mockedHouseholdApi = vi.mocked(householdApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -105,6 +108,27 @@ function renderPage() {
 describe('GrowthHome', () => {
   beforeEach(() => {
     queryClient.clear();
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: 'u1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      updateName: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+      id: 'h1',
+      name: 'Team Müller',
+      role: 'OWNER',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
     mockedChildApi.fetchChild.mockResolvedValue(makeChild());
     mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([makeMeasurement()]);
     mockedGrowthApi.fetchGrowthReference.mockResolvedValue(availableReference);

@@ -11,6 +11,12 @@ import { listHouseholdMembers, type HouseholdMemberSummary } from '../../api/hou
 import { ageInMonths } from '../../lib/childAge';
 import { formatCalendarDate, parseCalendarDate } from '../../lib/calendarDate';
 import { GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
+import {
+  canEditEntry,
+  canWrite,
+  FULL_WRITE_ROLES,
+  type HouseholdRole,
+} from '../../lib/householdPermissions';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ErrorMessage } from '../ErrorMessage';
 import { Button, Card, EmptyState, Skeleton, toast } from '../ui';
@@ -23,6 +29,10 @@ export interface GrowthMeasurementListProps {
   birthDate: string;
   measurements: GrowthMeasurementSummary[];
   isLoading: boolean;
+  /** The signed-in user's role in this household; gates edit/delete. */
+  role: HouseholdRole | undefined;
+  /** The signed-in user's id, for the ownership half of the edit check. */
+  currentUserId: string | undefined;
 }
 
 /**
@@ -51,6 +61,8 @@ export function GrowthMeasurementList({
   birthDate,
   measurements,
   isLoading,
+  role,
+  currentUserId,
 }: GrowthMeasurementListProps) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -162,20 +174,24 @@ export function GrowthMeasurementList({
                     })}
                   </span>
                   <span className="flex items-center gap-3">
-                    <Link
-                      to={`/households/${householdId}/children/${childId}/growth/${measurement.id}/edit`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      {t('growth.list.editLink')}
-                    </Link>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPendingDeleteId(measurement.id)}
-                    >
-                      {t('growth.list.deleteButton')}
-                    </Button>
+                    {canEditEntry(role, measurement.userId, currentUserId) && (
+                      <Link
+                        to={`/households/${householdId}/children/${childId}/growth/${measurement.id}/edit`}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        {t('growth.list.editLink')}
+                      </Link>
+                    )}
+                    {canWrite(role, FULL_WRITE_ROLES) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPendingDeleteId(measurement.id)}
+                      >
+                        {t('growth.list.deleteButton')}
+                      </Button>
+                    )}
                   </span>
                 </div>
               </Card.Body>
