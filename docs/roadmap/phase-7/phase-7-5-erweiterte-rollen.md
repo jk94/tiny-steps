@@ -219,9 +219,8 @@ Felder), aber die aufrufende Stelle in `DailyTimeline` ist mit zu prüfen.
 
 ## Umsetzungsstand (Stand 2026-09-05)
 
-Backend und Frontend-Fundament sind implementiert, review-durchlaufen und lokal in `feature/version-2`
-gemerged (zwei Merge-Commits, **noch nicht gepusht**); das rollenabhängige Ausblenden in den
-Domain-Screens (Lauf 3) liegt noch als eigener Branch vor dem Merge. Drei `/develop`-Läufe:
+Alle drei Teile sind implementiert, review-durchlaufen und in `feature/version-2` gemerged. Drei
+`/develop`-Läufe:
 
 1. **Backend** (2 Review-Runden): `CAREGIVER`/`OBSERVER`, Rechtematrix-Konstanten
    (`apps/backend/src/household/household-permissions.ts`), `@RequireRole` an allen schreibenden
@@ -268,9 +267,8 @@ Domain-Screens (Lauf 3) liegt noch als eigener Branch vor dem Merge. Drei `/deve
 - Zwei Feinschliff-Punkte aus dem dritten Lauf, siehe „Offene Punkte" oben (Direkt-URL-Erreichbarkeit
   der Create-/Edit-Routen für Beobachter; rollen-gegatete Aktionen erscheinen einen Frame nach dem
   Mounten) — beide bewusst außerhalb des Scopes gehalten, mit Entscheidungshilfen dokumentiert.
-- Branch lokal gemerged, aber **nicht gepusht** — Push/PR gegen `feature/version-2` steht noch aus.
-  Der dritte Lauf liegt noch als eigener Branch `worktree-agent-a9d3b6a837e6eb1a4` (10 signierte
-  Commits) vor dem Merge.
+- Alle drei Läufe sind in `feature/version-2` gemerged und gepusht (drei Merge-Commits). Ein PR
+  von `feature/version-2` gegen `main` steht — wie bei den übrigen Phase-7-Teilphasen — noch aus.
 
 ## Definition of Done
 
