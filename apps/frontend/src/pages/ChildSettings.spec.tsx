@@ -177,6 +177,33 @@ describe('ChildSettings', () => {
     },
   );
 
+  it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+    'offers the export to a %s, who may generate reports server-side',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+      renderChildSettings();
+
+      expect(await screen.findByRole('link', { name: 'Export data' })).toHaveAttribute(
+        'href',
+        `/households/${household.id}/children/${child.id}/settings/export`,
+      );
+    },
+  );
+
+  it('hides the export from an OBSERVER, who has read-only access', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OBSERVER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+    renderChildSettings();
+
+    // Wait on the part of the page that stays, so the absence assertion
+    // below can't pass merely because nothing has rendered yet.
+    await screen.findByRole('checkbox', { name: 'Feeding reminder' });
+    expect(screen.queryByRole('link', { name: 'Export data' })).not.toBeInTheDocument();
+  });
+
   it('opens the confirm dialog when Delete is clicked, and cancel closes it without deleting', async () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
     mockedChildApi.fetchChild.mockResolvedValueOnce(child);

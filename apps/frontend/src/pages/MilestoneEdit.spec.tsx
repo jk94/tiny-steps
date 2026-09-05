@@ -255,14 +255,17 @@ describe('MilestoneEdit', () => {
         makeMilestone({ photos: [{ id: 'p1', sortIndex: 0, mimeType: 'image/png' }] }),
       );
 
-    it.each(['OWNER', 'CO_PARENT'] as const)('offers a %s the photo delete action', async (role) => {
-      givenHouseholdRole(role);
-      withPhoto();
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'offers a %s the photo delete action',
+      async (role) => {
+        givenHouseholdRole(role);
+        withPhoto();
 
-      renderPage();
+        renderPage();
 
-      expect(await screen.findByRole('button', { name: 'Delete photo' })).toBeInTheDocument();
-    });
+        expect(await screen.findByRole('button', { name: 'Delete photo' })).toBeInTheDocument();
+      },
+    );
 
     it.each(['CAREGIVER', 'OBSERVER'] as const)(
       'hides the photo delete action from a %s, since the endpoint has no ownership exception',

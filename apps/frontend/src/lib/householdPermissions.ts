@@ -63,6 +63,8 @@ export function canEditEntry(
     return true;
   }
   return (
-    canWrite(role, ENTRY_WRITE_ROLES) && currentUserId !== undefined && currentUserId === entryUserId
+    canWrite(role, ENTRY_WRITE_ROLES) &&
+    currentUserId !== undefined &&
+    currentUserId === entryUserId
   );
 }

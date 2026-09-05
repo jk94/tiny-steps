@@ -203,7 +203,8 @@ export function HealthRecordOverview() {
                               disabled={markDoneMutation.isPending}
                               onClick={() => markDoneMutation.mutate(record.id)}
                             >
-                              {markDoneMutation.isPending && markDoneMutation.variables === record.id
+                              {markDoneMutation.isPending &&
+                              markDoneMutation.variables === record.id
                                 ? t('health.row.markDonePending')
                                 : t('health.row.markDone')}
                             </Button>

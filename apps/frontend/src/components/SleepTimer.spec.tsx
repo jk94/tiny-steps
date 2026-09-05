@@ -32,10 +32,7 @@ function makeRunningEvent(
   };
 }
 
-function renderTimer(
-  event: sleepApi.SleepEventSummary,
-  role: HouseholdRole | undefined = 'OWNER',
-) {
+function renderTimer(event: sleepApi.SleepEventSummary, role: HouseholdRole | undefined = 'OWNER') {
   return render(
     <QueryClientProvider client={queryClient}>
       <SleepTimer householdId={HOUSEHOLD_ID} childId={CHILD_ID} event={event} role={role} />
