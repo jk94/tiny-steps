@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SleepTimer } from './SleepTimer';
 import * as sleepApi from '../api/sleep-api';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
@@ -31,10 +32,13 @@ function makeRunningEvent(
   };
 }
 
-function renderTimer(event: sleepApi.SleepEventSummary) {
+function renderTimer(
+  event: sleepApi.SleepEventSummary,
+  role: HouseholdRole | undefined = 'OWNER',
+) {
   return render(
     <QueryClientProvider client={queryClient}>
-      <SleepTimer householdId={HOUSEHOLD_ID} childId={CHILD_ID} event={event} />
+      <SleepTimer householdId={HOUSEHOLD_ID} childId={CHILD_ID} event={event} role={role} />
     </QueryClientProvider>,
   );
 }
@@ -96,6 +100,42 @@ describe('SleepTimer', () => {
         expect.objectContaining({ id: 'e1' }),
         expect.any(String),
       );
+    });
+  });
+
+  describe('role-dependent stopping', () => {
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'lets a %s stop a timer another member started (deliberate shift-handover exception)',
+      (role) => {
+        renderTimer(makeRunningEvent({ userId: 'someone-else' }), role);
+
+        expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides Stop from an OBSERVER while still showing the running timer', () => {
+      renderTimer(makeRunningEvent(), 'OBSERVER');
+
+      expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+      // Read access to what is currently happening stays universal.
+      expect(screen.getByRole('timer')).toBeInTheDocument();
+    });
+
+    it('hides Stop until the role is known, rather than flashing it into view', () => {
+      // Rendered directly: passing `undefined` through `renderTimer` would fall
+      // back to its default role parameter and defeat the point of the test.
+      render(
+        <QueryClientProvider client={queryClient}>
+          <SleepTimer
+            householdId={HOUSEHOLD_ID}
+            childId={CHILD_ID}
+            event={makeRunningEvent()}
+            role={undefined}
+          />
+        </QueryClientProvider>,
+      );
+
+      expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
     });
   });
 });

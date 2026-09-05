@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { stopSleepTimerOptimistic } from '../api/sleep-api';
 import type { SleepEventSummary } from '../api/sleep-api';
+import { canWrite, ENTRY_WRITE_ROLES, type HouseholdRole } from '../lib/householdPermissions';
 import { Badge, Button, Card } from './ui';
 
 const TICK_INTERVAL_MS = 1000;
@@ -17,6 +18,8 @@ export interface SleepTimerProps {
   householdId: string;
   childId: string;
   event: SleepEventSummary;
+  /** The signed-in user's role in this household; gates the Stop button. */
+  role: HouseholdRole | undefined;
 }
 
 /**
@@ -30,7 +33,7 @@ export interface SleepTimerProps {
  * which is how the timer survives an app restart with zero local
  * persistence.
  */
-export function SleepTimer({ householdId, childId, event }: SleepTimerProps) {
+export function SleepTimer({ householdId, childId, event, role }: SleepTimerProps) {
   const { t } = useTranslation();
   // Lazy `useState` initializers are the one place React condones an
   // impure read like `Date.now()` — it runs exactly once, on mount, not on
@@ -69,14 +72,23 @@ export function SleepTimer({ householdId, childId, event }: SleepTimerProps) {
         <p role="timer" className="text-4xl font-extrabold tabular-nums text-foreground">
           {formatElapsed(elapsedSeconds)}
         </p>
-        <Button
-          type="button"
-          variant="destructive"
-          isLoading={mutation.isPending}
-          onClick={() => mutation.mutate()}
-        >
-          {t(mutation.isPending ? 'sleep.timer.stopButtonPending' : 'sleep.timer.stopButton')}
-        </Button>
+        {/*
+          Role-only, deliberately WITHOUT an ownership check: `SleepService.stop`
+          skips `assertMayEditEntry` on purpose so whoever is on shift can stop a
+          timer a colleague started (hand-over). Anyone who may record entries at
+          all may therefore stop any running timer. The elapsed time above stays
+          visible to every role, including OBSERVER.
+        */}
+        {canWrite(role, ENTRY_WRITE_ROLES) && (
+          <Button
+            type="button"
+            variant="destructive"
+            isLoading={mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {t(mutation.isPending ? 'sleep.timer.stopButtonPending' : 'sleep.timer.stopButton')}
+          </Button>
+        )}
       </Card.Body>
     </Card>
   );

@@ -10,6 +10,7 @@ import { FeedingQuickEntry } from '../components/FeedingQuickEntry';
 import { FeedingTimer } from '../components/FeedingTimer';
 import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
 import { Skeleton } from '../components/ui';
+import { useHouseholdRole } from '../household/useHouseholdRole';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -25,6 +26,7 @@ export function FeedingHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
   useHouseholdRoom(householdId);
+  const { role } = useHouseholdRole(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -105,7 +107,12 @@ export function FeedingHome() {
               </p>
             </section>
           ) : activeTimer ? (
-            <FeedingTimer householdId={householdId!} childId={childId!} event={activeTimer} />
+            <FeedingTimer
+              householdId={householdId!}
+              childId={childId!}
+              event={activeTimer}
+              role={role}
+            />
           ) : (
             <FeedingQuickEntry householdId={householdId!} childId={childId!} />
           )}

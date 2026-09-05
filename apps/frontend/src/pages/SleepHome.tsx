@@ -10,6 +10,7 @@ import { SleepQuickEntry } from '../components/SleepQuickEntry';
 import { SleepTimer } from '../components/SleepTimer';
 import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
 import { Skeleton } from '../components/ui';
+import { useHouseholdRole } from '../household/useHouseholdRole';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -25,6 +26,7 @@ export function SleepHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
   useHouseholdRoom(householdId);
+  const { role } = useHouseholdRole(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -101,7 +103,12 @@ export function SleepHome() {
               </p>
             </section>
           ) : activeTimer ? (
-            <SleepTimer householdId={householdId!} childId={childId!} event={activeTimer} />
+            <SleepTimer
+              householdId={householdId!}
+              childId={childId!}
+              event={activeTimer}
+              role={role}
+            />
           ) : (
             <SleepQuickEntry householdId={householdId!} childId={childId!} />
           )}
