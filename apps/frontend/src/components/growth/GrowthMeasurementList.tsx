@@ -14,6 +14,7 @@ import { GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
 import {
   canEditEntry,
   canWrite,
+  ENTRY_WRITE_ROLES,
   FULL_WRITE_ROLES,
   type HouseholdRole,
 } from '../../lib/householdPermissions';
@@ -105,18 +106,25 @@ export function GrowthMeasurementList({
     );
   }
 
+  const mayRecord = canWrite(role, ENTRY_WRITE_ROLES);
+  const mayDelete = canWrite(role, FULL_WRITE_ROLES);
+
   if (measurements.length === 0) {
     return (
       <EmptyState
         title={t('growth.list.empty.title')}
         description={t('growth.list.empty.description')}
+        // A read-only role still learns that nothing has been recorded — it
+        // just isn't invited to record something it may not record.
         action={
-          <Link
-            to={`/households/${householdId}/children/${childId}/growth/new`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {t('growth.list.empty.cta')}
-          </Link>
+          mayRecord ? (
+            <Link
+              to={`/households/${householdId}/children/${childId}/growth/new`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t('growth.list.empty.cta')}
+            </Link>
+          ) : undefined
         }
       />
     );
@@ -131,73 +139,82 @@ export function GrowthMeasurementList({
       </h2>
 
       <ul className="flex flex-col gap-2">
-        {newestFirst.map((measurement) => (
-          <li key={measurement.id}>
-            <Card>
-              <Card.Body className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    {formatCalendarDate(measurement.measuredAt, i18n.language)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t('growth.list.ageAtMeasurement', {
-                      count: ageInMonths(
-                        birthDate,
-                        parseCalendarDate(measurement.measuredAt) ?? new Date(),
-                      ),
-                    })}
-                  </span>
-                </div>
+        {newestFirst.map((measurement) => {
+          const mayEdit = canEditEntry(role, measurement.userId, currentUserId);
 
-                <ul className="flex flex-col gap-1">
-                  {GROWTH_MEASURES.map((measure) => (
-                    <GrowthMeasureValueRow
-                      key={measure}
-                      measure={measure}
-                      measurement={measurement}
-                    />
-                  ))}
-                </ul>
+          return (
+            <li key={measurement.id}>
+              <Card>
+                <Card.Body className="flex flex-col gap-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {formatCalendarDate(measurement.measuredAt, i18n.language)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t('growth.list.ageAtMeasurement', {
+                        count: ageInMonths(
+                          birthDate,
+                          parseCalendarDate(measurement.measuredAt) ?? new Date(),
+                        ),
+                      })}
+                    </span>
+                  </div>
 
-                {measurement.note && (
-                  <p className="text-sm text-muted-foreground">{measurement.note}</p>
-                )}
+                  <ul className="flex flex-col gap-1">
+                    {GROWTH_MEASURES.map((measure) => (
+                      <GrowthMeasureValueRow
+                        key={measure}
+                        measure={measure}
+                        measurement={measurement}
+                      />
+                    ))}
+                  </ul>
 
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {t('growth.list.recordedBy', {
-                      name: resolveUserLabel(
-                        measurement.userId,
-                        membersQuery.data,
-                        t('growth.list.unknownUser'),
-                      ),
-                    })}
-                  </span>
-                  <span className="flex items-center gap-3">
-                    {canEditEntry(role, measurement.userId, currentUserId) && (
-                      <Link
-                        to={`/households/${householdId}/children/${childId}/growth/${measurement.id}/edit`}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        {t('growth.list.editLink')}
-                      </Link>
+                  {measurement.note && (
+                    <p className="text-sm text-muted-foreground">{measurement.note}</p>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {t('growth.list.recordedBy', {
+                        name: resolveUserLabel(
+                          measurement.userId,
+                          membersQuery.data,
+                          t('growth.list.unknownUser'),
+                        ),
+                      })}
+                    </span>
+                    {/* Rendered only when there is something in it — an empty
+                      flex box would still consume the row's gap and leave a
+                      dead strip on every row for a read-only role. */}
+                    {(mayEdit || mayDelete) && (
+                      <span className="flex items-center gap-3">
+                        {mayEdit && (
+                          <Link
+                            to={`/households/${householdId}/children/${childId}/growth/${measurement.id}/edit`}
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {t('growth.list.editLink')}
+                          </Link>
+                        )}
+                        {mayDelete && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingDeleteId(measurement.id)}
+                          >
+                            {t('growth.list.deleteButton')}
+                          </Button>
+                        )}
+                      </span>
                     )}
-                    {canWrite(role, FULL_WRITE_ROLES) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPendingDeleteId(measurement.id)}
-                      >
-                        {t('growth.list.deleteButton')}
-                      </Button>
-                    )}
-                  </span>
-                </div>
-              </Card.Body>
-            </Card>
-          </li>
-        ))}
+                  </div>
+                </Card.Body>
+              </Card>
+            </li>
+          );
+        })}
       </ul>
 
       {deleteMutation.isError && <ErrorMessage message={t('growth.validation.deleteFailed')} />}

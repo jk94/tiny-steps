@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { MilestoneCatalogView } from './MilestoneCatalogView';
 import type { MilestoneSummary } from '../../api/milestone-api';
+import type { HouseholdRole } from '../../lib/householdPermissions';
 import { MILESTONE_TEMPLATES } from '../../lib/milestoneCatalog';
 
 const HOUSEHOLD_ID = 'h1';
@@ -35,7 +36,7 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderCatalog(milestones: MilestoneSummary[]) {
+function renderCatalog(milestones: MilestoneSummary[], role: HouseholdRole = 'OWNER') {
   return render(
     <MemoryRouter initialEntries={[BASE_PATH]}>
       <Routes>
@@ -47,6 +48,7 @@ function renderCatalog(milestones: MilestoneSummary[]) {
                 householdId={HOUSEHOLD_ID}
                 childId={CHILD_ID}
                 milestones={milestones}
+                role={role}
               />
               <LocationProbe />
             </>
@@ -102,5 +104,33 @@ describe('MilestoneCatalogView (M-12)', () => {
     renderCatalog([makeMilestone({ templateKey: null, title: 'First trip by train' })]);
 
     expect(screen.queryByText('Recorded')).not.toBeInTheDocument();
+  });
+
+  describe('role-dependent recording', () => {
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'lets a %s tap an unrecorded template to record it',
+      (role) => {
+        renderCatalog([], role);
+
+        expect(screen.getByRole('button', { name: 'Record “First steps”' })).toBeInTheDocument();
+      },
+    );
+
+    it('keeps the catalog browsable for an OBSERVER but offers no way to record', () => {
+      renderCatalog([], 'OBSERVER');
+
+      expect(screen.getAllByRole('listitem')).toHaveLength(MILESTONE_TEMPLATES.length);
+      expect(screen.getByText('First steps')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Record “First steps”' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+    });
+
+    it('still lets an OBSERVER open an already-recorded entry', () => {
+      renderCatalog([makeMilestone({ id: 'existing', templateKey: 'FIRST_STEPS' })], 'OBSERVER');
+
+      expect(screen.getByRole('button', { name: 'Open “First steps”' })).toBeInTheDocument();
+    });
   });
 });

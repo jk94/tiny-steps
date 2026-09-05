@@ -11,6 +11,7 @@ import { FeedingTimer } from '../components/FeedingTimer';
 import { OfflineStatusBadge } from '../components/OfflineStatusBadge';
 import { Skeleton } from '../components/ui';
 import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -114,15 +115,22 @@ export function FeedingHome() {
               role={role}
             />
           ) : (
-            <FeedingQuickEntry householdId={householdId!} childId={childId!} />
+            // Starting a timer / logging a feed creates an event, so the whole
+            // quick-entry block is gated. A running timer above stays visible
+            // to every role — only its Stop button is gated (in `FeedingTimer`).
+            canWrite(role, ENTRY_WRITE_ROLES) && (
+              <FeedingQuickEntry householdId={householdId!} childId={childId!} />
+            )
           )}
 
-          <Link
-            to={`/households/${householdId}/children/${childId}/feeding/new`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {t('feeding.home.backfillLink')}
-          </Link>
+          {canWrite(role, ENTRY_WRITE_ROLES) && (
+            <Link
+              to={`/households/${householdId}/children/${childId}/feeding/new`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t('feeding.home.backfillLink')}
+            </Link>
+          )}
         </div>
 
         <div className="flex-1">

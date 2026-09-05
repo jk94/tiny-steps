@@ -10,6 +10,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { MilestoneCatalogView } from '../components/milestone/MilestoneCatalogView';
 import { MilestoneTimelineList } from '../components/milestone/MilestoneTimelineList';
 import { Skeleton, Tabs } from '../components/ui';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 
 /**
  * Milestone page for one child: the recorded timeline and the template catalog
@@ -75,12 +76,16 @@ export function MilestoneTimeline() {
         <p className="text-sm text-muted-foreground">{t('milestone.timeline.subtitle')}</p>
       </div>
 
-      <Link
-        to={`/households/${householdId}/children/${childId}/milestones/new`}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        {t('milestone.timeline.addLink')}
-      </Link>
+      {/* The timeline and the catalog below stay browsable for every role —
+          only the invitation to record a milestone is gated. */}
+      {canWrite(role, ENTRY_WRITE_ROLES) && (
+        <Link
+          to={`/households/${householdId}/children/${childId}/milestones/new`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('milestone.timeline.addLink')}
+        </Link>
+      )}
 
       <Tabs defaultValue="timeline">
         <Tabs.List>
@@ -110,6 +115,7 @@ export function MilestoneTimeline() {
             // A failed list query only costs the "already recorded" markers
             // here; the catalog itself is static and still worth showing.
             milestones={milestones}
+            role={role}
           />
         </Tabs.Panel>
       </Tabs>

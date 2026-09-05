@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -313,5 +313,45 @@ describe('HealthRecordOverview', () => {
         expect(screen.getByText('Planned shot')).toBeInTheDocument();
       },
     );
+
+    it('renders no action container at all when a role has no action on the row', async () => {
+      const actionContainer = 'div.justify-end.gap-3';
+
+      // Sanity-check the selector: an OWNER does get the container…
+      await visibleActionsFor('OWNER', OTHER_USER_ID);
+      expect(document.querySelector(actionContainer)).not.toBeNull();
+
+      cleanup();
+      queryClient.clear();
+
+      // …while an OBSERVER gets no empty flex box still consuming the card's
+      // gap and leaving a dead strip under every row.
+      await visibleActionsFor('OBSERVER', OTHER_USER_ID);
+      expect(document.querySelector(actionContainer)).toBeNull();
+    });
+
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'offers the "add entry" link to a %s',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedHealthRecordApi.listHealthRecords.mockResolvedValue([]);
+
+        renderOverview();
+
+        expect(await screen.findByRole('link', { name: 'Add entry' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides the "add entry" link from an OBSERVER while keeping both sections readable', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedHealthRecordApi.listHealthRecords.mockResolvedValue([
+        makeRecord({ name: 'Planned shot', userId: OTHER_USER_ID }),
+      ]);
+
+      renderOverview();
+
+      expect(await screen.findByText('Planned shot')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Add entry' })).not.toBeInTheDocument();
+    });
   });
 });

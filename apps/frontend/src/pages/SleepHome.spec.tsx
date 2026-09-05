@@ -182,4 +182,30 @@ describe('SleepHome', () => {
     expect(await screen.findByRole('timer')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
   });
+
+  describe('role-dependent create affordances', () => {
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'offers quick entry and the backfill link to a %s',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedSleepApi.fetchActiveSleepTimer.mockResolvedValueOnce(null);
+
+        renderSleepHome();
+
+        expect(await screen.findByText('Quick entry')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Add entry manually' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides both from an OBSERVER while keeping the event list readable', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedSleepApi.fetchActiveSleepTimer.mockResolvedValueOnce(null);
+
+      renderSleepHome();
+
+      expect(await screen.findByRole('heading', { name: 'Sleep — Alex' })).toBeInTheDocument();
+      await vi.waitFor(() => expect(screen.queryByText('Quick entry')).not.toBeInTheDocument());
+      expect(screen.queryByRole('link', { name: 'Add entry manually' })).not.toBeInTheDocument();
+    });
+  });
 });

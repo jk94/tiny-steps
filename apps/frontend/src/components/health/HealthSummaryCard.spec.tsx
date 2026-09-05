@@ -5,14 +5,18 @@ import { MemoryRouter } from 'react-router';
 import { HealthSummaryCard } from './HealthSummaryCard';
 import type { HealthRecordSummary } from '../../api/health-record-api';
 import * as healthRecordApi from '../../api/health-record-api';
+import * as householdApi from '../../api/household-api';
+import type { HouseholdRole } from '../../lib/householdPermissions';
 import { queryClient } from '../../lib/query-client';
 
 vi.mock('../../api/health-record-api', async () => {
   const actual = await vi.importActual<typeof healthRecordApi>('../../api/health-record-api');
   return { ...actual, listHealthRecords: vi.fn() };
 });
+vi.mock('../../api/household-api');
 
 const mockedHealthRecordApi = vi.mocked(healthRecordApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -38,6 +42,16 @@ function makeRecord(overrides: Partial<HealthRecordSummary> = {}): HealthRecordS
   };
 }
 
+/** Resolves the household query `useHouseholdRole` reads the card's role from. */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
 function renderCard() {
   return render(
     <MemoryRouter>
@@ -53,6 +67,7 @@ describe('HealthSummaryCard', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(TODAY);
     queryClient.clear();
+    givenHouseholdRole();
   });
 
   afterEach(() => {
@@ -93,6 +108,18 @@ describe('HealthSummaryCard', () => {
     expect(screen.getByRole('link', { name: 'Add entry' })).toHaveAttribute(
       'href',
       `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/health/new`,
+    );
+  });
+
+  it('keeps the empty-state statement but drops the call to action for an OBSERVER', async () => {
+    givenHouseholdRole('OBSERVER');
+    mockedHealthRecordApi.listHealthRecords.mockResolvedValue([]);
+
+    renderCard();
+
+    expect(await screen.findByText('Nothing recorded yet.')).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Add entry' })).not.toBeInTheDocument(),
     );
   });
 

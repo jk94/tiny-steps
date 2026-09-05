@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { Check } from 'lucide-react';
 import type { MilestoneSummary } from '../../api/milestone-api';
+import { canWrite, ENTRY_WRITE_ROLES, type HouseholdRole } from '../../lib/householdPermissions';
 import { groupTemplatesByAgeBucket, milestoneTemplateLabelKey } from '../../lib/milestoneCatalog';
 import { milestoneCategoryVisuals } from '../../lib/milestoneCategoryVisuals';
 import { Badge, Card } from '../ui';
@@ -11,6 +12,12 @@ export interface MilestoneCatalogViewProps {
   childId: string;
   /** The child's recorded milestones, used to mark templates as done (M-5). */
   milestones: MilestoneSummary[];
+  /**
+   * The signed-in user's role in this household. Gates only the "record this
+   * one" tap-through on an *unrecorded* template — browsing the catalog and
+   * opening an already-recorded entry stay open to every role.
+   */
+  role: HouseholdRole | undefined;
 }
 
 /**
@@ -28,10 +35,12 @@ export function MilestoneCatalogView({
   householdId,
   childId,
   milestones,
+  role,
 }: MilestoneCatalogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const mayRecord = canWrite(role, ENTRY_WRITE_ROLES);
   const basePath = `/households/${householdId}/children/${childId}/milestones`;
   // Template key -> the milestone recording it. At most one per key, enforced
   // by the DB's unique index.
@@ -59,57 +68,73 @@ export function MilestoneCatalogView({
               const recorded = recordedByTemplate.get(template.key);
               const label = t(milestoneTemplateLabelKey(template.key));
               const visual = milestoneCategoryVisuals[template.category];
+              // Tapping an unrecorded template opens the create form, so it is
+              // a create affordance and gated. An already-recorded one merely
+              // opens the existing entry — that's reading, open to every role.
+              const isTappable = recorded !== undefined || mayRecord;
+              const tileContent = (
+                <>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium text-foreground">{label}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {t('milestone.catalog.typicalRange', {
+                        min: template.typicalAgeMonths[0],
+                        max: template.typicalAgeMonths[1],
+                      })}
+                    </span>
+                  </span>
+
+                  <span className="flex shrink-0 items-center gap-1">
+                    <visual.Icon
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5"
+                      style={{ color: `var(${visual.colorVar})` }}
+                    />
+                    <Badge variant={visual.badgeVariant} size="sm">
+                      {t(visual.labelKey)}
+                    </Badge>
+                  </span>
+
+                  {recorded && (
+                    <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-success">
+                      <Check aria-hidden="true" className="h-4 w-4" />
+                      {t('milestone.catalog.achievedMarker')}
+                    </span>
+                  )}
+                </>
+              );
+              const tileClassName = 'flex w-full items-center gap-3 rounded-lg p-3 text-left';
 
               return (
                 <li key={template.key}>
                   <Card>
                     <Card.Body className="p-0">
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        aria-label={
-                          recorded
-                            ? t('milestone.catalog.openAchieved', { title: label })
-                            : t('milestone.catalog.recordTemplate', { title: label })
-                        }
-                        onClick={() =>
-                          // Already recorded -> open it, rather than let the
-                          // user run into the 409 (M-5).
-                          void navigate(
+                      {isTappable ? (
+                        <button
+                          type="button"
+                          className={`${tileClassName} transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                          aria-label={
                             recorded
-                              ? `${basePath}/${recorded.id}/edit`
-                              : `${basePath}/new?templateKey=${template.key}`,
-                          )
-                        }
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-medium text-foreground">{label}</span>
-                          <span className="block text-xs text-muted-foreground">
-                            {t('milestone.catalog.typicalRange', {
-                              min: template.typicalAgeMonths[0],
-                              max: template.typicalAgeMonths[1],
-                            })}
-                          </span>
-                        </span>
-
-                        <span className="flex shrink-0 items-center gap-1">
-                          <visual.Icon
-                            aria-hidden="true"
-                            className="h-3.5 w-3.5"
-                            style={{ color: `var(${visual.colorVar})` }}
-                          />
-                          <Badge variant={visual.badgeVariant} size="sm">
-                            {t(visual.labelKey)}
-                          </Badge>
-                        </span>
-
-                        {recorded && (
-                          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-success">
-                            <Check aria-hidden="true" className="h-4 w-4" />
-                            {t('milestone.catalog.achievedMarker')}
-                          </span>
-                        )}
-                      </button>
+                              ? t('milestone.catalog.openAchieved', { title: label })
+                              : t('milestone.catalog.recordTemplate', { title: label })
+                          }
+                          onClick={() =>
+                            // Already recorded -> open it, rather than let the
+                            // user run into the 409 (M-5).
+                            void navigate(
+                              recorded
+                                ? `${basePath}/${recorded.id}/edit`
+                                : `${basePath}/new?templateKey=${template.key}`,
+                            )
+                          }
+                        >
+                          {tileContent}
+                        </button>
+                      ) : (
+                        // Read-only role, template not yet recorded: the entry
+                        // stays browsable, just not tappable.
+                        <div className={tileClassName}>{tileContent}</div>
+                      )}
                     </Card.Body>
                   </Card>
                 </li>

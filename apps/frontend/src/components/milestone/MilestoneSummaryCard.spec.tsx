@@ -5,14 +5,18 @@ import { MemoryRouter } from 'react-router';
 import { MilestoneSummaryCard } from './MilestoneSummaryCard';
 import type { MilestoneSummary } from '../../api/milestone-api';
 import * as milestoneApi from '../../api/milestone-api';
+import * as householdApi from '../../api/household-api';
+import type { HouseholdRole } from '../../lib/householdPermissions';
 import { queryClient } from '../../lib/query-client';
 
 vi.mock('../../api/milestone-api', async () => {
   const actual = await vi.importActual<typeof milestoneApi>('../../api/milestone-api');
   return { ...actual, listMilestones: vi.fn() };
 });
+vi.mock('../../api/household-api');
 
 const mockedMilestoneApi = vi.mocked(milestoneApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -36,6 +40,16 @@ function makeMilestone(overrides: Partial<MilestoneSummary> = {}): MilestoneSumm
   };
 }
 
+/** Resolves the household query `useHouseholdRole` reads the card's role from. */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
 function renderCard() {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -49,6 +63,7 @@ function renderCard() {
 describe('MilestoneSummaryCard (M-13)', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
   });
 
   afterEach(() => {
@@ -91,6 +106,18 @@ describe('MilestoneSummaryCard (M-13)', () => {
     expect(screen.getByRole('link', { name: 'Record a milestone' })).toHaveAttribute(
       'href',
       `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones/new`,
+    );
+  });
+
+  it('keeps the empty-state statement but drops the call to action for an OBSERVER', async () => {
+    givenHouseholdRole('OBSERVER');
+    mockedMilestoneApi.listMilestones.mockResolvedValue([]);
+
+    renderCard();
+
+    expect(await screen.findByText('No milestone recorded yet.')).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Record a milestone' })).not.toBeInTheDocument(),
     );
   });
 

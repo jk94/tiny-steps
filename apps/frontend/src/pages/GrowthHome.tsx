@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../auth/useAuth';
 import { mapChildError } from '../child/mapChildError';
 import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { GrowthMeasurementList } from '../components/growth/GrowthMeasurementList';
 import { toGrowthSeries } from '../components/growth/growthChartData';
@@ -192,12 +193,16 @@ export function GrowthHome() {
         ))}
       </Tabs>
 
-      <Link
-        to={`/households/${householdId}/children/${childId}/growth/new`}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        {t('growth.home.addLink')}
-      </Link>
+      {/* The chart and the list above stay visible to every role — only the
+          invitation to record a new measurement is gated. */}
+      {canWrite(role, ENTRY_WRITE_ROLES) && (
+        <Link
+          to={`/households/${householdId}/children/${childId}/growth/new`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('growth.home.addLink')}
+        </Link>
+      )}
 
       {measurementsQuery.error ? (
         <ErrorMessage message={t('growth.validation.loadFailed')} />

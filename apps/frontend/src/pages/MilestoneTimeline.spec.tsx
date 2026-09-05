@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -10,6 +10,7 @@ import * as householdApi from '../api/household-api';
 import * as milestoneApi from '../api/milestone-api';
 import * as realtime from '../realtime/useHouseholdRoom';
 import * as useAuthModule from '../auth/useAuth';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api', async () => {
@@ -36,11 +37,15 @@ const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
 const BASE_PATH = `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones`;
+/** The signed-in user — also the author of `milestone` below. */
+const CURRENT_USER_ID = 'u1';
+/** Another household member, so a milestone can be made "foreign". */
+const OTHER_USER_ID = 'u2';
 
 const milestone: MilestoneSummary = {
   id: 'm1',
   childId: CHILD_ID,
-  userId: 'u1',
+  userId: CURRENT_USER_ID,
   templateKey: 'FIRST_STEPS',
   title: 'First steps',
   category: 'MOTOR',
@@ -52,6 +57,30 @@ const milestone: MilestoneSummary = {
   updatedAt: '2025-08-21T09:00:00.000Z',
   photos: [],
 };
+
+/** Resolves the household query `useHouseholdRole` reads the page's role from. */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2025-01-01T00:00:00.000Z',
+  });
+}
+
+/** Signs a user in, so the ownership half of the edit check has an id to compare. */
+function givenSignedInUser(id: string = CURRENT_USER_ID) {
+  mockedUseAuth.mockReturnValue({
+    user: { id, email: 'parent@example.com', name: 'Bernd', createdAt: '2025-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
+  });
+}
 
 function renderPage() {
   return render(
@@ -81,27 +110,8 @@ describe('MilestoneTimeline', () => {
       createdAt: '2025-01-21T00:00:00.000Z',
     });
     mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([] as never);
-    mockedHouseholdApi.fetchHousehold.mockResolvedValue({
-      id: HOUSEHOLD_ID,
-      name: 'Team Müller',
-      role: 'OWNER',
-      createdAt: '2025-01-01T00:00:00.000Z',
-    });
-    mockedUseAuth.mockReturnValue({
-      user: {
-        id: 'u1',
-        email: 'parent@example.com',
-        name: 'Bernd',
-        createdAt: '2025-01-01T00:00:00.000Z',
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      updateName: vi.fn(),
-      logout: vi.fn(),
-    });
+    givenHouseholdRole();
+    givenSignedInUser();
     mockedMilestoneApi.listMilestones.mockResolvedValue([milestone]);
   });
 
@@ -155,5 +165,80 @@ describe('MilestoneTimeline', () => {
       'href',
       `${BASE_PATH}/new`,
     );
+  });
+
+  describe('role-dependent actions', () => {
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'offers the "add milestone" link to a %s',
+      async (role) => {
+        givenHouseholdRole(role);
+
+        renderPage();
+
+        expect(await screen.findByRole('link', { name: 'Add milestone' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides the "add milestone" link from an OBSERVER while keeping the timeline readable', async () => {
+      givenHouseholdRole('OBSERVER');
+
+      renderPage();
+
+      expect(await screen.findByText('First steps')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Add milestone' })).not.toBeInTheDocument();
+    });
+
+    it('drops the empty-state call to action for an OBSERVER but keeps the statement', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedMilestoneApi.listMilestones.mockResolvedValue([]);
+
+      renderPage();
+
+      expect(await screen.findByText('No milestones yet')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Record the first milestone' }),
+      ).not.toBeInTheDocument();
+    });
+
+    // Proves the page actually threads `role` and `currentUserId` into the
+    // list: with OWNER (the default above) the ownership half short-circuits,
+    // so a hardcoded role or an undefined user id would go unnoticed.
+    it('lets a CAREGIVER edit only their own milestone', async () => {
+      givenHouseholdRole('CAREGIVER');
+      mockedMilestoneApi.listMilestones.mockResolvedValue([
+        { ...milestone, id: 'own', userId: CURRENT_USER_ID },
+        { ...milestone, id: 'foreign', templateKey: null, userId: OTHER_USER_ID },
+      ]);
+
+      renderPage();
+
+      const editLinks = await screen.findAllByRole('link', { name: 'Edit' });
+      expect(editLinks).toHaveLength(1);
+      expect(editLinks[0]).toHaveAttribute('href', `${BASE_PATH}/own/edit`);
+      // Role-only, no ownership exception — a CAREGIVER deletes nothing.
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it('renders no per-row action container at all for an OBSERVER', async () => {
+      const actionContainer = 'span.items-center.gap-3';
+
+      // Sanity-check the selector: an OWNER does get the container…
+      renderPage();
+      await screen.findByText('First steps');
+      expect(document.querySelector(actionContainer)).not.toBeNull();
+
+      cleanup();
+      queryClient.clear();
+      givenHouseholdRole('OBSERVER');
+
+      renderPage();
+
+      // The entry itself is still there…
+      expect(await screen.findByText('First steps')).toBeInTheDocument();
+      // …but nothing actionable, and no empty wrapper holding the row's gap.
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+      expect(document.querySelector(actionContainer)).toBeNull();
+    });
   });
 });

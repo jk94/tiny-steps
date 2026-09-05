@@ -13,6 +13,7 @@ import { formatCalendarDate } from '../../lib/calendarDate';
 import {
   canEditEntry,
   canWrite,
+  ENTRY_WRITE_ROLES,
   FULL_WRITE_ROLES,
   type HouseholdRole,
 } from '../../lib/householdPermissions';
@@ -107,18 +108,25 @@ export function MilestoneTimelineList({
     );
   }
 
+  const mayRecord = canWrite(role, ENTRY_WRITE_ROLES);
+  const mayDelete = canWrite(role, FULL_WRITE_ROLES);
+
   if (milestones.length === 0) {
     return (
       <EmptyState
         title={t('milestone.list.empty.title')}
         description={t('milestone.list.empty.description')}
+        // A read-only role still learns that nothing has been recorded — it
+        // just isn't invited to record something it may not record.
         action={
-          <Link
-            to={`/households/${householdId}/children/${childId}/milestones/new`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {t('milestone.list.empty.cta')}
-          </Link>
+          mayRecord ? (
+            <Link
+              to={`/households/${householdId}/children/${childId}/milestones/new`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t('milestone.list.empty.cta')}
+            </Link>
+          ) : undefined
         }
       />
     );
@@ -137,6 +145,7 @@ export function MilestoneTimelineList({
           const visual = milestone.category ? milestoneCategoryVisuals[milestone.category] : null;
           const visiblePhotos = milestone.photos.slice(0, VISIBLE_THUMBNAILS);
           const hiddenPhotoCount = milestone.photos.length - visiblePhotos.length;
+          const mayEdit = canEditEntry(role, milestone.userId, currentUserId);
 
           return (
             <li key={milestone.id}>
@@ -224,26 +233,31 @@ export function MilestoneTimelineList({
                         ),
                       })}
                     </span>
-                    <span className="flex items-center gap-3">
-                      {canEditEntry(role, milestone.userId, currentUserId) && (
-                        <Link
-                          to={`/households/${householdId}/children/${childId}/milestones/${milestone.id}/edit`}
-                          className="text-sm font-medium text-primary hover:underline"
-                        >
-                          {t('milestone.list.editLink')}
-                        </Link>
-                      )}
-                      {canWrite(role, FULL_WRITE_ROLES) && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPendingDeleteId(milestone.id)}
-                        >
-                          {t('milestone.list.deleteButton')}
-                        </Button>
-                      )}
-                    </span>
+                    {/* Rendered only when there is something in it — an empty
+                        flex box would still consume the row's gap and leave a
+                        dead strip on every row for a read-only role. */}
+                    {(mayEdit || mayDelete) && (
+                      <span className="flex items-center gap-3">
+                        {mayEdit && (
+                          <Link
+                            to={`/households/${householdId}/children/${childId}/milestones/${milestone.id}/edit`}
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {t('milestone.list.editLink')}
+                          </Link>
+                        )}
+                        {mayDelete && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingDeleteId(milestone.id)}
+                          >
+                            {t('milestone.list.deleteButton')}
+                          </Button>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </Card.Body>
               </Card>

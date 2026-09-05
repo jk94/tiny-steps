@@ -9,6 +9,8 @@ import {
 import { ageInMonths } from '../../lib/childAge';
 import { formatCalendarDate, parseCalendarDate } from '../../lib/calendarDate';
 import { GROWTH_MEASURES } from '../../lib/growthMeasureVisuals';
+import { useHouseholdRole } from '../../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../../lib/householdPermissions';
 import { Card, EmptyState, Skeleton } from '../ui';
 import { GrowthMeasureValueRow } from './GrowthMeasureValueRow';
 
@@ -32,6 +34,7 @@ export interface GrowthSummaryCardProps {
  */
 export function GrowthSummaryCard({ householdId, childId, birthDate }: GrowthSummaryCardProps) {
   const { t, i18n } = useTranslation();
+  const { role } = useHouseholdRole(householdId);
 
   const measurementsQuery = useQuery({
     queryKey: growthQueryKey(householdId, childId),
@@ -94,13 +97,17 @@ export function GrowthSummaryCard({ householdId, childId, birthDate }: GrowthSum
         ) : (
           <EmptyState
             description={t('growth.card.empty')}
+            // The "nothing recorded yet" statement stays for every role; only
+            // the call to action a read-only role couldn't follow is dropped.
             action={
-              <Link
-                to={`${growthPath}/new`}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {t('growth.card.cta')}
-              </Link>
+              canWrite(role, ENTRY_WRITE_ROLES) ? (
+                <Link
+                  to={`${growthPath}/new`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {t('growth.card.cta')}
+                </Link>
+              ) : undefined
             }
           />
         )}

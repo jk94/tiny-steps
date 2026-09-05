@@ -5,14 +5,18 @@ import { MemoryRouter } from 'react-router';
 import { GrowthSummaryCard } from './GrowthSummaryCard';
 import type { GrowthMeasurementSummary } from '../../api/growth-api';
 import * as growthApi from '../../api/growth-api';
+import * as householdApi from '../../api/household-api';
+import type { HouseholdRole } from '../../lib/householdPermissions';
 import { queryClient } from '../../lib/query-client';
 
 vi.mock('../../api/growth-api', async () => {
   const actual = await vi.importActual<typeof growthApi>('../../api/growth-api');
   return { ...actual, listGrowthMeasurements: vi.fn() };
 });
+vi.mock('../../api/household-api');
 
 const mockedGrowthApi = vi.mocked(growthApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -45,6 +49,16 @@ function makeMeasurement(
   };
 }
 
+/** Resolves the household query `useHouseholdRole` reads the card's role from. */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
 function renderCard() {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -58,6 +72,7 @@ function renderCard() {
 describe('GrowthSummaryCard (W-15)', () => {
   beforeEach(() => {
     queryClient.clear();
+    givenHouseholdRole();
   });
 
   afterEach(() => {
@@ -101,6 +116,18 @@ describe('GrowthSummaryCard (W-15)', () => {
     expect(screen.getByRole('link', { name: 'Record a measurement' })).toHaveAttribute(
       'href',
       `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/growth/new`,
+    );
+  });
+
+  it('keeps the empty-state statement but drops the call to action for an OBSERVER', async () => {
+    givenHouseholdRole('OBSERVER');
+    mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([]);
+
+    renderCard();
+
+    expect(await screen.findByText('No measurement recorded yet.')).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Record a measurement' })).not.toBeInTheDocument(),
     );
   });
 

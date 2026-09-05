@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
@@ -124,29 +124,68 @@ export function HealthRecordOverview() {
     .filter((record) => record.administeredAt !== null)
     .sort((a, b) => b.administeredAt!.localeCompare(a.administeredAt!));
 
-  const editLink = (record: HealthRecordSummary) =>
-    canEditEntry(role, record.userId, user?.id) && (
-      <Link
-        to={`${basePath}/${record.id}/edit`}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        {t('health.row.editLink')}
-      </Link>
-    );
-
-  const deleteButton = (record: HealthRecordSummary) =>
-    canWrite(role, FULL_WRITE_ROLES) && (
-      <Button type="button" variant="ghost" size="sm" onClick={() => setPendingDeleteId(record.id)}>
-        {t('health.row.deleteButton')}
-      </Button>
-    );
+  const mayEdit = (record: HealthRecordSummary) => canEditEntry(role, record.userId, user?.id);
+  const mayDelete = canWrite(role, FULL_WRITE_ROLES);
+  const mayRecord = canWrite(role, ENTRY_WRITE_ROLES);
 
   // Deliberately role-only, with NO ownership check: the backend lets any
   // ENTRY_WRITE_ROLES member (i.e. also a CAREGIVER) mark someone else's planned
   // record as done, because `isMarkAsDoneOnly()` bypasses the ownership
   // assertion for a PATCH that carries nothing but `administeredAt` — which is
   // exactly what `markDoneMutation` sends. Do not "fix" this into canEditEntry.
-  const mayMarkAsDone = canWrite(role, ENTRY_WRITE_ROLES);
+  const mayMarkAsDone = mayRecord;
+
+  /**
+   * The action cluster for one row, or `undefined` when this role has no action
+   * on it at all — so `HealthRecordRow` can skip its wrapper instead of
+   * rendering an empty flex box. `withMarkDone` is true only in the upcoming
+   * section; a record in the history is already done.
+   */
+  const rowActions = (
+    record: HealthRecordSummary,
+    withMarkDone: boolean,
+  ): ReactNode | undefined => {
+    const showMarkDone = withMarkDone && mayMarkAsDone;
+    const showEdit = mayEdit(record);
+    if (!showMarkDone && !showEdit && !mayDelete) {
+      return undefined;
+    }
+    return (
+      <>
+        {showMarkDone && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={markDoneMutation.isPending}
+            onClick={() => markDoneMutation.mutate(record.id)}
+          >
+            {markDoneMutation.isPending && markDoneMutation.variables === record.id
+              ? t('health.row.markDonePending')
+              : t('health.row.markDone')}
+          </Button>
+        )}
+        {showEdit && (
+          <Link
+            to={`${basePath}/${record.id}/edit`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t('health.row.editLink')}
+          </Link>
+        )}
+        {mayDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setPendingDeleteId(record.id)}
+          >
+            {t('health.row.deleteButton')}
+          </Button>
+        )}
+      </>
+    );
+  };
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -163,9 +202,13 @@ export function HealthRecordOverview() {
         <p className="text-sm text-muted-foreground">{t('health.overview.subtitle')}</p>
       </div>
 
-      <Link to={`${basePath}/new`} className="text-sm font-medium text-primary hover:underline">
-        {t('health.overview.addLink')}
-      </Link>
+      {/* Both sections below stay readable for every role — only the
+          invitation to record a new entry is gated. */}
+      {mayRecord && (
+        <Link to={`${basePath}/new`} className="text-sm font-medium text-primary hover:underline">
+          {t('health.overview.addLink')}
+        </Link>
+      )}
 
       {recordsQuery.error ? (
         <ErrorMessage message={t('health.overview.loadFailed')} />
@@ -193,26 +236,7 @@ export function HealthRecordOverview() {
                     <HealthRecordRow
                       record={record}
                       isOverdue={isOverdue(record, today)}
-                      actions={
-                        <>
-                          {mayMarkAsDone && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              disabled={markDoneMutation.isPending}
-                              onClick={() => markDoneMutation.mutate(record.id)}
-                            >
-                              {markDoneMutation.isPending &&
-                              markDoneMutation.variables === record.id
-                                ? t('health.row.markDonePending')
-                                : t('health.row.markDone')}
-                            </Button>
-                          )}
-                          {editLink(record)}
-                          {deleteButton(record)}
-                        </>
-                      }
+                      actions={rowActions(record, true)}
                     />
                   </li>
                 ))}
@@ -234,15 +258,7 @@ export function HealthRecordOverview() {
               <ul className="flex flex-col gap-2">
                 {history.map((record) => (
                   <li key={record.id}>
-                    <HealthRecordRow
-                      record={record}
-                      actions={
-                        <>
-                          {editLink(record)}
-                          {deleteButton(record)}
-                        </>
-                      }
-                    />
+                    <HealthRecordRow record={record} actions={rowActions(record, false)} />
                   </li>
                 ))}
               </ul>

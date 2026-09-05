@@ -9,8 +9,12 @@ export interface HealthRecordRowProps {
   record: HealthRecordSummary;
   /** True when the planned date has passed without the entry being done (MED-6). */
   isOverdue?: boolean;
-  /** Buttons/links owned by the section this row appears in. */
-  actions: ReactNode;
+  /**
+   * Buttons/links owned by the section this row appears in, or `undefined` when
+   * the user's role offers none — the wrapper is then skipped entirely rather
+   * than rendered as an empty flex box that still consumes the card's gap.
+   */
+  actions?: ReactNode;
 }
 
 /**
@@ -78,7 +82,9 @@ export function HealthRecordRow({ record, isOverdue = false, actions }: HealthRe
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-3">{actions}</div>
+        {actions !== undefined && (
+          <div className="flex flex-wrap items-center justify-end gap-3">{actions}</div>
+        )}
       </Card.Body>
     </Card>
   );

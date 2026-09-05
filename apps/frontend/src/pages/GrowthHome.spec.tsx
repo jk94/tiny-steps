@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -10,6 +10,7 @@ import * as childApi from '../api/child-api';
 import * as growthApi from '../api/growth-api';
 import * as householdApi from '../api/household-api';
 import * as useAuthModule from '../auth/useAuth';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
@@ -37,6 +38,10 @@ const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
+/** The signed-in user — also the default author of `makeMeasurement()`. */
+const CURRENT_USER_ID = 'u1';
+/** Another household member, so a measurement can be made "foreign". */
+const OTHER_USER_ID = 'u2';
 
 function makeChild(overrides: Partial<ChildSummary> = {}): ChildSummary {
   return {
@@ -105,30 +110,35 @@ function renderPage() {
   );
 }
 
+/** Resolves the household query `useHouseholdRole` reads the page's role from. */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
+/** Signs a user in, so the ownership half of the edit check has an id to compare. */
+function givenSignedInUser(id: string = CURRENT_USER_ID) {
+  mockedUseAuth.mockReturnValue({
+    user: { id, email: 'parent@example.com', name: 'Bernd', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
+  });
+}
+
 describe('GrowthHome', () => {
   beforeEach(() => {
     queryClient.clear();
-    mockedUseAuth.mockReturnValue({
-      user: {
-        id: 'u1',
-        email: 'parent@example.com',
-        name: 'Bernd',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      register: vi.fn(),
-      updateName: vi.fn(),
-      logout: vi.fn(),
-    });
-    mockedHouseholdApi.fetchHousehold.mockResolvedValue({
-      id: 'h1',
-      name: 'Team Müller',
-      role: 'OWNER',
-      createdAt: '2026-01-01T00:00:00.000Z',
-    });
+    givenSignedInUser();
+    givenHouseholdRole();
     mockedChildApi.fetchChild.mockResolvedValue(makeChild());
     mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([makeMeasurement()]);
     mockedGrowthApi.fetchGrowthReference.mockResolvedValue(availableReference);
@@ -295,5 +305,83 @@ describe('GrowthHome', () => {
     expect(
       await screen.findByText('The measurements could not be loaded. Please try again.'),
     ).toBeInTheDocument();
+  });
+
+  describe('role-dependent actions', () => {
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'offers the "add measurement" link to a %s',
+      async (role) => {
+        givenHouseholdRole(role);
+
+        renderPage();
+
+        expect(await screen.findByRole('link', { name: 'Add measurement' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides the "add measurement" link from an OBSERVER while keeping the trend readable', async () => {
+      givenHouseholdRole('OBSERVER');
+
+      renderPage();
+
+      expect(await screen.findByText('Weight: 6.4 kg')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Add measurement' })).not.toBeInTheDocument();
+    });
+
+    it('drops the empty-state call to action for an OBSERVER but keeps the statement', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([]);
+
+      renderPage();
+
+      expect(await screen.findByText('No measurements yet')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Record the first measurement' }),
+      ).not.toBeInTheDocument();
+    });
+
+    // Proves the page actually threads `role` and `currentUserId` into the
+    // list: with OWNER (the default above) the ownership half short-circuits,
+    // so a hardcoded role or an undefined user id would go unnoticed.
+    it('lets a CAREGIVER edit only their own measurement', async () => {
+      givenHouseholdRole('CAREGIVER');
+      mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([
+        makeMeasurement({ id: 'own', userId: CURRENT_USER_ID }),
+        makeMeasurement({ id: 'foreign', userId: OTHER_USER_ID }),
+      ]);
+
+      renderPage();
+
+      const editLinks = await screen.findAllByRole('link', { name: 'Edit' });
+      expect(editLinks).toHaveLength(1);
+      expect(editLinks[0]).toHaveAttribute(
+        'href',
+        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/growth/own/edit`,
+      );
+      // Role-only, no ownership exception — a CAREGIVER deletes nothing.
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it('renders no per-row action container at all for an OBSERVER', async () => {
+      const actionContainer = 'span.items-center.gap-3';
+
+      // Sanity-check the selector: an OWNER does get the container…
+      renderPage();
+      await screen.findByText('Weight: 6.4 kg');
+      expect(document.querySelector(actionContainer)).not.toBeNull();
+
+      cleanup();
+      queryClient.clear();
+      givenHouseholdRole('OBSERVER');
+
+      renderPage();
+
+      // The row itself is still there…
+      expect(await screen.findByText('Weight: 6.4 kg')).toBeInTheDocument();
+      // …but nothing actionable, and no empty wrapper holding the row's gap.
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+      expect(document.querySelector(actionContainer)).toBeNull();
+    });
   });
 });
