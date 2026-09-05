@@ -54,6 +54,14 @@ export interface DiaperEventFormProps {
   mode: 'create' | 'edit';
   initialValues?: DiaperEventFormInitialValues;
   onSubmit: (output: DiaperEventFormOutput) => Promise<void>;
+  /**
+   * Renders the entry as a read-only detail view: every field is disabled and
+   * the submit button is not rendered at all. Used on the edit page for a role
+   * that may not edit this entry (OBSERVER, or CAREGIVER on someone else's
+   * entry) — the page is the only place an entry's full fields are visible, so
+   * the values still have to be readable.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -67,7 +75,12 @@ export interface DiaperEventFormProps {
  * `UpdateDiaperEventDto`'s doc comment), unlike Feeding's immutable
  * `feedingType`.
  */
-export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFormProps) {
+export function DiaperEventForm({
+  mode,
+  initialValues,
+  onSubmit,
+  readOnly = false,
+}: DiaperEventFormProps) {
   const { t } = useTranslation();
   const [diaperType, setDiaperType] = useState<DiaperType | ''>(initialValues?.diaperType ?? '');
   const [occurredAt, setOccurredAt] = useState(
@@ -77,6 +90,10 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
   const [fieldErrorKeys, setFieldErrorKeys] = useState<FieldErrorKeys>({});
   const [formErrorKey, setFormErrorKey] = useState<DiaperErrorKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // One switch for every field: a read-only render and an in-flight submit both
+  // mean "don't let the user change anything right now".
+  const isFieldDisabled = readOnly || isSubmitting;
 
   const clearFieldError = (field: keyof FieldErrorKeys) => {
     setFieldErrorKeys((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -104,6 +121,12 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (readOnly) {
+      // Belt-and-braces: the submit button isn't rendered at all, but an
+      // implicit form submit must not slip past the role gate either.
+      return;
+    }
 
     const nextFieldErrorKeys = validate();
     if (Object.values(nextFieldErrorKeys).some(Boolean)) {
@@ -160,7 +183,7 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
         placeholder={t('diaper.fields.diaperTypePlaceholder')}
         required
         value={diaperType}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
         onValueChange={(value) => {
           setDiaperType(value as DiaperType);
           clearFieldError('diaperType');
@@ -184,7 +207,7 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
           clearFieldError('occurredAt');
         }}
         error={fieldErrorKeys.occurredAt ? t(fieldErrorKeys.occurredAt) : undefined}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
       />
 
       <Textarea
@@ -196,15 +219,17 @@ export function DiaperEventForm({ mode, initialValues, onSubmit }: DiaperEventFo
           clearFieldError('note');
         }}
         error={fieldErrorKeys.note ? t(fieldErrorKeys.note) : undefined}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
         rows={3}
       />
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
-        {t(submitButtonTextKey)}
-      </Button>
+      {!readOnly && (
+        <Button type="submit" variant="primary" className="w-full" disabled={isFieldDisabled}>
+          {t(submitButtonTextKey)}
+        </Button>
+      )}
     </form>
   );
 }

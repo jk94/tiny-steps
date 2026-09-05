@@ -6,15 +6,18 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { SleepEventEdit } from './SleepEventEdit';
 import * as sleepApi from '../api/sleep-api';
 import * as householdApi from '../api/household-api';
+import * as useAuthModule from '../auth/useAuth';
 import type { HouseholdRole } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/sleep-api');
 vi.mock('../api/household-api');
+vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedSleepApi = vi.mocked(sleepApi);
 const mockedHouseholdApi = vi.mocked(householdApi);
+const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 const mockNavigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -37,11 +40,15 @@ beforeEach(() => {
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
 const EVENT_ID = 'e1';
+/** The signed-in user — also the author of `event` below (an "own" entry). */
+const CURRENT_USER_ID = 'u1';
+/** Another household member, so `event` can be turned into a "foreign" entry. */
+const OTHER_USER_ID = 'u2';
 
 const event: sleepApi.SleepEventSummary = {
   id: EVENT_ID,
   childId: CHILD_ID,
-  userId: 'u1',
+  userId: CURRENT_USER_ID,
   type: 'SLEEP',
   occurredAt: '2026-01-01T20:00:00.000Z',
   startedAt: '2026-01-01T20:00:00.000Z',
@@ -62,6 +69,20 @@ function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
     name: 'Team Müller',
     role,
     createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
+
+/** Signs a user in, so the page's ownership check has a concrete id to compare. */
+function givenSignedInUser(id: string = CURRENT_USER_ID) {
+  mockedUseAuth.mockReturnValue({
+    user: { id, email: 'parent@example.com', name: 'Bernd', createdAt: '2026-01-01T00:00:00.000Z' },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    updateName: vi.fn(),
+    logout: vi.fn(),
   });
 }
 
@@ -86,6 +107,7 @@ describe('SleepEventEdit', () => {
   beforeEach(() => {
     queryClient.clear();
     givenHouseholdRole();
+    givenSignedInUser();
   });
 
   afterEach(() => {
@@ -209,27 +231,64 @@ describe('SleepEventEdit', () => {
       expect(await screen.findByRole('button', { name: 'Delete entry' })).toBeInTheDocument();
     });
 
-    it.each(['CAREGIVER', 'OBSERVER'] as const)(
-      'hides Delete from a %s while keeping the entry readable and the form submittable',
+    it.each(['CAREGIVER', 'OBSERVER'] as const)('hides Delete from a %s', async (role) => {
+      givenHouseholdRole(role);
+      mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
+
+      renderSleepEventEdit();
+
+      await screen.findByLabelText('End time (optional)');
+      expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument();
+    });
+
+    it.each(['OWNER', 'CO_PARENT'] as const)(
+      'lets a %s edit and save an entry logged by someone else',
       async (role) => {
         givenHouseholdRole(role);
-        mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
-        mockedSleepApi.updateSleepEventOptimistic.mockResolvedValueOnce(event);
-        const user = userEvent.setup();
+        mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce({ ...event, userId: OTHER_USER_ID });
 
         renderSleepEventEdit();
 
-        // The form is the only view of an entry's full fields, so it must stay
-        // available to every role — only the delete affordance disappears.
-        const saveButton = await screen.findByRole('button', { name: 'Save' });
-        await vi.waitFor(() =>
-          expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument(),
-        );
-        expect(screen.getByLabelText('End time (optional)')).toBeInTheDocument();
-
-        await user.click(saveButton);
-        expect(mockedSleepApi.updateSleepEventOptimistic).toHaveBeenCalled();
+        expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+        expect(screen.getByLabelText('End time (optional)')).toBeEnabled();
       },
     );
+
+    it('lets a CAREGIVER edit and save their own entry', async () => {
+      givenHouseholdRole('CAREGIVER');
+      mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
+
+      renderSleepEventEdit();
+
+      expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+      expect(screen.getByLabelText('End time (optional)')).toBeEnabled();
+    });
+
+    it("hides Save from a CAREGIVER on someone else's entry, but keeps the fields readable", async () => {
+      givenHouseholdRole('CAREGIVER');
+      mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce({ ...event, userId: OTHER_USER_ID });
+
+      renderSleepEventEdit();
+
+      // This page is the only view of an entry's full fields, so they stay
+      // rendered — just disabled, with no way to submit a change.
+      const endedAtField = await screen.findByLabelText('End time (optional)');
+      expect(endedAtField).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    });
+
+    it('hides Save from an OBSERVER, but keeps the fields readable', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedSleepApi.fetchSleepEvent.mockResolvedValueOnce(event);
+
+      renderSleepEventEdit();
+
+      const occurredAtField = await screen.findByLabelText('Time');
+      expect(occurredAtField).toBeDisabled();
+      expect(new Date((occurredAtField as HTMLInputElement).value).toISOString()).toBe(
+        event.occurredAt,
+      );
+      expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    });
   });
 });
