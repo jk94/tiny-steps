@@ -13,6 +13,9 @@ const EVENT_CONFLICT_CODE = 'EVENT_CONFLICT';
  * mirrors `EVENT_ALREADY_STOPPED_CODE` in the same backend file. */
 const EVENT_ALREADY_STOPPED_CODE = 'EVENT_ALREADY_STOPPED';
 
+/** HTTP status the backend's role guard rejects a not-permitted write with. */
+const HTTP_STATUS_FORBIDDEN = 403;
+
 /**
  * Whether an error is a Last-Write-Wins conflict (409 with a
  * `{ code: 'EVENT_CONFLICT' }` body) rather than a plain timer conflict or any
@@ -44,6 +47,21 @@ export function isEventAlreadyStoppedError(error: unknown): boolean {
     error.body !== null &&
     (error.body as { code?: unknown }).code === EVENT_ALREADY_STOPPED_CODE
   );
+}
+
+/**
+ * Whether an error is a 403 from the backend's role guard — the user's
+ * household role may not perform this write. Distinct from a retryable failure:
+ * resending the identical payload can never succeed, so the offline engine and
+ * the sync-queue drop the buffered record (with a dismissible notice) instead
+ * of leaving a permanent "not saved" ghost row that no UI can clear.
+ *
+ * Deliberately matched on the status code alone, not on a body `code`: the
+ * `RolesGuard`'s `ForbiddenException` carries no structured code, and every 403
+ * the API can return means the same thing here — "this write is not allowed".
+ */
+export function isForbiddenError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === HTTP_STATUS_FORBIDDEN;
 }
 
 /**
