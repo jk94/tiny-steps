@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_ROLES,
+  canEditEntry,
   canWrite,
   ENTRY_WRITE_ROLES,
   EXPORT_ROLES,
@@ -54,5 +55,38 @@ describe('householdPermissions', () => {
 
   it('never lets an invite grant ownership', () => {
     expect(INVITABLE_ROLES).not.toContain('OWNER');
+  });
+
+  describe('canEditEntry', () => {
+    const AUTHOR_ID = 'user-author';
+    const OTHER_ID = 'user-other';
+
+    it.each(FULL_WRITE_ROLES)('lets %s edit an entry recorded by someone else', (role) => {
+      expect(canEditEntry(role, AUTHOR_ID, OTHER_ID)).toBe(true);
+    });
+
+    it.each(FULL_WRITE_ROLES)('lets %s edit their own entry', (role) => {
+      expect(canEditEntry(role, AUTHOR_ID, AUTHOR_ID)).toBe(true);
+    });
+
+    it('lets a CAREGIVER edit their own entry', () => {
+      expect(canEditEntry('CAREGIVER', AUTHOR_ID, AUTHOR_ID)).toBe(true);
+    });
+
+    it("does not let a CAREGIVER edit someone else's entry", () => {
+      expect(canEditEntry('CAREGIVER', AUTHOR_ID, OTHER_ID)).toBe(false);
+    });
+
+    it('does not let an OBSERVER edit even their own entry', () => {
+      expect(canEditEntry('OBSERVER', AUTHOR_ID, AUTHOR_ID)).toBe(false);
+    });
+
+    it('denies an unresolved role, so nothing flashes into view while loading', () => {
+      expect(canEditEntry(undefined, AUTHOR_ID, AUTHOR_ID)).toBe(false);
+    });
+
+    it('denies a CAREGIVER whose own user id is not resolved yet', () => {
+      expect(canEditEntry('CAREGIVER', AUTHOR_ID, undefined)).toBe(false);
+    });
   });
 });
