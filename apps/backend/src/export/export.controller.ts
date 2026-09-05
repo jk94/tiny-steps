@@ -6,7 +6,9 @@ import { RequireRole } from '../household/guards/require-role.decorator';
 import { EXPORT_ROLES } from '../household/household-permissions';
 import { toCsv } from './csv.serializer';
 import { ExportQueryDto } from './dto/export-query.dto';
+import { ReportQueryDto } from './dto/report-query.dto';
 import { ExportService } from './export.service';
+import { ReportService } from './report/report.service';
 
 /**
  * Child-level raw-data export (JSON + CSV). Read-only, so — like
@@ -27,7 +29,10 @@ import { ExportService } from './export.service';
 @UseGuards(JwtAuthGuard, HouseholdMembershipGuard)
 @RequireRole(...EXPORT_ROLES)
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(
+    private readonly exportService: ExportService,
+    private readonly reportService: ReportService,
+  ) {}
 
   @Get('json')
   async exportJson(
@@ -69,6 +74,30 @@ export class ExportController {
     res.set({
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="export-${childId}.csv"`,
+    });
+    return new StreamableFile(buffer);
+  }
+
+  /**
+   * The curated PDF report (roadmap Phase 7.4), as opposed to the two raw-data
+   * dumps above. Same guards for the same reason (EXP-14): it only reads, so
+   * any household member may generate one.
+   *
+   * A completely empty result is a 422 rather than a PDF — see
+   * `ReportService.generatePdf`.
+   */
+  @Get('report.pdf')
+  async exportReportPdf(
+    @Param('householdId') householdId: string,
+    @Param('childId') childId: string,
+    @Query() query: ReportQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const buffer = await this.reportService.generatePdf(householdId, childId, query);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${childId}.pdf"`,
     });
     return new StreamableFile(buffer);
   }

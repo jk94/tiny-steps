@@ -1,0 +1,47 @@
+{
+  "name": "@baby-tracker/growth-chart-static",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The growth trend chart as a pure, prop-driven SVG component, shared by the frontend (interactive) and the backend PDF report (static).",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./geometry": {
+      "types": "./dist/esm/growthChartGeometry.d.ts",
+      "import": "./dist/esm/growthChartGeometry.js",
+      "require": "./dist/cjs/growthChartGeometry.js"
+    },
+    "./server": {
+      "types": "./dist/esm/server.d.ts",
+      "import": "./dist/esm/server.js",
+      "require": "./dist/cjs/server.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && bun run scripts/write-module-markers.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepare": "bun run build"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "dependencies": {
+    "@visx/axis": "4.0.0",
+    "@visx/curve": "4.0.0",
+    "@visx/group": "4.0.0",
+    "@visx/scale": "4.0.0",
+    "@visx/shape": "4.0.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

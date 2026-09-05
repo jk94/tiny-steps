@@ -885,7 +885,28 @@
     "downloadButton": "Herunterladen",
     "downloadButtonPending": "Wird vorbereitet…",
     "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut.",
-    "includesGrowthNote": "Der Export enthält neben den Einträgen auch alle Wachstumsmessungen."
+    "includesGrowthNote": "Der Export enthält neben den Einträgen auch alle Wachstumsmessungen.",
+    "report": {
+      "sectionTitle": "Bericht",
+      "description": "Ein lesbarer PDF-Bericht für den Kinderarzttermin — mit Wachstumskurven, Meilensteinen, Medikamenten/Impfungen und einer Tracking-Zusammenfassung.",
+      "periodLabel": "Zeitraum",
+      "periodLastMonth": "Letzter Monat",
+      "periodLast3Months": "Letzte 3 Monate",
+      "periodLastYear": "Letztes Jahr",
+      "periodCustom": "Frei wählbar",
+      "fromLabel": "Von",
+      "toLabel": "Bis",
+      "sectionsLabel": "Enthaltene Abschnitte",
+      "sectionCore": "Stammdaten (immer enthalten)",
+      "sectionGrowth": "Wachstum",
+      "sectionMilestones": "Meilensteine",
+      "sectionMedical": "Medikamente & Impfungen",
+      "sectionTracking": "Tracking-Zusammenfassung",
+      "downloadButton": "Bericht herunterladen",
+      "downloadButtonPending": "Bericht wird erstellt…",
+      "errorEmptyPeriod": "Für den gewählten Zeitraum und die gewählten Abschnitte liegen keine Daten vor.",
+      "errorGeneric": "Der Bericht konnte nicht erstellt werden. Bitte versuche es erneut."
+    }
   },
   "profile": {
     "title": "Profil",

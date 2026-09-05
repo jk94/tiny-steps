@@ -75,6 +75,7 @@ appear both here and in the Event-type table below.
 | --- | --- |
 | `--font-family-sans` | `system-ui, Avenir, Helvetica, Arial, sans-serif` |
 | `--font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
+| `--font-family-report` | `Inter` |
 | `--font-size-xs` | `0.75rem` |
 | `--font-size-sm` | `0.875rem` |
 | `--font-size-base` | `1rem` |
@@ -153,3 +154,23 @@ and a hand-authored icon key (resolved against
 | `DIAPER.PEE` | `--color-diaper-pee` | `diaper` |
 | `DIAPER.STOOL` | `--color-diaper-stool` | `diaper` |
 | `DIAPER.BOTH` | `--color-diaper-both` | `diaper` |
+
+## react-pdf StyleSheet (PDF report)
+
+The same tokens are emitted a third time, for the backend PDF report, as
+`apps/backend/src/export/report/renderers/react-pdf/report-tokens.generated.ts`.
+It is the same source of truth expressed in the units `@react-pdf/renderer`
+understands, so a token change reaches the report without a hand-maintained
+copy (see [ADR-0015](../adr/0015-pdf-report-generation.md)):
+
+- **Colors:** the **light** values only. A printed page has no
+  `prefers-color-scheme`, so there is no dark variant to choose between.
+- **Lengths:** converted from CSS to PostScript points — `1rem` = `12`,
+  `1px` = `0.75` — and emitted as bare numbers, because react-pdf rejects
+  CSS units.
+- **`fontFamily.report`:** backend-only. It names the font *file* embedded in
+  the PDF (`Inter`), not a CSS stack: react-pdf has no system fonts, so the
+  `sans` stack's fallbacks are meaningless there. Nothing in the frontend uses
+  this family.
+- The generated module exports a **plain object**, not a `StyleSheet.create()`
+  call, so no generated design-system artifact imports the renderer.

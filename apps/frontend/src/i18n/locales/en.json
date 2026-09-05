@@ -885,7 +885,28 @@
     "downloadButton": "Download",
     "downloadButtonPending": "Preparing…",
     "error": "The export couldn't be generated. Please try again.",
-    "includesGrowthNote": "Besides the logged entries, the export also contains all growth measurements."
+    "includesGrowthNote": "Besides the logged entries, the export also contains all growth measurements.",
+    "report": {
+      "sectionTitle": "Report",
+      "description": "A readable PDF report for the paediatrician — with growth curves, milestones, medications/vaccinations and a tracking summary.",
+      "periodLabel": "Period",
+      "periodLastMonth": "Last month",
+      "periodLast3Months": "Last 3 months",
+      "periodLastYear": "Last year",
+      "periodCustom": "Custom",
+      "fromLabel": "From",
+      "toLabel": "To",
+      "sectionsLabel": "Included sections",
+      "sectionCore": "Master data (always included)",
+      "sectionGrowth": "Growth",
+      "sectionMilestones": "Milestones",
+      "sectionMedical": "Medications & vaccinations",
+      "sectionTracking": "Tracking summary",
+      "downloadButton": "Download report",
+      "downloadButtonPending": "Creating report…",
+      "errorEmptyPeriod": "There is no data for the selected period and sections.",
+      "errorGeneric": "The report could not be created. Please try again."
+    }
   },
   "profile": {
     "title": "Profile",

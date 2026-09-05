@@ -86,6 +86,7 @@
   /* Typography */
   --font-family-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-family-report: Inter;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -305,6 +306,7 @@
   /* Typography */
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);
+  --font-report: var(--font-family-report);
   --text-xs: var(--font-size-xs);
   --text-sm: var(--font-size-sm);
   --text-base: var(--font-size-base);

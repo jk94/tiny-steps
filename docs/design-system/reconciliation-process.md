@@ -4,9 +4,10 @@ The design system lives in three places that must never drift apart: the **token
 (`design-system/tokens/*.json`), the **React component library**
 (`apps/frontend/src/components/ui/`), and this **Markdown styleguide** (`docs/design-system/`). The
 generated artifacts (`apps/frontend/src/styles/tokens.generated.css`,
-`apps/frontend/src/lib/eventTypeTokens.generated.ts`, and `docs/design-system/tokens.md`) are derived
-from the token JSON and are committed, not build-time-only — so a stale token edit would otherwise go
-unnoticed.
+`apps/frontend/src/lib/eventTypeTokens.generated.ts`,
+`apps/backend/src/export/report/renderers/react-pdf/report-tokens.generated.ts`, and
+`docs/design-system/tokens.md`) are derived from the token JSON and are committed, not
+build-time-only — so a stale token edit would otherwise go unnoticed.
 
 This document defines what a change must include so they stay consistent. Treat it as a **PR
 checklist** (per the Phase 6 roadmap's own suggestion).
@@ -17,10 +18,25 @@ checklist** (per the Phase 6 roadmap's own suggestion).
 - [ ] Commit the regenerated artifacts alongside the JSON change:
   - `apps/frontend/src/styles/tokens.generated.css`
   - `apps/frontend/src/lib/eventTypeTokens.generated.ts`
+  - `apps/backend/src/export/report/renderers/react-pdf/report-tokens.generated.ts`
   - `docs/design-system/tokens.md`
 - [ ] Do **not** hand-edit any generated file (each carries a "do not edit by hand" header).
 - [ ] If you added/removed a breakpoint, confirm it still matches
   `apps/frontend/src/styles/breakpoints.css` (they must stay identical).
+- [ ] If you added a length token, give it a unit the PDF target can convert (`rem`, `px`, or
+  unitless). `design-system/scripts/report-tokens.ts` throws on anything else rather than guessing —
+  `report-tokens.spec.ts` runs the conversion over the real token files, so an unconvertible unit
+  fails the test suite, not the report at render time.
+
+### The `report` font family is backend-only
+
+`typography.json`'s `fontFamily.report` (`Inter`) exists **only** for the PDF report. Unlike `sans`
+and `mono` it is not a CSS font stack but the name of a font *file* embedded in the PDF (see
+`apps/backend/src/export/report/renderers/react-pdf/fonts/README.md`): `@react-pdf/renderer` has no
+system fonts, so a stack's fallbacks would be meaningless there. Nothing in the frontend uses
+`--font-family-report`/`--font-report`; they are emitted only because the CSS target maps the whole
+`fontFamily` group. Adding a weight to the report means vendoring another `.ttf`, not editing a
+token.
 
 ## When you add or change a component in `apps/frontend/src/components/ui/`
 

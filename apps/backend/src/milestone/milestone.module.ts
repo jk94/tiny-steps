@@ -20,5 +20,8 @@ import { MilestoneService } from './milestone.service';
   // referenced via `@UseGuards(GuardClass)` from the module declaring the
   // controller — same pattern as ChildModule/GrowthModule.
   providers: [MilestoneService, MilestonePhotoStorageService, HouseholdMembershipGuard],
+  // Exported for the PDF report (roadmap Phase 7.4) — see GrowthModule's
+  // identical note.
+  exports: [MilestoneService],
 })
 export class MilestoneModule {}

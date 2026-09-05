@@ -3,6 +3,10 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
+    // The PDF report's own string catalog is plain JSON, mirroring the
+    // frontend's locale files (see report-i18n/). `nest-cli.json` copies them
+    // into dist/ — tsc resolves JSON imports but never emits the files.
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -11,6 +15,7 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
+    "jsx": "react-jsx",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",

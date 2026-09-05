@@ -23,6 +23,19 @@ describe('IsNotFutureDateConstraint', () => {
   });
 
   describe('date-only values', () => {
+    // Pin the clock to noon UTC: "tomorrow's UTC calendar day" is then 12h
+    // ahead, inside the ~14h max-UTC-offset tolerance, so the UTC+14 case below
+    // is exercised deterministically no matter what wall-clock time the suite
+    // runs at. Without this the assertion flips depending on the hour of day.
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-06-15T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     const todayInUtc = () => new Date().toISOString().slice(0, 10);
     const dayOffset = (days: number) =>
       new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

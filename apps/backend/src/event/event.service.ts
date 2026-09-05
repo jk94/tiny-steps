@@ -31,8 +31,31 @@ export interface EventStatsSummary {
   };
 }
 
+/**
+ * Aggregated Feeding/Sleep/Diaper activity over an arbitrary period, as daily
+ * averages (EXP-7).
+ *
+ * Deliberately separate from `EventStatsSummary` rather than a generalisation
+ * of it: that shape means "today", carries a *not* date-filtered
+ * `lastEventAt`, and is consumed by the live home screen. Widening it to serve
+ * a report would have changed a screen's contract for a document's benefit.
+ */
+export interface PeriodTrackingSummary {
+  /** Whole days in the requested period, at least 1. */
+  days: number;
+  feedingCount: number;
+  diaperCount: number;
+  /** Completed sleep only — see `getStatsSummary` for why. */
+  sleepHours: number;
+  feedingsPerDay: number;
+  diapersPerDay: number;
+  sleepHoursPerDay: number;
+}
+
 const HOURS_DECIMAL_PLACES = 1;
+const AVERAGE_DECIMAL_PLACES = 1;
 const MS_PER_HOUR = 1000 * 60 * 60;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 /**
  * Read-only queries spanning all three event types (Feeding/Sleep/Diaper),
@@ -132,6 +155,56 @@ export class EventService {
         SLEEP: lastSleep?.occurredAt ?? null,
         DIAPER: lastDiaper?.occurredAt ?? null,
       },
+    };
+  }
+
+  /**
+   * Aggregated tracking numbers over `[from, to)` for the PDF report (EXP-7).
+   *
+   * Counts and one duration sum only — never an event list. A doctor's report
+   * wants "roughly 7 feedings and 14 hours of sleep a day"; the per-event
+   * detail belongs in the raw CSV/JSON export, which already has it.
+   *
+   * The sleep sum reuses `getStatsSummary`'s rule verbatim: an unfinished
+   * timer contributes nothing, because its duration is unknown until it stops
+   * and counting it would fabricate a number that changes retroactively.
+   */
+  async getPeriodTrackingSummary(
+    householdId: string,
+    childId: string,
+    from: Date,
+    to: Date,
+  ): Promise<PeriodTrackingSummary> {
+    await this.findChildOrThrow(householdId, childId);
+
+    const occurredAt = { gte: from, lt: to };
+    const [feedingCount, diaperCount, sleepEvents] = await Promise.all([
+      this.prisma.event.count({ where: { childId, type: EventType.FEEDING, occurredAt } }),
+      this.prisma.event.count({ where: { childId, type: EventType.DIAPER, occurredAt } }),
+      this.prisma.event.findMany({ where: { childId, type: EventType.SLEEP, occurredAt } }),
+    ]);
+
+    const sleepMillis = sleepEvents.reduce((total, event) => {
+      if (event.startedAt === null || event.endedAt === null) {
+        return total;
+      }
+      return total + (event.endedAt.getTime() - event.startedAt.getTime());
+    }, 0);
+    const sleepHours = round(sleepMillis / MS_PER_HOUR, HOURS_DECIMAL_PLACES);
+
+    // Floor, then clamp to 1: a sub-day or inverted period must not divide by
+    // zero, and reporting a half-day's counts as if they were a full day's
+    // average is the honest reading of "per day" for such a period.
+    const days = Math.max(1, Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY));
+
+    return {
+      days,
+      feedingCount,
+      diaperCount,
+      sleepHours,
+      feedingsPerDay: round(feedingCount / days, AVERAGE_DECIMAL_PLACES),
+      diapersPerDay: round(diaperCount / days, AVERAGE_DECIMAL_PLACES),
+      sleepHoursPerDay: round(sleepHours / days, AVERAGE_DECIMAL_PLACES),
     };
   }
 

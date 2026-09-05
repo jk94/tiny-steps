@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { pwaManifest } from './pwa.config.ts';
+import { workspaceAliases } from './workspace-aliases.ts';
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: { alias: workspaceAliases },
   plugins: [
     react(),
     // Tailwind CSS v4, driven by the externally-generated design tokens

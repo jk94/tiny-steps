@@ -3,6 +3,17 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": false
+    "deleteOutDir": false,
+    "assets": [
+      {
+        "include": "export/report/renderers/react-pdf/fonts/*",
+        "outDir": "dist"
+      },
+      {
+        "include": "export/report/report-i18n/*.json",
+        "outDir": "dist"
+      }
+    ],
+    "watchAssets": true
   }
 }

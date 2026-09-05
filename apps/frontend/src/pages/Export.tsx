@@ -5,6 +5,7 @@ import { downloadExport } from '../api/export-api';
 import type { ExportFormat } from '../api/export-api';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Button, Card, Input } from '../components/ui';
+import { ReportSection } from './ReportSection';
 
 /**
  * Converts a `<input type="date">` value (`YYYY-MM-DD`, or empty) to a UTC
@@ -137,6 +138,17 @@ export function Export() {
           {failed && <ErrorMessage message={t('export.error')} />}
         </Card.Body>
       </Card>
+
+      {/*
+        The curated PDF report (roadmap Phase 7.4) sits below the raw-data
+        export rather than on a route of its own, so every way of getting data
+        out of the app stays in one place.
+      */}
+      <ReportSection
+        householdId={householdId!}
+        childId={childId!}
+        onDownloaded={(blob, filename) => saveBlob(blob, filename)}
+      />
     </section>
   );
 }
