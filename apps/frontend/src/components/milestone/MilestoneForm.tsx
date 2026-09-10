@@ -175,6 +175,14 @@ export function MilestoneForm({
       ? null
       : (category as MilestoneCategory);
 
+  // One object URL per queued photo, revoked on the next `photos` change (via
+  // the effect cleanup keyed on `previewUrls`) and on unmount. Kept in
+  // `useMemo` rather than an effect on purpose: the repo's `react-hooks` lint
+  // rules forbid both `setState` inside an effect and ref access during
+  // render, which the "create in an effect" rewrites would need. StrictMode's
+  // dev-only double-invocation of the factory can briefly allocate a second,
+  // never-revoked URL, but production invokes it once — see `ChildForm` for
+  // the same accepted pattern.
   const previewUrls = useMemo(
     () => photos.map((photo) => ({ id: photo.id, url: URL.createObjectURL(photo.file) })),
     [photos],
