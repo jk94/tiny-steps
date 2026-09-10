@@ -80,13 +80,18 @@ export class ExportController {
 
   /**
    * The curated PDF report (roadmap Phase 7.4), as opposed to the two raw-data
-   * dumps above. Same guards for the same reason (EXP-14): it only reads, so
-   * any household member may generate one.
+   * dumps above. EXP-14 ties its protection to "the existing export endpoints",
+   * which the Phase 7.5 permission matrix scopes to `EXPORT_ROLES` (OWNER /
+   * CO_PARENT / CAREGIVER, not OBSERVER) — bundling a child's whole history into
+   * one downloadable artefact is exactly the capability withheld from a
+   * read-only member. The requirement is repeated explicitly here rather than
+   * left to inherit from the class so the intent is visible at the handler.
    *
    * A completely empty result is a 422 rather than a PDF — see
    * `ReportService.generatePdf`.
    */
   @Get('report.pdf')
+  @RequireRole(...EXPORT_ROLES)
   async exportReportPdf(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,

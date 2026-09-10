@@ -479,6 +479,31 @@ describe('Household roles (e2e)', () => {
       await get(f.observer, `${childScope(f)}/export/csv`).expect(403);
       await get(f.outsider, `${childScope(f)}/export/csv`).expect(404);
     });
+
+    it('scopes the PDF report the same way as the raw-data export', async () => {
+      const f = await seedHousehold('export-report');
+      const reportQuery = {
+        from: '2026-01-01T00:00:00.000Z',
+        to: '2026-02-01T00:00:00.000Z',
+        locale: 'de',
+      };
+
+      // A permitted member passes the role gate; with no seeded data the
+      // report itself is an empty-period 422, which still proves the guard
+      // let the request through.
+      for (const member of [f.owner, f.coParent, f.caregiver]) {
+        await get(member, `${childScope(f)}/export/report.pdf`)
+          .query(reportQuery)
+          .expect(422);
+      }
+
+      await get(f.observer, `${childScope(f)}/export/report.pdf`)
+        .query(reportQuery)
+        .expect(403);
+      await get(f.outsider, `${childScope(f)}/export/report.pdf`)
+        .query(reportQuery)
+        .expect(404);
+    });
   });
 
   describe('own notification settings', () => {
