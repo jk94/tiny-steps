@@ -122,16 +122,18 @@ export class HouseholdService {
     // Re-count inside the transaction, so a concurrent demotion of the *other*
     // owner cannot slip between the count and this write — see
     // `assertLastOwnerSurvives`.
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (isDemotingAnOwner) {
-        await assertLastOwnerSurvives(tx, householdId, 'LAST_OWNER_CANNOT_BE_DEMOTED');
-      }
-      return tx.membership.update({
-        where: { id: membership.id },
-        data: { role },
-        include: { user: true },
-      });
-    });
+    const updated = await this.translatingMissingTarget(() =>
+      this.prisma.$transaction(async (tx) => {
+        if (isDemotingAnOwner) {
+          await assertLastOwnerSurvives(tx, householdId, 'LAST_OWNER_CANNOT_BE_DEMOTED');
+        }
+        return tx.membership.update({
+          where: { id: membership.id },
+          data: { role },
+          include: { user: true },
+        });
+      }),
+    );
 
     return toMemberSummary(updated);
   }
@@ -167,12 +169,14 @@ export class HouseholdService {
     const membership = await this.findMembershipOrThrow(householdId, targetUserId);
     const isRemovingAnOwner = toHouseholdRole(membership.role) === HouseholdRole.OWNER;
 
-    await this.prisma.$transaction(async (tx) => {
-      if (isRemovingAnOwner) {
-        await assertLastOwnerSurvives(tx, householdId, 'LAST_OWNER_CANNOT_BE_REMOVED');
-      }
-      await tx.membership.delete({ where: { id: membership.id } });
-    });
+    await this.translatingMissingTarget(() =>
+      this.prisma.$transaction(async (tx) => {
+        if (isRemovingAnOwner) {
+          await assertLastOwnerSurvives(tx, householdId, 'LAST_OWNER_CANNOT_BE_REMOVED');
+        }
+        await tx.membership.delete({ where: { id: membership.id } });
+      }),
+    );
 
     // Best-effort and deliberately after the commit: the DB is the source of
     // truth for access, and the broadcast this stops carries no payload of its
@@ -185,6 +189,29 @@ export class HouseholdService {
       this.logger.warn(
         `Failed to evict user ${targetUserId} from the room of household ${householdId}: ${String(error)}`,
       );
+    }
+  }
+
+  /**
+   * Runs a mutating operation and translates Prisma's "record to
+   * update/delete does not exist" (P2025) into the same 404 an unknown member
+   * gets everywhere else.
+   *
+   * Both member-management endpoints read the target `Membership` *before*
+   * opening their transaction. Two owners acting on the same target
+   * concurrently (both remove, or one removes while the other changes the
+   * role) each pass that pre-read; SQLite then serializes the writes, so the
+   * loser's `update`/`delete` runs against an id that no longer exists. Without
+   * this the loser gets an unhandled 500 instead of the idempotent 404.
+   */
+  private async translatingMissingTarget<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException();
+      }
+      throw error;
     }
   }
 

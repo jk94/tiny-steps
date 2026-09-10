@@ -1,4 +1,5 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { HouseholdRole } from './household-role.enum';
 import { HouseholdService } from './household.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,6 +20,14 @@ function makeMembership(overrides: Record<string, unknown> = {}) {
     user: { id: MEMBER_ID, email: 'co-parent@example.com', name: 'Co Parent' },
     ...overrides,
   };
+}
+
+/** Prisma's "record to update/delete does not exist" error. */
+function recordNotFound() {
+  return new Prisma.PrismaClientKnownRequestError('Record to delete does not exist.', {
+    code: 'P2025',
+    clientVersion: 'test',
+  });
 }
 
 /** The machine-readable `code` a structured error carries. */
@@ -283,6 +292,15 @@ describe('HouseholdService', () => {
         prisma.membership.update.mock.invocationCallOrder[0],
       );
     });
+
+    it('404s instead of 500 when a concurrent request already removed the target', async () => {
+      prisma.membership.findUnique.mockResolvedValue(makeMembership());
+      prisma.membership.update.mockRejectedValue(recordNotFound());
+
+      await expect(
+        service.changeMemberRole(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID, HouseholdRole.OBSERVER),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   describe('removeMember', () => {
@@ -364,6 +382,16 @@ describe('HouseholdService', () => {
         service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID),
       ).resolves.toBeUndefined();
       expect(prisma.membership.delete).toHaveBeenCalled();
+    });
+
+    it('404s instead of 500 when a concurrent request already removed the target', async () => {
+      prisma.membership.findUnique.mockResolvedValue(makeMembership());
+      prisma.membership.delete.mockRejectedValue(recordNotFound());
+
+      await expect(service.removeMember(HOUSEHOLD_ID, OWNER_ID, MEMBER_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(realtime.evictFromHousehold).not.toHaveBeenCalled();
     });
 
     it('does not evict anyone when the removal itself was refused', async () => {
