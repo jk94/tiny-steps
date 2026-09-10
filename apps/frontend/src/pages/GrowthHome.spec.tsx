@@ -255,6 +255,36 @@ describe('GrowthHome', () => {
         screen.queryByText(/No WHO reference curves exist for this range/i),
       ).not.toBeInTheDocument();
     });
+
+    it('scopes the hint to the active measure, not any out-of-range slot', async () => {
+      const user = userEvent.setup();
+      // Head circumference is beyond the reference range; weight and length
+      // are fully computed — a common pattern once a toddler stops having its
+      // head measured.
+      mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([
+        makeMeasurement({
+          percentiles: {
+            weight: { status: 'COMPUTED', zScore: 0.1, percentile: 54 },
+            length: { status: 'COMPUTED', zScore: -0.2, percentile: 42 },
+            headCircumference: { status: 'UNAVAILABLE', reason: 'AGE_ABOVE_REFERENCE_RANGE' },
+          },
+        }),
+      ]);
+
+      renderPage();
+      await screen.findByTestId('growth-chart');
+
+      // The default WEIGHT tab has no out-of-range weight data, so no hint.
+      expect(
+        screen.queryByText(/No WHO reference curves exist for this range/i),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('tab', { name: 'Head circumference' }));
+
+      expect(
+        await screen.findByText(/No WHO reference curves exist for this range/i),
+      ).toBeInTheDocument();
+    });
   });
 
   it('offers a link to record a new measurement', async () => {

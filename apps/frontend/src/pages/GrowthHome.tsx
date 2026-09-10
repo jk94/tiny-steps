@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
@@ -21,6 +21,7 @@ import { Skeleton, Tabs } from '../components/ui';
 import { ageInDaysAt } from '../lib/growthAge';
 import {
   GROWTH_MEASURES,
+  growthMeasureFields,
   growthMeasureVisuals,
   type GrowthMeasure,
 } from '../lib/growthMeasureVisuals';
@@ -98,15 +99,22 @@ export function GrowthHome() {
 
   const reference = referenceQuery.data ?? null;
   const hasSexOnProfile = child?.sex != null;
-  // W-11: either the reference itself is unavailable for a non-sex reason, or
-  // an already-recorded measurement falls outside what it covers.
-  const hasOutOfRangeMeasurement = measurements.some((measurement) =>
-    Object.values(measurement.percentiles).some(
-      (percentile) =>
-        percentile?.status === 'UNAVAILABLE' &&
-        (percentile.reason === 'AGE_ABOVE_REFERENCE_RANGE' ||
-          percentile.reason === 'AGE_BELOW_REFERENCE_RANGE'),
-    ),
+  // W-11: an already-recorded measurement falls outside what the reference
+  // covers. Scoped to a single measure — growth data is frequently partial
+  // (head circumference stops being recorded long before weight/length), so a
+  // head-circumference value beyond the reference range must not make the
+  // WEIGHT tab claim its own fully-computed data has "no reference".
+  const hasOutOfRangeMeasurement = useCallback(
+    (candidate: GrowthMeasure) =>
+      measurements.some((measurement) => {
+        const percentile = measurement.percentiles[growthMeasureFields[candidate].percentileSlot];
+        return (
+          percentile?.status === 'UNAVAILABLE' &&
+          (percentile.reason === 'AGE_ABOVE_REFERENCE_RANGE' ||
+            percentile.reason === 'AGE_BELOW_REFERENCE_RANGE')
+        );
+      }),
+    [measurements],
   );
 
   if (childQuery.isLoading) {
@@ -167,7 +175,7 @@ export function GrowthHome() {
                     </Link>
                   </p>
                 )}
-                {hasSexOnProfile && hasOutOfRangeMeasurement && (
+                {hasSexOnProfile && hasOutOfRangeMeasurement(candidate) && (
                   <p className="text-sm text-muted-foreground">
                     {t('growth.chart.noReferenceHint')}
                   </p>
