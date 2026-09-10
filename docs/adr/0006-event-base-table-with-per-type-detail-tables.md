@@ -193,6 +193,103 @@ See `apps/backend/src/diaper/diaper.service.ts` for the resulting implementation
 stay always null for `DIAPER` events, since Diaper is a pure point event like Feeding's
 `BOTTLE`/`SOLID` sub-types, never timer-based like Feeding's `BREAST` sub-type or Sleep).
 
+## Addendum: `GrowthMeasurement` — the first child-domain table beside `Event`
+
+Added in roadmap Phase 7.1 ("Wachstumstracking"), the first sub-phase after the MVP event types.
+Growth measurements (weight, recumbent length / standing height, head circumference) are stored in
+their own `GrowthMeasurement` table, **not** as a fourth `Event` type with a detail table. That is a
+deliberate departure from the pattern this ADR established, so the reasoning is recorded here rather
+than only in code comments.
+
+### Why not an `Event` type
+
+Every argument that made Feeding/Sleep/Diaper fit the shared `Event` base table fails for a growth
+measurement:
+
+- **No timer duality.** `Event.startedAt`/`endedAt` exist for timer-based types. A measurement is
+  neither a timed interval nor a point-in-the-day activity — modelling it as an `Event` would leave
+  both columns permanently null for a whole type, which is exactly the "always-null column" smell
+  this ADR set out to avoid.
+- **Different time semantics.** `Event.occurredAt` is "when did this happen today", the sort key of
+  the mixed daily timeline. A measurement carries a *date* (`measuredAt`), typically backfilled from
+  a pediatric check-up days later. Reusing `occurredAt` would give the column two different
+  meanings.
+- **Several optional values per row.** A measurement carries up to three independent values, each
+  individually optional, with an "at least one" rule across them (W-1/W-2). The detail tables all
+  model exactly one kind of thing.
+- **Derived, sex-specific classification.** The point of the feature is the WHO percentile, which
+  depends on the child's sex and age — a derivation no other event type has, and one that has no
+  place in a shared base row.
+- **Not part of the activity timeline.** `EventService.listDaily` merges every `Event` for a day.
+  A measurement must not appear there, so every timeline/stats query would have needed a
+  `type != 'GROWTH'` exclusion — polluting the queries that the base table exists to simplify.
+- **Naming.** `growthDetail.weightGrams` hanging off an `Event` row whose `type` is `GROWTH` reads as
+  an activity that was logged, which is not what a measurement is.
+
+### Shape of the decision
+
+```prisma
+model GrowthMeasurement {
+  id                           String   @id @default(cuid())
+  childId                      String
+  userId                       String
+  measuredAt                   DateTime
+  weightGrams                  Int?
+  lengthMillimeters            Int?
+  headCircumferenceMillimeters Int?
+  lengthMeasurementPosition    String?
+  note                         String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([childId, measuredAt])
+}
+```
+
+- **FKs to both `Child` and `User`**, mirroring `Event`: who a measurement is about, and who recorded
+  it (W-7).
+- **`onDelete: Cascade` on the child relation.** A measurement is meaningless without its child, and
+  deleting a child profile must not be blocked by an FK constraint — the same reasoning as the
+  `Event` detail tables. The `user` relation deliberately does **not** cascade: deleting a household
+  member must not silently erase measurements they recorded for a shared child.
+- **`@@index([childId, measuredAt])`.** The only access pattern is "this child's measurements in
+  chronological order, optionally windowed" — one index covers the list, the chart and the export.
+- **Integer base units, no floats.** Grams and millimetres (W-3); the familiar kg/cm input is a
+  frontend concern. A float column would let a stored value drift from what was entered.
+- **`updatedAt` is traceability only.** Unlike `Event.updatedAt`, it is *not* a Last-Write-Wins
+  tiebreak: growth tracking is an online-only feature with no offline buffering (W-16), so
+  [ADR-0011](0011-offline-edit-stop-and-last-write-wins.md) does not apply here and the update DTO
+  deliberately has no `clientTimestamp`. Note that Prisma's `@updatedAt` *does* work normally for
+  this model, because the service issues a direct `growthMeasurement.update()` rather than the
+  nested detail-only `event.update()` that ADR-0011 had to work around.
+- **No realtime broadcast.** `GrowthModule` deliberately does not import `RealtimeModule`
+  ([ADR-0007](0007-websocket-realtime-sync.md)): a value that changes a handful of times a year does
+  not need a push, and adding one would imply an offline/optimistic surface the feature explicitly
+  does not have.
+
+### `Child.sex`
+
+`Child` gains one nullable column, `sex` (`'FEMALE' | 'MALE'`, null = "not specified"):
+
+- **Privacy-minimal.** It is the smallest field that makes the WHO reference selection possible, and
+  it drives *nothing else* in the app — no display, no defaults, no other branch.
+- **"Not specified" is a first-class state, not missing data.** Without it the app shows values and
+  trends but deliberately no percentiles, with an explanatory hint and a link to the child profile
+  (W-10). A guessed default would silently fabricate a clinical-looking classification, which is the
+  one outcome the requirement rules out.
+- **Plain `String`, read through `toChildSex()`** — the same application-level enum pattern as
+  `Membership.role`/`Event.type`, for the same SQLite-connector reason
+  ([ADR-0002](0002-application-level-household-roles-and-invites.md)).
+- The same pattern covers `GrowthMeasurement.lengthMeasurementPosition`
+  (`toLengthMeasurementPosition()`), where `null` likewise means something specific — "derive the
+  WHO reference from the age at measurement time" (W-17) — rather than an absent value.
+
+The migration is purely additive: one nullable column on `Child` plus the new table, no data
+migration.
+
 ## Related
 
 - [Phase 2 roadmap](../roadmap/phase-2-tracking-kernfunktionen.md) — "Datenmodell" and "Backend:
@@ -211,5 +308,12 @@ stay always null for `DIAPER` events, since Diaper is a pure point event like Fe
   `diaper.service.ts`, `diaper.controller.ts`, `diaper.module.ts`, `diaper-type.enum.ts`,
   `dto/create-diaper-event.dto.ts`, `dto/update-diaper-event.dto.ts`.
 - `apps/backend/src/event/event-type.enum.ts` — the shared `EventType` enum/cast function.
+- `apps/backend/src/growth/` — implementation of the `GrowthMeasurement` addendum above
+  (`growth.service.ts`, `growth.controller.ts`, `growth.module.ts`,
+  `length-measurement-position.enum.ts`, `percentiles/`, `reference-data/`); deliberately has no
+  detail table and no `RealtimeService` dependency.
+- `apps/backend/src/child/child-sex.enum.ts` — the optional `Child.sex` cast function.
+- [ADR-0014](0014-charting-library-visx.md) — the chart that renders the growth trend the
+  `GrowthMeasurement` table backs.
 - `apps/backend/prisma/schema.prisma` — `Event.startedAt`/`endedAt`, `FeedingDetail`/`DiaperDetail`
-  models.
+  and `GrowthMeasurement` models.

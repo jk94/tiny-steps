@@ -2,15 +2,23 @@ import { Controller, Get, Param, Query, Res, StreamableFile, UseGuards } from '@
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
+import { RequireRole } from '../household/guards/require-role.decorator';
+import { EXPORT_ROLES } from '../household/household-permissions';
 import { toCsv } from './csv.serializer';
 import { ExportQueryDto } from './dto/export-query.dto';
+import { ReportQueryDto } from './dto/report-query.dto';
 import { ExportService } from './export.service';
+import { ReportService } from './report/report.service';
 
 /**
  * Child-level raw-data export (JSON + CSV). Read-only, so — like
- * `EventController` — no `CsrfGuard` and no `@RequireRole`: any household
- * member may export, the same read-access rule as `/events/daily` and
- * `/events/stats`.
+ * `EventController` — no `CsrfGuard`.
+ *
+ * Unlike the other read routes this one *is* role-scoped: generating an export
+ * bundles a child's whole history into one downloadable file, which the Phase
+ * 7.5 permission matrix withholds from OBSERVER. `@RequireRole` works on GET
+ * routes just as well as on writes — the guard only reads metadata, it does not
+ * look at the HTTP method when a requirement is present.
  *
  * Both handlers buffer the full payload in memory before responding, copying
  * `ChildController.getPhoto`'s approach (see ADR-0003's ENOENT-avoidance
@@ -19,8 +27,12 @@ import { ExportService } from './export.service';
  */
 @Controller('households/:householdId/children/:childId/export')
 @UseGuards(JwtAuthGuard, HouseholdMembershipGuard)
+@RequireRole(...EXPORT_ROLES)
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(
+    private readonly exportService: ExportService,
+    private readonly reportService: ReportService,
+  ) {}
 
   @Get('json')
   async exportJson(
@@ -62,6 +74,35 @@ export class ExportController {
     res.set({
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="export-${childId}.csv"`,
+    });
+    return new StreamableFile(buffer);
+  }
+
+  /**
+   * The curated PDF report (roadmap Phase 7.4), as opposed to the two raw-data
+   * dumps above. EXP-14 ties its protection to "the existing export endpoints",
+   * which the Phase 7.5 permission matrix scopes to `EXPORT_ROLES` (OWNER /
+   * CO_PARENT / CAREGIVER, not OBSERVER) — bundling a child's whole history into
+   * one downloadable artefact is exactly the capability withheld from a
+   * read-only member. The requirement is repeated explicitly here rather than
+   * left to inherit from the class so the intent is visible at the handler.
+   *
+   * A completely empty result is a 422 rather than a PDF — see
+   * `ReportService.generatePdf`.
+   */
+  @Get('report.pdf')
+  @RequireRole(...EXPORT_ROLES)
+  async exportReportPdf(
+    @Param('householdId') householdId: string,
+    @Param('childId') childId: string,
+    @Query() query: ReportQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const buffer = await this.reportService.generatePdf(householdId, childId, query);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${childId}.pdf"`,
     });
     return new StreamableFile(buffer);
   }

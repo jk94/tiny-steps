@@ -41,6 +41,14 @@ export interface SleepEventFormProps {
   mode: 'create' | 'edit';
   initialValues?: SleepEventFormInitialValues;
   onSubmit: (output: SleepEventFormOutput) => Promise<void>;
+  /**
+   * Renders the entry as a read-only detail view: every field is disabled and
+   * the submit button is not rendered at all. Used on the edit page for a role
+   * that may not edit this entry (OBSERVER, or CAREGIVER on someone else's
+   * entry) — the page is the only place an entry's full fields are visible, so
+   * the values still have to be readable.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -63,7 +71,12 @@ export interface SleepEventFormProps {
  * this start" field the user sees; `startedAt` is always mirrored from it
  * on submit, in both create and edit mode.
  */
-export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventFormProps) {
+export function SleepEventForm({
+  mode,
+  initialValues,
+  onSubmit,
+  readOnly = false,
+}: SleepEventFormProps) {
   const { t } = useTranslation();
   const [occurredAt, setOccurredAt] = useState(
     initialValues?.occurredAt ? isoToDatetimeLocalValue(initialValues.occurredAt) : '',
@@ -74,6 +87,10 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
   const [fieldErrorKeys, setFieldErrorKeys] = useState<FieldErrorKeys>({});
   const [formErrorKey, setFormErrorKey] = useState<SleepErrorKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // One switch for every field: a read-only render and an in-flight submit both
+  // mean "don't let the user change anything right now".
+  const isFieldDisabled = readOnly || isSubmitting;
 
   const clearFieldError = (field: keyof FieldErrorKeys) => {
     setFieldErrorKeys((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -106,6 +123,12 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (readOnly) {
+      // Belt-and-braces: the submit button isn't rendered at all, but an
+      // implicit form submit must not slip past the role gate either.
+      return;
+    }
 
     const nextFieldErrorKeys = validate();
     if (Object.values(nextFieldErrorKeys).some(Boolean)) {
@@ -166,7 +189,7 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
           clearFieldError('occurredAt');
         }}
         error={fieldErrorKeys.occurredAt ? t(fieldErrorKeys.occurredAt) : undefined}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
       />
 
       <Input
@@ -180,14 +203,16 @@ export function SleepEventForm({ mode, initialValues, onSubmit }: SleepEventForm
           clearFieldError('endedAt');
         }}
         error={fieldErrorKeys.endedAt ? t(fieldErrorKeys.endedAt) : undefined}
-        disabled={isSubmitting}
+        disabled={isFieldDisabled}
       />
 
       {formErrorKey && <ErrorMessage message={t(formErrorKey)} />}
 
-      <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
-        {t(submitButtonTextKey)}
-      </Button>
+      {!readOnly && (
+        <Button type="submit" variant="primary" className="w-full" disabled={isFieldDisabled}>
+          {t(submitButtonTextKey)}
+        </Button>
+      )}
     </form>
   );
 }

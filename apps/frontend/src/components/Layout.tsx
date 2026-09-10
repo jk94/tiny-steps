@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, Droplet, Home, LogOut, Menu, Milk, Moon, Settings } from 'lucide-react';
+import {
+  ClipboardList,
+  Droplet,
+  Home,
+  LogOut,
+  Menu,
+  Milk,
+  Moon,
+  Settings,
+  Sparkles,
+  Stethoscope,
+  TrendingUp,
+} from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { useRealtimeConnection } from '../realtime/useRealtimeConnection';
 import { ConnectionStatusDot } from './ConnectionStatusDot';
@@ -137,6 +149,33 @@ export function Layout() {
           Icon: Droplet,
           isActive: location.pathname.startsWith(
             `/households/${householdId}/children/${childId}/diaper`,
+          ),
+        },
+        {
+          to: `/households/${householdId}/children/${childId}/growth`,
+          label: t('child.list.growthLink'),
+          Icon: TrendingUp,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/growth`,
+          ),
+        },
+        {
+          to: `/households/${householdId}/children/${childId}/milestones`,
+          label: t('child.list.milestonesLink'),
+          Icon: Sparkles,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/milestones`,
+          ),
+        },
+        {
+          to: `/households/${householdId}/children/${childId}/health`,
+          label: t('child.list.healthLink'),
+          // A generic Lucide icon like every other nav entry — the two
+          // hand-drawn health icons belong to the records themselves, where
+          // they distinguish medication from vaccination.
+          Icon: Stethoscope,
+          isActive: location.pathname.startsWith(
+            `/households/${householdId}/children/${childId}/health`,
           ),
         },
         {

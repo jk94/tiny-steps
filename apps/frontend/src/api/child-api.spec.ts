@@ -66,6 +66,7 @@ describe('child-api', () => {
       name: 'Alex',
       birthDate: '2026-01-01',
       hasPhoto: false,
+      sex: null,
       createdAt: '2026-01-01T00:00:00.000Z',
     };
     mockedApiFetch.mockResolvedValueOnce(child);

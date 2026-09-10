@@ -2,7 +2,8 @@
   "name": "baby-tracking-app",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "engines": {
     "node": ">=24.18.0",

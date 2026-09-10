@@ -2,12 +2,13 @@ import {
   EVENT_TYPE_QUERY_KEY_SEGMENT,
   isEventAlreadyStoppedError,
   isEventConflictError,
+  isForbiddenError,
   type EventType,
   type TimelineEventSummary,
 } from '../api/event-api';
 import { queryClient } from '../lib/query-client';
 import { clearActiveTimerCache } from './activeTimerCache';
-import { recordConflictNotice } from './conflictNotices';
+import { recordConflictNotice, recordForbiddenNotice } from './conflictNotices';
 import {
   deletePendingEvent,
   findPendingUpdateForEvent,
@@ -77,7 +78,7 @@ export interface UpdateEventOptimisticallyParams<T extends TimelineEventSummary>
  * fire a *second*, genuinely redundant stop request in the first place (see
  * the `isEventAlreadyStoppedError` case below).
  *
- * On failure there are three cases (see ADR-0011 and its addendum):
+ * On failure there are four cases (see ADR-0011 and its addendum):
  *  - Last-Write-Wins conflict (`isEventConflictError`): the buffered write lost,
  *    so it's deleted (not retryable), a dismissible conflict notice is recorded
  *    (JC-3), and the domain query is invalidated so the server's winning values
@@ -90,6 +91,11 @@ export interface UpdateEventOptimisticallyParams<T extends TimelineEventSummary>
  *    buffered record is simply dropped and the domain query refetched so the
  *    UI reflects the real (already-stopped) event instead of getting stuck
  *    showing a permanent "not saved" ghost row. The error is still rethrown.
+ *  - Not permitted (`isForbiddenError`, 403): the user's household role may not
+ *    perform this write. Resending the identical payload can never succeed, so
+ *    — like an LWW conflict — the buffered record is dropped and a dismissible
+ *    notice is recorded, just with its own wording. Keeping it would strand a
+ *    permanent "not saved" overlay the user has no way to discard.
  *  - Ordinary failure (network/5xx): the record is flipped to `failed` and kept,
  *    so the user's edited values stay visible with a badge (JC-2) and the
  *    sync-queue retries it later. The error is rethrown unchanged.
@@ -173,6 +179,13 @@ export async function updateEventOptimistically<T extends TimelineEventSummary>(
       // Redundant stop — the timer was already stopped by an earlier attempt.
       // Same cleanup as a conflict, but no notice: nothing was actually lost.
       await resolvePendingRecord(localId, householdId, childId, eventType, operation);
+      throw error;
+    }
+    if (isForbiddenError(error)) {
+      // The role guard rejected this write — never retryable. Same drop-and-
+      // notify shape as the conflict case, with its own notice wording.
+      await resolvePendingRecord(localId, householdId, childId, eventType, operation);
+      recordForbiddenNotice(eventType, targetEventId);
       throw error;
     }
     // Ordinary failure: keep the edited values visible (JC-2), let the

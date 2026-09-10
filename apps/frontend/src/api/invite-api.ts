@@ -1,3 +1,4 @@
+import type { HouseholdRole } from '../lib/householdPermissions';
 import { apiFetch } from './http-client';
 
 /**
@@ -16,7 +17,12 @@ export interface InvitePreview {
 
 export interface AcceptedInvite {
   household: { id: string; name: string };
-  role: 'OWNER' | 'CO_PARENT';
+  /**
+   * The role the invite granted: any invitable role (`INVITABLE_ROLES`) —
+   * never OWNER, which the backend's `CreateInviteDto` refuses, since
+   * ownership is only ever handed over on an existing member.
+   */
+  role: HouseholdRole;
 }
 
 /**

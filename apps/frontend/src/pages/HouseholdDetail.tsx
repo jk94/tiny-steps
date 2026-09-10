@@ -7,6 +7,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { InviteGenerator } from '../components/InviteGenerator';
 import { MemberList } from '../components/MemberList';
 import { Skeleton } from '../components/ui';
+import { householdRoleLabelKey } from '../household/householdRoleLabelKey';
 import { mapHouseholdError } from '../household/mapHouseholdError';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -50,11 +51,7 @@ export function HouseholdDetail() {
         <div className="mt-1 flex gap-3 text-sm text-muted-foreground">
           <span>
             {t('household.detail.yourRoleLabel')}:{' '}
-            <strong className="text-foreground">
-              {t(
-                data.role === 'OWNER' ? 'household.list.roleOwner' : 'household.list.roleCoParent',
-              )}
-            </strong>
+            <strong className="text-foreground">{t(householdRoleLabelKey(data.role))}</strong>
           </span>
           <span>
             {t('household.detail.createdAtLabel')}:{' '}
@@ -65,7 +62,7 @@ export function HouseholdDetail() {
         </div>
       </div>
       <InviteGenerator householdId={data.id} role={data.role} />
-      <MemberList householdId={data.id} />
+      <MemberList householdId={data.id} role={data.role} />
       <ChildList householdId={data.id} role={data.role} />
     </section>
   );

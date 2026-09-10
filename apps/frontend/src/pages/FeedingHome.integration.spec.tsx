@@ -36,7 +36,17 @@ const child = {
   name: 'Alex',
   birthDate: '2024-01-01T00:00:00.000Z',
   hasPhoto: false,
+  sex: null,
   createdAt: '2024-01-02T00:00:00.000Z',
+};
+
+// `FeedingTimer` gates its Stop button on the household role, so the timer
+// scenarios below need this route served just like the child/event ones.
+const household = {
+  id: HOUSEHOLD_ID,
+  name: 'Team Müller',
+  role: 'OWNER' as const,
+  createdAt: '2024-01-01T00:00:00.000Z',
 };
 
 const runningTimer = {
@@ -109,6 +119,9 @@ describe('FeedingHome stop-timer flow (integration)', () => {
 
     mockedFetch.mockImplementation(async (path: string, options?: { method?: string }) => {
       const method = options?.method?.toUpperCase() ?? 'GET';
+      if (path === `/households/${HOUSEHOLD_ID}`) {
+        return household;
+      }
       if (path === `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}`) {
         return child;
       }
@@ -179,6 +192,9 @@ describe('FeedingHome stop-timer flow (integration)', () => {
 
     mockedFetch.mockImplementation(async (path: string, options?: { method?: string }) => {
       const method = options?.method?.toUpperCase() ?? 'GET';
+      if (path === `/households/${HOUSEHOLD_ID}`) {
+        return household;
+      }
       if (path === `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}`) {
         return child;
       }

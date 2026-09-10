@@ -129,10 +129,14 @@ gehört als Kommentar ans Modell.
   Vorlauffensters oder überfällig, und der zuständige `NotificationSettings`-Eintrag aktiv.
 - Wie im Bestand wird „jetzt" aus dem injizierten `ClockService` gelesen, damit Tests mit fixierter
   Zeit direkt gegen die Methode laufen können statt gegen die Wanduhr.
-- **Zeitzonen:** Es gilt weiterhin die MVP-Vereinfachung „Server-Lokalzeit" aus Phase 5. Das ist
-  hier spürbarer als bei der Tageszusammenfassung (ein Fälligkeitstag kann sich um einen Tag
-  verschieben, wenn Server und Nutzer weit auseinanderliegen) und wird deshalb ausdrücklich als
-  bekannte Einschränkung dokumentiert, nicht stillschweigend übernommen.
+- **Zeitzonen:** `dueAt` wird als Kalendertag (UTC-Mitternacht, wie `Child.birthDate`) gespeichert,
+  daher rechnet die Fälligkeits-/Vorlauf-Logik den Tag in **UTC** aus — nicht in Server-Lokalzeit.
+  Die Rest-Einschränkung: der Cron feuert um 08:00 **Server-Lokalzeit**, während die Tagesmathematik
+  UTC ist (ein Server weit östlich von UTC stellt den Fälligkeits-Push am folgenden lokalen Morgen
+  zu), und ein Nutzer in einer deutlich anderen Zeitzone als der Server kann eine Erinnerung um bis
+  zu einen Tag versetzt sehen. Beides ist als bekannte Einschränkung in
+  [`docs/known-issues.md`](../../known-issues.md) dokumentiert; echte Pro-Nutzer-Zeitzonen bleiben
+  bis Phase 7.6 außerhalb des Scope.
 
 ## API
 
@@ -179,19 +183,19 @@ wird um die zwei neuen Felder erweitert, es entsteht kein zweiter Einstellungs-E
 
 ## Aufgaben
 
-- [ ] Datenmodell `HealthRecord` und Erweiterung von `NotificationSettings` inkl. Prisma-Migration
-- [ ] Backend-Modul `health` (Controller, Service, DTOs, kind-abhängige Validierung nach MED-1 bis MED-6)
-- [ ] Cron-Methode für Fälligkeits-Erinnerungen im bestehenden `NotificationSchedulerService`, inkl. Entdoppelung (MED-9/MED-10)
-- [ ] `NotificationController`-DTO um die zwei neuen Einstellungsfelder erweitern
-- [ ] Deep-Link vom Push in den betreffenden Eintrag (MED-11)
-- [ ] Übersichtsansicht mit den zwei Abschnitten und Überfälligkeits-Kennzeichnung
-- [ ] Erfassungs-/Bearbeitungs-UI inkl. „als erfolgt markieren" (MED-5)
-- [ ] Zwei neue Icons im Stil des bestehenden Icon-Sets
-- [ ] Übersichtskarte „Medizin" auf `ChildHome` (MED-13)
-- [ ] i18n-Texte (de/en) inkl. der Push-Benachrichtigungstexte
-- [ ] Rohdaten-Export um Medikamente/Impfungen erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
-- [ ] Zeitzonen-Einschränkung in `docs/known-issues.md` dokumentieren
-- [ ] Unit-Tests: Validierung je `kind`, Scheduler-Auswahl und Entdoppelung mit fixierter Uhr, Statuswechsel geplant→erfolgt
+- [x] Datenmodell `HealthRecord` und Erweiterung von `NotificationSettings` inkl. Prisma-Migration
+- [x] Backend-Modul `health` (Controller, Service, DTOs, kind-abhängige Validierung nach MED-1 bis MED-6)
+- [x] Cron-Methode für Fälligkeits-Erinnerungen im bestehenden `NotificationSchedulerService`, inkl. Entdoppelung (MED-9/MED-10)
+- [x] `NotificationController`-DTO um die zwei neuen Einstellungsfelder erweitern
+- [x] Deep-Link vom Push in den betreffenden Eintrag (MED-11)
+- [x] Übersichtsansicht mit den zwei Abschnitten und Überfälligkeits-Kennzeichnung
+- [x] Erfassungs-/Bearbeitungs-UI inkl. „als erfolgt markieren" (MED-5)
+- [x] Zwei neue Icons im Stil des bestehenden Icon-Sets
+- [x] Übersichtskarte „Medizin" auf `ChildHome` (MED-13)
+- [x] i18n-Texte (de/en) inkl. der Push-Benachrichtigungstexte
+- [x] Rohdaten-Export um Medikamente/Impfungen erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
+- [x] Zeitzonen-Einschränkung in `docs/known-issues.md` dokumentieren
+- [x] Unit-Tests: Validierung je `kind`, Scheduler-Auswahl und Entdoppelung mit fixierter Uhr, Statuswechsel geplant→erfolgt
 
 ## Definition of Done
 

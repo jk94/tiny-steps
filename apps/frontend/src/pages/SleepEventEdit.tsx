@@ -10,7 +10,10 @@ import { SleepEventForm } from '../components/SleepEventForm';
 import type { SleepEventFormOutput } from '../components/SleepEventForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { Button, Card } from '../components/ui';
+import { useAuth } from '../auth/useAuth';
 import { mapSleepError } from '../sleep/mapSleepError';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canEditEntry, canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
@@ -24,6 +27,8 @@ export function SleepEventEdit() {
   }>();
   useHouseholdRoom(householdId);
   const navigate = useNavigate();
+  const { role } = useHouseholdRole(householdId);
+  const { user } = useAuth();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const listQueryKey = ['households', householdId, 'children', childId, 'sleep-events'];
@@ -71,6 +76,7 @@ export function SleepEventEdit() {
   }
 
   const event = eventQuery.data;
+  const canEdit = canEditEntry(role, event.userId, user?.id);
 
   const handleSubmit = async (output: SleepEventFormOutput) => {
     // No immutability concern here, unlike Feeding's feedingType — Sleep has no
@@ -112,28 +118,34 @@ export function SleepEventEdit() {
               endedAt: event.endedAt ?? undefined,
             }}
             onSubmit={handleSubmit}
+            readOnly={!canEdit}
           />
 
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            {t('sleep.edit.deleteButton')}
-          </Button>
-          <ConfirmDialog
-            isOpen={isDeleteDialogOpen}
-            title={t('sleep.edit.deleteDialog.title')}
-            description={t('sleep.edit.deleteDialog.description')}
-            confirmLabel={t('sleep.edit.deleteDialog.confirmButton')}
-            cancelLabel={t('sleep.edit.deleteDialog.cancelButton')}
-            onConfirm={() => deleteMutation.mutate()}
-            onCancel={() => setIsDeleteDialogOpen(false)}
-            isConfirming={deleteMutation.isPending}
-          />
-          {deleteMutation.isError && (
-            <ErrorMessage message={t(mapSleepError(deleteMutation.error, 'delete'))} />
+          {/* Delete only — the form stays readable (read-only) for every role, see FeedingEventEdit. */}
+          {canWrite(role, FULL_WRITE_ROLES) && (
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('sleep.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('sleep.edit.deleteDialog.title')}
+                description={t('sleep.edit.deleteDialog.description')}
+                confirmLabel={t('sleep.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('sleep.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapSleepError(deleteMutation.error, 'delete'))} />
+              )}
+            </>
           )}
         </Card.Body>
       </Card>

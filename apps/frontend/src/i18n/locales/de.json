@@ -19,6 +19,9 @@
     "conflict": {
       "message": "Deine Änderung wurde überschrieben, weil dieser Eintrag zwischenzeitlich an anderer Stelle aktualisiert wurde.",
       "dismiss": "Hinweis schließen"
+    },
+    "forbidden": {
+      "message": "Deine Änderung wurde nicht gespeichert: Deine Rolle in diesem Haushalt erlaubt diese Aktion nicht."
     }
   },
   "nav": {
@@ -86,9 +89,13 @@
     "list": {
       "title": "Haushalte",
       "empty": "Du bist noch keinem Haushalt zugeordnet.",
-      "createLink": "Haushalt anlegen",
-      "roleOwner": "Inhaber:in",
-      "roleCoParent": "Mitglied"
+      "createLink": "Haushalt anlegen"
+    },
+    "roles": {
+      "ownerLabel": "Inhaber:in",
+      "coParentLabel": "Mitglied",
+      "caregiverLabel": "Betreuer:in",
+      "observerLabel": "Beobachter:in"
     },
     "create": {
       "title": "Haushalt anlegen",
@@ -109,11 +116,34 @@
       "copiedConfirmation": "Kopiert!",
       "copyFailed": "Kopieren fehlgeschlagen. Bitte kopiere den Link manuell.",
       "expiresAtLabel": "Gültig bis",
-      "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen."
+      "ownerOnlyHint": "Nur die haushaltführende Person kann Einladungen erzeugen.",
+      "roleSelectLabel": "Rolle der eingeladenen Person",
+      "roleDescription": {
+        "coParent": "Voller Zugriff auf alle Einträge und Kindprofile, aber keine Verwaltung des Haushalts.",
+        "caregiver": "Darf Einträge erfassen und eigene bearbeiten, aber nichts löschen und keine Kindprofile verwalten.",
+        "observer": "Nur Lesezugriff, dazu die eigenen Benachrichtigungseinstellungen."
+      }
     },
     "members": {
       "title": "Mitglieder",
-      "empty": "Keine Mitglieder gefunden."
+      "empty": "Keine Mitglieder gefunden.",
+      "roleLabel": "Rolle",
+      "joinedAtLabel": "Mitglied seit",
+      "removeButton": "Entfernen",
+      "removeDialog": {
+        "title": "Mitglied entfernen?",
+        "description": "{{name}} verliert sofort den Zugriff auf diesen Haushalt. Bereits erfasste Einträge bleiben erhalten.",
+        "confirmButton": "Entfernen",
+        "cancelButton": "Abbrechen"
+      },
+      "roleChangeDialog": {
+        "title": "Rolle ändern?",
+        "description": "{{name}} erhält die Rolle „{{role}}“.",
+        "descriptionDemotion": "{{name}} erhält die Rolle „{{role}}“ und verliert dabei Rechte, die diese Person heute hat.",
+        "descriptionPromotionToOwner": "{{name}} erhält die Rolle „{{role}}“ und kann dann Mitglieder und den Haushalt selbst verwalten.",
+        "confirmButton": "Rolle ändern",
+        "cancelButton": "Abbrechen"
+      }
     },
     "validation": {
       "nameRequired": "Bitte gib einen Namen für den Haushalt ein.",
@@ -122,6 +152,10 @@
     "errors": {
       "notFound": "Dieser Haushalt wurde nicht gefunden oder du bist kein Mitglied.",
       "forbidden": "Nur die haushaltführende Person darf diese Aktion ausführen.",
+      "cannotChangeOwnRole": "Du kannst deine eigene Rolle nicht ändern. Bitte eine andere haushaltführende Person darum.",
+      "cannotRemoveSelf": "Du kannst dich nicht selbst aus dem Haushalt entfernen. Bitte eine andere haushaltführende Person darum.",
+      "lastOwnerCannotBeDemoted": "Das ist die letzte haushaltführende Person. Mache zuerst jemand anderen dazu.",
+      "lastOwnerCannotBeRemoved": "Das ist die letzte haushaltführende Person. Mache zuerst jemand anderen dazu.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   },
@@ -162,7 +196,10 @@
       "feedingLink": "Füttern",
       "sleepLink": "Schlaf",
       "diaperLink": "Windel",
-      "timelineLink": "Übersicht"
+      "timelineLink": "Übersicht",
+      "growthLink": "Wachstum",
+      "milestonesLink": "Meilensteine",
+      "healthLink": "Medizin"
     },
     "create": {
       "title": "Kind-Profil anlegen",
@@ -186,7 +223,12 @@
       "birthDateLabel": "Geburtsdatum",
       "photoLabel": "Foto (optional)",
       "photoPlaceholder": "Foto hinzufügen",
-      "photoHint": "JPEG, PNG oder WebP, maximal 2 MB."
+      "photoHint": "JPEG, PNG oder WebP, maximal 2 MB.",
+      "sexLabel": "Geschlecht (optional)",
+      "sexHint": "Wird ausschließlich für die WHO-Wachstumsperzentile verwendet. Ohne Angabe werden Werte und Verlauf angezeigt, aber keine Perzentile.",
+      "sexOptionNotSpecified": "Keine Angabe",
+      "sexOptionFemale": "Weiblich",
+      "sexOptionMale": "Männlich"
     },
     "validation": {
       "nameRequired": "Bitte gib einen Namen ein.",
@@ -416,6 +458,387 @@
       "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
     }
   },
+  "growth": {
+    "home": {
+      "title": "Wachstum — {{name}}",
+      "backLink": "Zurück zum Haushalt",
+      "addLink": "Messung hinzufügen",
+      "subtitle": "Gewicht, Länge/Größe und Kopfumfang im Verlauf."
+    },
+    "measures": {
+      "weight": "Gewicht",
+      "length": "Länge/Größe",
+      "headCircumference": "Kopfumfang"
+    },
+    "units": {
+      "kg": "kg",
+      "cm": "cm"
+    },
+    "chart": {
+      "ariaLabel": "Verlauf {{measure}}: mit den Pfeiltasten zwischen den Messpunkten wechseln",
+      "figureLabel": "Wachstumsverlauf {{measure}}",
+      "keyboardHint": "Diagramm fokussieren und mit den Pfeiltasten von Messpunkt zu Messpunkt springen. Auf dem Touchscreen lange gedrückt halten.",
+      "liveReadout": "{{date}}: {{measure}} {{value}} {{unit}}, {{percentile}}",
+      "liveReadoutNoPercentile": "{{date}}: {{measure}} {{value}} {{unit}}",
+      "valueText": "{{date}}: {{value}} {{unit}}",
+      "valueTextEmpty": "Kein Messpunkt ausgewählt",
+      "noReferenceHint": "Für diesen Bereich gibt es keine WHO-Referenzkurven, deshalb werden nur die Messwerte ohne Perzentilbänder angezeigt.",
+      "empty": "Für diesen Messwert gibt es noch keine Einträge.",
+      "band": {
+        "label": "P{{percentile}}"
+      },
+      "position": {
+        "lying": "Liegend gemessen",
+        "standing": "Stehend gemessen"
+      },
+      "axis": {
+        "months_one": "{{count}} Mon.",
+        "months_other": "{{count}} Mon.",
+        "years_one": "{{count}} Jahr",
+        "years_other": "{{count}} Jahre"
+      }
+    },
+    "list": {
+      "title": "Messungen",
+      "empty": {
+        "title": "Noch keine Messungen",
+        "description": "Trage die Werte der nächsten Vorsorgeuntersuchung ein, um den Verlauf zu sehen.",
+        "cta": "Erste Messung eintragen"
+      },
+      "recordedBy": "Erfasst von {{name}}",
+      "unknownUser": "Unbekannt",
+      "ageAtMeasurement_one": "{{count}} Monat alt",
+      "ageAtMeasurement_other": "{{count}} Monate alt",
+      "editLink": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleteDialog": {
+        "title": "Messung löschen?",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "form": {
+      "titleCreate": "Messung eintragen",
+      "titleEdit": "Messung bearbeiten",
+      "backLink": "Zurück zum Wachstum",
+      "measuredAtLabel": "Datum der Messung",
+      "weightLabel": "Gewicht (kg)",
+      "lengthLabel": "Länge/Größe (cm)",
+      "headCircumferenceLabel": "Kopfumfang (cm)",
+      "valuesHint": "Mindestens einer der drei Werte muss ausgefüllt sein.",
+      "position": {
+        "label": "Messmethode Länge/Größe",
+        "auto": "Automatisch (nach Alter)",
+        "lying": "Liegend gemessen",
+        "standing": "Stehend gemessen",
+        "explanation": "Die WHO-Referenz unterscheidet liegend gemessene Länge (bis 24 Monate) von stehend gemessener Größe (ab 24 Monaten). Normalerweise wird das aus dem Alter abgeleitet — stelle es nur um, wenn tatsächlich anders gemessen wurde."
+      },
+      "noteLabel": "Notiz (optional)",
+      "submit": {
+        "create": "Speichern",
+        "createPending": "Wird gespeichert…",
+        "edit": "Änderungen speichern",
+        "editPending": "Wird gespeichert…"
+      }
+    },
+    "validation": {
+      "atLeastOneValue": "Bitte trage mindestens einen Wert ein.",
+      "weightRange": "Das Gewicht muss zwischen {{min}} und {{max}} kg liegen.",
+      "lengthRange": "Die Länge/Größe muss zwischen {{min}} und {{max}} cm liegen.",
+      "headCircumferenceRange": "Der Kopfumfang muss zwischen {{min}} und {{max}} cm liegen.",
+      "measuredAtRequired": "Bitte gib ein Datum an.",
+      "measuredAtFuture": "Das Datum darf nicht in der Zukunft liegen.",
+      "measuredAtBeforeBirth": "Das Datum darf nicht vor dem Geburtsdatum liegen.",
+      "noteTooLong": "Die Notiz darf höchstens 500 Zeichen lang sein.",
+      "saveFailed": "Die Messung konnte nicht gespeichert werden. Bitte prüfe deine Verbindung und versuche es erneut.",
+      "deleteFailed": "Die Messung konnte nicht gelöscht werden. Bitte versuche es erneut.",
+      "loadFailed": "Die Messungen konnten nicht geladen werden. Bitte versuche es erneut."
+    },
+    "percentile": {
+      "value": "{{value}}. Perzentile",
+      "zScore": "Z-Wert {{value}}",
+      "unavailable": {
+        "sexUnknown": "Perzentile brauchen das Geschlecht des Kindes.",
+        "sexUnknownLink": "Im Kind-Profil ergänzen",
+        "ageBelowRange": "Vor dem Geburtsdatum — außerhalb des WHO-Referenzbereichs.",
+        "ageOutOfRange": "Außerhalb des WHO-Referenzbereichs (0–5 Jahre)."
+      }
+    },
+    "card": {
+      "title": "Wachstum",
+      "link": "Verlauf ansehen",
+      "empty": "Noch keine Messung erfasst.",
+      "cta": "Messung eintragen",
+      "measuredOn": "Gemessen am {{date}}"
+    }
+  },
+  "milestone": {
+    "timeline": {
+      "title": "Meilensteine — {{name}}",
+      "backLink": "Zurück zum Haushalt",
+      "addLink": "Meilenstein hinzufügen",
+      "subtitle": "Die Entwicklungsschritte deines Kindes, chronologisch festgehalten.",
+      "tabTimeline": "Timeline",
+      "tabCatalog": "Was kommt als Nächstes?"
+    },
+    "list": {
+      "title": "Erfasste Meilensteine",
+      "empty": {
+        "title": "Noch keine Meilensteine",
+        "description": "Halte den ersten Entwicklungsschritt fest — aus der Vorlagenliste oder ganz frei.",
+        "cta": "Ersten Meilenstein eintragen"
+      },
+      "recordedBy": "Erfasst von {{name}}",
+      "unknownUser": "Unbekannt",
+      "ageAtMilestone_one": "mit {{count}} Monat",
+      "ageAtMilestone_other": "mit {{count}} Monaten",
+      "photoCount_one": "{{count}} Foto",
+      "photoCount_other": "{{count}} Fotos",
+      "morePhotos": "+{{count}}",
+      "openGallery": "Fotos von „{{title}}“ ansehen",
+      "editLink": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleteDialog": {
+        "title": "Meilenstein löschen?",
+        "description": "Der Eintrag und seine Fotos werden endgültig entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "catalog": {
+      "title": "Was kommt als Nächstes?",
+      "intro": "Typische Entwicklungsschritte zur Einordnung — kein Zeitplan. Jedes Kind hat sein eigenes Tempo.",
+      "ageGroupLabel": "{{min}}–{{max}} Monate",
+      "achievedMarker": "Erfasst",
+      "typicalRange": "meist zwischen {{min}} und {{max}} Monaten",
+      "openAchieved": "„{{title}}“ öffnen",
+      "recordTemplate": "„{{title}}“ eintragen"
+    },
+    "form": {
+      "createTitle": "Meilenstein eintragen",
+      "editTitle": "Meilenstein bearbeiten",
+      "backLink": "Zurück zu den Meilensteinen",
+      "modeTemplate": "Aus Vorlage",
+      "modeFree": "Freier Eintrag",
+      "templateLabel": "Vorlage",
+      "templatePlaceholder": "Vorlage auswählen",
+      "titleLabel": "Bezeichnung",
+      "titlePlaceholder": "z. B. Erster Zoobesuch",
+      "titleFixedHint": "Die Bezeichnung kommt aus der Vorlage und kann nicht geändert werden.",
+      "categoryLabel": "Kategorie (optional)",
+      "categoryNone": "Keine Kategorie",
+      "categoryHint": "Dient nur der Einordnung, nicht der Bewertung.",
+      "categoryFixedHint": "Die Kategorie ergibt sich aus der Vorlage.",
+      "achievedAtLabel": "Datum",
+      "noteLabel": "Notiz (optional)",
+      "submit": {
+        "create": "Speichern",
+        "createPending": "Wird gespeichert…",
+        "edit": "Änderungen speichern",
+        "editPending": "Wird gespeichert…"
+      },
+      "photos": {
+        "sectionLabel": "Fotos",
+        "addLabel": "Fotos auswählen",
+        "hint": "Bis zu {{max}} Fotos, je höchstens 2 MB (JPEG, PNG oder WebP).",
+        "statusPending": "Wartet auf den Upload",
+        "statusDone": "Hochgeladen",
+        "statusError": "Fehlgeschlagen",
+        "removeLabel": "„{{name}}“ entfernen",
+        "limitReached": "Es sind höchstens {{max}} Fotos pro Meilenstein möglich. {{count}} Datei(en) wurden nicht übernommen.",
+        "existingLabel": "Bereits hochgeladen",
+        "deleteExisting": "Foto löschen"
+      }
+    },
+    "gallery": {
+      "title": "Fotos",
+      "previous": "Vorheriges Foto",
+      "next": "Nächstes Foto",
+      "counter": "{{current}} von {{total}}",
+      "photoAlt": "Foto {{index}} zu „{{title}}“",
+      "deleteConfirm": {
+        "title": "Foto löschen?",
+        "description": "Das Foto wird endgültig entfernt.",
+        "confirmButton": "Endgültig löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "validation": {
+      "titleRequired": "Bitte gib eine Bezeichnung ein.",
+      "titleTooLong": "Die Bezeichnung darf höchstens {{max}} Zeichen lang sein.",
+      "templateRequired": "Bitte wähle eine Vorlage aus.",
+      "achievedAtRequired": "Bitte gib ein Datum an.",
+      "achievedAtInFuture": "Das Datum darf nicht in der Zukunft liegen.",
+      "achievedAtBeforeBirth": "Das Datum darf nicht vor dem Geburtsdatum liegen.",
+      "noteTooLong": "Die Notiz darf höchstens {{max}} Zeichen lang sein.",
+      "photoInvalidType": "„{{name}}“ ist kein JPEG-, PNG- oder WebP-Bild.",
+      "photoTooLarge": "„{{name}}“ ist größer als 2 MB.",
+      "photosNeedAttention": "Einige Fotos wurden abgelehnt. Bitte entferne sie oder wähle andere Dateien, bevor du speicherst.",
+      "saveFailed": "Der Meilenstein konnte nicht gespeichert werden. Bitte prüfe deine Verbindung und versuche es erneut.",
+      "photoUploadFailed": "Der Meilenstein wurde gespeichert, aber {{count}} Foto(s) konnten nicht hochgeladen werden. Die betroffenen Dateien sind unten aufgeführt — tippe erneut auf Speichern, um sie noch einmal hochzuladen.",
+      "photoDeleteFailed": "Das Foto konnte nicht gelöscht werden. Bitte versuche es erneut.",
+      "deleteFailed": "Der Meilenstein konnte nicht gelöscht werden. Bitte versuche es erneut.",
+      "loadFailed": "Die Meilensteine konnten nicht geladen werden. Bitte versuche es erneut."
+    },
+    "errors": {
+      "notFound": "Dieser Meilenstein wurde nicht gefunden.",
+      "forbidden": "Du darfst diese Aktion nicht ausführen.",
+      "templateAlreadyRecorded": "Dieser Meilenstein ist für dieses Kind bereits erfasst.",
+      "photoLimitReached": "Es sind höchstens 10 Fotos pro Meilenstein möglich.",
+      "photoTooLarge": "Das Foto darf höchstens 2 MB groß sein.",
+      "photoInvalidType": "Bitte wähle ein JPEG-, PNG- oder WebP-Bild aus.",
+      "photoUploadError": "Das Foto konnte nicht hochgeladen werden. Bitte versuche es erneut.",
+      "templateFieldNotEditable": "Bezeichnung und Kategorie einer Vorlage können nicht geändert werden.",
+      "invalidTitle": "Bitte gib eine gültige Bezeichnung ein.",
+      "invalidAchievedAt": "Bitte gib ein gültiges Datum an, das nicht in der Zukunft liegt.",
+      "invalidInput": "Die Eingaben konnten nicht gespeichert werden. Bitte prüfe Bezeichnung und Datum.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es später erneut."
+    },
+    "card": {
+      "title": "Meilensteine",
+      "link": "Alle Meilensteine ansehen",
+      "empty": "Noch keinen Meilenstein erfasst.",
+      "cta": "Meilenstein eintragen",
+      "achievedOn": "Am {{date}}",
+      "ageAt_one": "mit {{count}} Monat",
+      "ageAt_other": "mit {{count}} Monaten"
+    },
+    "categories": {
+      "motor": "Motorik",
+      "language": "Sprache",
+      "social": "Sozial",
+      "physical": "Körperlich"
+    },
+    "templates": {
+      "FIRST_SMILE": "Erstes Lächeln",
+      "HOLDS_HEAD_UP": "Hält den Kopf selbst",
+      "FIRST_LAUGH": "Erstes Lachen",
+      "GRASPS_OBJECT": "Greift gezielt nach etwas",
+      "ROLLS_OVER": "Dreht sich vom Rücken auf den Bauch",
+      "FIRST_SOLID_FOOD": "Erste Beikost",
+      "BABBLES": "Erstes Brabbeln",
+      "FIRST_TOOTH": "Erster Zahn",
+      "SITS_UNSUPPORTED": "Sitzt frei",
+      "CRAWLS": "Krabbelt",
+      "PULLS_TO_STAND": "Zieht sich zum Stehen hoch",
+      "WAVES_BYE": "Winkt zum Abschied",
+      "FIRST_WORD": "Erstes Wort",
+      "FIRST_STEPS": "Erste Schritte",
+      "DRINKS_FROM_CUP": "Trinkt aus dem Becher",
+      "CLIMBS_STAIRS": "Steigt Treppen",
+      "RUNS": "Läuft/rennt sicher",
+      "TWO_WORD_SENTENCE": "Erster Zwei-Wort-Satz",
+      "SAYS_OWN_NAME": "Nennt den eigenen Namen",
+      "POTTY_TRAINED_DAY": "Tagsüber trocken"
+    }
+  },
+  "health": {
+    "overview": {
+      "title": "Medikamente & Impfungen für {{name}}",
+      "subtitle": "Anstehende Termine und die bisherige Historie.",
+      "backLink": "Zurück zur Übersicht",
+      "addLink": "Eintrag hinzufügen",
+      "upcomingSectionTitle": "Anstehend & überfällig",
+      "historySectionTitle": "Historie",
+      "upcomingEmpty": "Kein Termin geplant.",
+      "historyEmpty": "Noch nichts eingetragen.",
+      "loadFailed": "Die Einträge konnten nicht geladen werden."
+    },
+    "kinds": {
+      "medication": "Medikament",
+      "vaccination": "Impfung"
+    },
+    "form": {
+      "createTitle": "Eintrag hinzufügen",
+      "editTitle": "Eintrag bearbeiten",
+      "backLink": "Zurück zu Medikamente & Impfungen",
+      "kindLabel": "Art",
+      "kindFixedHint": "Die Art kann nachträglich nicht geändert werden.",
+      "nameLabel": "Bezeichnung",
+      "namePlaceholder": "z. B. Paracetamol 125 mg",
+      "namePlaceholderVaccination": "z. B. 6-fach-Impfung",
+      "administeredAtLabel": "Verabreicht am (optional)",
+      "administeredAtHint": "Leer lassen, solange der Termin nur geplant ist.",
+      "dueAtLabel": "Fällig am (optional)",
+      "dueAtHint": "Ein Datum in der Vergangenheit gilt als überfällig.",
+      "doseAmountLabel": "Dosis (optional)",
+      "doseUnitLabel": "Einheit",
+      "doseUnitPlaceholder": "z. B. ml",
+      "doseUnitSuggestions": {
+        "milliliters": "ml",
+        "milligrams": "mg",
+        "drops": "Tropfen",
+        "pieces": "Stück"
+      },
+      "vaccineBatchLabel": "Impfstoff / Charge (optional)",
+      "vaccineBatchPlaceholder": "z. B. Infanrix hexa, Charge AB1234",
+      "noteLabel": "Notiz (optional)",
+      "reminderToggleLabel": "An diesen Termin erinnern",
+      "reminderHint": "Alle Mitglieder des Haushalts mit aktivierten Medizin-Erinnerungen werden vorab und am Fälligkeitstag benachrichtigt.",
+      "submit": {
+        "create": "Speichern",
+        "createPending": "Wird gespeichert…",
+        "edit": "Änderungen speichern",
+        "editPending": "Wird gespeichert…"
+      }
+    },
+    "row": {
+      "dueOn": "Fällig am {{date}}",
+      "administeredOn": "Verabreicht am {{date}}",
+      "doseFormat": "{{amount}} {{unit}}",
+      "batchFormat": "Charge: {{batch}}",
+      "overdueBadge": "Überfällig",
+      "reminderBadge": "Erinnerung aktiv",
+      "markDone": "Als erledigt markieren",
+      "markDonePending": "Wird gespeichert…",
+      "editLink": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleteDialog": {
+        "title": "Eintrag löschen?",
+        "description": "Der Eintrag wird dauerhaft entfernt. Das lässt sich nicht rückgängig machen.",
+        "confirmButton": "Löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "card": {
+      "title": "Medizin",
+      "link": "Alle Einträge ansehen",
+      "empty": "Noch nichts eingetragen.",
+      "cta": "Eintrag hinzufügen",
+      "nextDue": "Nächster Termin: {{name}} am {{date}}",
+      "overdue": "{{name}} war am {{date}} fällig"
+    },
+    "validation": {
+      "nameRequired": "Bitte eine Bezeichnung eingeben.",
+      "nameTooLong": "Die Bezeichnung darf höchstens {{max}} Zeichen lang sein.",
+      "missingDate": "Bitte ein Verabreichungs- oder ein Fälligkeitsdatum angeben.",
+      "doseUnitRequired": "Bitte zur Dosis auch eine Einheit angeben.",
+      "doseAmountInvalid": "Bitte eine Dosis größer als 0 eingeben.",
+      "doseUnitTooLong": "Die Einheit darf höchstens {{max}} Zeichen lang sein.",
+      "vaccineBatchTooLong": "Die Angabe darf höchstens {{max}} Zeichen lang sein.",
+      "noteTooLong": "Die Notiz darf höchstens {{max}} Zeichen lang sein.",
+      "fieldNotAllowedForKind": "Dieses Feld gehört zur jeweils anderen Art von Eintrag.",
+      "administeredAtBeforeBirth": "Der Zeitpunkt darf nicht vor dem Geburtsdatum liegen.",
+      "administeredAtInFuture": "Der Zeitpunkt darf nicht in der Zukunft liegen.",
+      "deleteFailed": "Der Eintrag konnte nicht gelöscht werden. Bitte versuche es erneut."
+    },
+    "errors": {
+      "forbidden": "Dafür fehlen dir die Berechtigungen.",
+      "notFound": "Der Eintrag wurde nicht gefunden.",
+      "invalidName": "Bitte eine gültige Bezeichnung eingeben.",
+      "invalidInput": "Bitte prüfe deine Eingaben.",
+      "generic": "Der Eintrag konnte nicht gespeichert werden. Bitte versuche es erneut."
+    },
+    "push": {
+      "reminderTitleLead": "Anstehender Termin",
+      "reminderTitleDue": "Heute fällig",
+      "reminderTitleOverdue": "Überfälliger Termin",
+      "reminderBodyLead": "{{kind}} „{{name}}“ ist am {{date}} fällig.",
+      "reminderBodyDue": "{{kind}} „{{name}}“ ist heute fällig.",
+      "reminderBodyOverdue": "{{kind}} „{{name}}“ war am {{date}} fällig."
+    }
+  },
   "timeline": {
     "title": "Tagesübersicht — {{name}}",
     "backLink": "Zurück zur Übersicht",
@@ -461,7 +884,29 @@
     "toLabel": "Bis (optional)",
     "downloadButton": "Herunterladen",
     "downloadButtonPending": "Wird vorbereitet…",
-    "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut."
+    "error": "Der Export konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "includesGrowthNote": "Der Export enthält neben den Einträgen auch alle Wachstumsmessungen.",
+    "report": {
+      "sectionTitle": "Bericht",
+      "description": "Ein lesbarer PDF-Bericht für den Kinderarzttermin — mit Wachstumskurven, Meilensteinen, Medikamenten/Impfungen und einer Tracking-Zusammenfassung.",
+      "periodLabel": "Zeitraum",
+      "periodLastMonth": "Letzter Monat",
+      "periodLast3Months": "Letzte 3 Monate",
+      "periodLastYear": "Letztes Jahr",
+      "periodCustom": "Frei wählbar",
+      "fromLabel": "Von",
+      "toLabel": "Bis",
+      "sectionsLabel": "Enthaltene Abschnitte",
+      "sectionCore": "Stammdaten (immer enthalten)",
+      "sectionGrowth": "Wachstum",
+      "sectionMilestones": "Meilensteine",
+      "sectionMedical": "Medikamente & Impfungen",
+      "sectionTracking": "Tracking-Zusammenfassung",
+      "downloadButton": "Bericht herunterladen",
+      "downloadButtonPending": "Bericht wird erstellt…",
+      "errorEmptyPeriod": "Für den gewählten Zeitraum und die gewählten Abschnitte liegen keine Daten vor.",
+      "errorGeneric": "Der Bericht konnte nicht erstellt werden. Bitte versuche es erneut."
+    }
   },
   "profile": {
     "title": "Profil",
@@ -499,7 +944,11 @@
     "saveButtonPending": "Wird gespeichert…",
     "saved": "Einstellungen gespeichert.",
     "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
-    "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden."
+    "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden.",
+    "medicalReminderLabel": "Medizin-Erinnerungen",
+    "medicalReminderHint": "Gilt für geplante Medikamente und Impfungen mit aktivierter Erinnerung — vorab und am Fälligkeitstag.",
+    "medicalLeadDaysLabel": "Vorlauf (Tage)",
+    "medicalLeadDaysInvalid": "Bitte eine ganze Anzahl Tage zwischen 1 und 30 eingeben."
   },
   "ui": {
     "eventTypes": {

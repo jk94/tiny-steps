@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 import { fetchHousehold } from '../api/household-api';
-import { deleteChild, fetchChild, updateChild } from '../api/child-api';
+import { CLEAR_CHILD_SEX, deleteChild, fetchChild, updateChild } from '../api/child-api';
 import {
   fetchNotificationSettings,
   updateNotificationSettings,
@@ -17,12 +17,18 @@ import { Button, Card, Input } from '../components/ui';
 import { bumpPhotoCacheBust } from '../child/childPhotoCacheBust';
 import { mapChildError } from '../child/mapChildError';
 import { mapHouseholdError } from '../household/mapHouseholdError';
+import { canWrite, EXPORT_ROLES, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 const MIN_THRESHOLD_HOURS = 1;
 const MIN_HOUR = 0;
 const MAX_HOUR = 23;
+// Mirrors the backend's `@Min(1)`/`@Max(MEDICAL_REMINDER_MAX_LEAD_DAYS)` on
+// `medicalReminderLeadDays`. A 0-day lead is not a setting: it is just the
+// due-day reminder, which every enabled member gets anyway.
+const MIN_LEAD_DAYS = 1;
+const MAX_LEAD_DAYS = 30;
 
 function notificationSettingsQueryKey(
   householdId: string | undefined,
@@ -32,11 +38,17 @@ function notificationSettingsQueryKey(
 }
 
 /**
- * Per-child settings page: child-profile editing (name/photo/birthdate,
- * OWNER-only delete) plus notification preferences, merged into one page.
- * Formerly two standalone routes/pages (`ChildEdit` + `NotificationSettings`)
- * — `ChildList` now sends a click on the child item straight to the daily
- * timeline instead of an edit screen, so edit access moved here instead.
+ * Per-child settings page: child-profile editing (name/photo/birthdate plus
+ * delete) and notification preferences, merged into one page. Formerly two
+ * standalone routes/pages (`ChildEdit` + `NotificationSettings`) — `ChildList`
+ * now sends a click on the child item straight to the daily timeline instead
+ * of an edit screen, so edit access moved here instead.
+ *
+ * The two halves have different role requirements: the profile section needs
+ * `FULL_WRITE_ROLES` and is hidden without it, while the notification section
+ * is `ALL_ROLES` (everyone manages their own reminders). The page therefore
+ * stays reachable for every role, which is why its nav entry in `Layout` is
+ * not role-gated.
  */
 export function ChildSettings() {
   const { t } = useTranslation();
@@ -128,60 +140,68 @@ export function ChildSettings() {
       <h1 className="mb-4 text-xl font-bold text-foreground">{t('settings.title')}</h1>
 
       <div className="flex flex-col gap-3">
-        <Card>
-          <Card.Body className="flex flex-col gap-4">
-            <h2 className="text-sm font-bold text-foreground">
-              {t('settings.profileSectionTitle')}
-            </h2>
-            <ChildForm
-              mode="edit"
-              initialValues={{
-                name: child.name,
-                // `birthDate` arrives as a full ISO8601 datetime string; an
-                // `<input type="date">` value must be the date-only portion.
-                birthDate: child.birthDate.slice(0, 10),
-                childId: child.id,
-                householdId: household.id,
-                hasPhoto: child.hasPhoto,
-              }}
-              onSubmit={handleProfileSubmit}
-            />
+        {/* Editing and deleting a child profile both need `FULL_WRITE_ROLES`
+            server-side (`@RequireRole(...FULL_WRITE_ROLES)` on
+            `ChildController.update`/`remove`), i.e. OWNER and CO_PARENT. For a
+            CAREGIVER/OBSERVER the whole profile section is hidden rather than
+            rendered disabled or left interactive until a 403 comes back — the
+            notification section below stays, since managing one's *own*
+            reminders is `ALL_ROLES`. */}
+        {canWrite(household.role, FULL_WRITE_ROLES) && (
+          <Card>
+            <Card.Body className="flex flex-col gap-4">
+              <h2 className="text-sm font-bold text-foreground">
+                {t('settings.profileSectionTitle')}
+              </h2>
+              <ChildForm
+                mode="edit"
+                initialValues={{
+                  name: child.name,
+                  // `birthDate` arrives as a full ISO8601 datetime string; an
+                  // `<input type="date">` value must be the date-only portion.
+                  birthDate: child.birthDate.slice(0, 10),
+                  sex: child.sex ?? CLEAR_CHILD_SEX,
+                  childId: child.id,
+                  householdId: household.id,
+                  hasPhoto: child.hasPhoto,
+                }}
+                onSubmit={handleProfileSubmit}
+              />
 
-            {/* Child deletion is OWNER-only server-side (see `ChildController`) —
-                completely hidden for a CO_PARENT, not just disabled. */}
-            {household.role === 'OWNER' && (
-              <>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  {t('child.edit.deleteButton')}
-                </Button>
-                <ConfirmDialog
-                  isOpen={isDeleteDialogOpen}
-                  title={t('child.edit.deleteDialog.title')}
-                  description={t('child.edit.deleteDialog.description')}
-                  confirmLabel={t('child.edit.deleteDialog.confirmButton')}
-                  cancelLabel={t('child.edit.deleteDialog.cancelButton')}
-                  onConfirm={() => deleteMutation.mutate()}
-                  onCancel={() => setIsDeleteDialogOpen(false)}
-                  isConfirming={deleteMutation.isPending}
-                />
-                {deleteMutation.isError && (
-                  <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
-                )}
-              </>
-            )}
-          </Card.Body>
-        </Card>
+              {/* Deletion needs the same bundle as the edit form above, so it
+                  carries no extra role check of its own. */}
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                {t('child.edit.deleteButton')}
+              </Button>
+              <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                title={t('child.edit.deleteDialog.title')}
+                description={t('child.edit.deleteDialog.description')}
+                confirmLabel={t('child.edit.deleteDialog.confirmButton')}
+                cancelLabel={t('child.edit.deleteDialog.cancelButton')}
+                onConfirm={() => deleteMutation.mutate()}
+                onCancel={() => setIsDeleteDialogOpen(false)}
+                isConfirming={deleteMutation.isPending}
+              />
+              {deleteMutation.isError && (
+                <ErrorMessage message={t(mapChildError(deleteMutation.error))} />
+              )}
+            </Card.Body>
+          </Card>
+        )}
 
-        <Button asChild variant="secondary" className="w-full">
-          <Link to={`/households/${household.id}/children/${child.id}/settings/export`}>
-            {t('settings.exportButton')}
-          </Link>
-        </Button>
+        {canWrite(household.role, EXPORT_ROLES) && (
+          <Button asChild variant="secondary" className="w-full">
+            <Link to={`/households/${household.id}/children/${child.id}/settings/export`}>
+              {t('settings.exportButton')}
+            </Link>
+          </Button>
+        )}
 
         <h2 className="text-sm font-bold text-foreground">
           {t('settings.notificationsSectionTitle')}
@@ -244,6 +264,7 @@ function NotificationSettingsForm({
   const [values, setValues] = useState<NotificationSettingsValues>(initialValues);
   const [thresholdError, setThresholdError] = useState<string | null>(null);
   const [summaryHourError, setSummaryHourError] = useState<string | null>(null);
+  const [medicalLeadDaysError, setMedicalLeadDaysError] = useState<string | null>(null);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -264,6 +285,15 @@ function NotificationSettingsForm({
       return;
     }
     setSummaryHourError(null);
+    if (
+      !Number.isInteger(values.medicalReminderLeadDays) ||
+      values.medicalReminderLeadDays < MIN_LEAD_DAYS ||
+      values.medicalReminderLeadDays > MAX_LEAD_DAYS
+    ) {
+      setMedicalLeadDaysError(t('notifications.medicalLeadDaysInvalid'));
+      return;
+    }
+    setMedicalLeadDaysError(null);
     onSubmit(values);
   };
 
@@ -318,6 +348,33 @@ function NotificationSettingsForm({
             }
             error={summaryHourError ?? undefined}
           />
+        </Card.Body>
+      </Card>
+
+      <Card>
+        <Card.Body className="flex flex-col gap-3">
+          <ToggleField
+            label={t('notifications.medicalReminderLabel')}
+            checked={values.medicalReminderEnabled}
+            onChange={(checked) =>
+              setValues((prev) => ({ ...prev, medicalReminderEnabled: checked }))
+            }
+          />
+          {/* Same reasoning as the two inputs above: no HTML `min`/`max`, so
+              our own i18n validation message actually gets a chance to show. */}
+          <Input
+            label={t('notifications.medicalLeadDaysLabel')}
+            type="number"
+            value={values.medicalReminderLeadDays}
+            onChange={(event) =>
+              setValues((prev) => ({
+                ...prev,
+                medicalReminderLeadDays: event.target.valueAsNumber,
+              }))
+            }
+            error={medicalLeadDaysError ?? undefined}
+          />
+          <p className="text-xs text-muted-foreground">{t('notifications.medicalReminderHint')}</p>
         </Card.Body>
       </Card>
 

@@ -284,4 +284,108 @@ describe('EventService', () => {
       expect(result.lastEventAt).toEqual({ FEEDING: null, SLEEP: null, DIAPER: null });
     });
   });
+
+  describe('getPeriodTrackingSummary', () => {
+    /** 2026-01-01 → 2026-01-11, i.e. ten whole days. */
+    const PERIOD_FROM = new Date('2026-01-01T00:00:00.000Z');
+    const PERIOD_TO = new Date('2026-01-11T00:00:00.000Z');
+
+    it('throws NotFoundException when the child is not in the given household', async () => {
+      prisma.child.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getPeriodTrackingSummary(HOUSEHOLD_ID, CHILD_ID, PERIOD_FROM, PERIOD_TO),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('divides each count by the number of days in the period', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      // One `count` call per type, in the order the service issues them.
+      prisma.event.count.mockResolvedValueOnce(60).mockResolvedValueOnce(50);
+      prisma.event.findMany.mockResolvedValue([
+        makeSleepEvent({
+          startedAt: new Date('2026-01-01T01:00:00.000Z'),
+          endedAt: new Date('2026-01-01T13:00:00.000Z'),
+        }),
+      ]);
+
+      const result = await service.getPeriodTrackingSummary(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        PERIOD_FROM,
+        PERIOD_TO,
+      );
+
+      expect(result).toEqual({
+        days: 10,
+        feedingCount: 60,
+        diaperCount: 50,
+        sleepHours: 12,
+        feedingsPerDay: 6,
+        diapersPerDay: 5,
+        sleepHoursPerDay: 1.2,
+      });
+    });
+
+    it('excludes a still-running sleep timer, as the daily stats do', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.count.mockResolvedValue(0);
+      prisma.event.findMany.mockResolvedValue([
+        makeSleepEvent({
+          startedAt: new Date('2026-01-02T01:00:00.000Z'),
+          endedAt: new Date('2026-01-02T03:00:00.000Z'),
+        }),
+        makeSleepEvent({
+          id: 'sleep-ongoing',
+          startedAt: new Date('2026-01-03T20:00:00.000Z'),
+          endedAt: null,
+        }),
+      ]);
+
+      const result = await service.getPeriodTrackingSummary(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        PERIOD_FROM,
+        PERIOD_TO,
+      );
+
+      expect(result.sleepHours).toBe(2);
+    });
+
+    it('never divides by zero for a sub-day period', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.count.mockResolvedValueOnce(3).mockResolvedValueOnce(2);
+      prisma.event.findMany.mockResolvedValue([]);
+
+      const result = await service.getPeriodTrackingSummary(
+        HOUSEHOLD_ID,
+        CHILD_ID,
+        PERIOD_FROM,
+        new Date('2026-01-01T06:00:00.000Z'),
+      );
+
+      expect(result.days).toBe(1);
+      expect(result.feedingsPerDay).toBe(3);
+      expect(result.diapersPerDay).toBe(2);
+    });
+
+    it('scopes every query to the child and the period', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.count.mockResolvedValue(0);
+      prisma.event.findMany.mockResolvedValue([]);
+
+      await service.getPeriodTrackingSummary(HOUSEHOLD_ID, CHILD_ID, PERIOD_FROM, PERIOD_TO);
+
+      const occurredAt = { gte: PERIOD_FROM, lt: PERIOD_TO };
+      expect(prisma.event.count).toHaveBeenCalledWith({
+        where: { childId: CHILD_ID, type: EventType.FEEDING, occurredAt },
+      });
+      expect(prisma.event.count).toHaveBeenCalledWith({
+        where: { childId: CHILD_ID, type: EventType.DIAPER, occurredAt },
+      });
+      expect(prisma.event.findMany).toHaveBeenCalledWith({
+        where: { childId: CHILD_ID, type: EventType.SLEEP, occurredAt },
+      });
+    });
+  });
 });

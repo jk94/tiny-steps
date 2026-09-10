@@ -153,45 +153,112 @@ der vorhandene JSON-Export wird um die neuen Datensätze als eigene Schlüssel e
 
 ## Offene Punkte
 
-- **SVG-Fähigkeiten von `@react-pdf/renderer` prüfen** — die Rückfallebene ist entschieden: Reicht
-  der unterstützte Umfang nicht, wird das Diagramm serverseitig gerastert und als Bild eingebettet
-  (schlechtere Druckqualität, dafür sicher). Offen ist nur, welcher der beiden Wege es wird; der
-  Prototyp gehört an den **Anfang** der Teilphase, nicht ans Ende.
-- **Schriftarten:** react-pdf braucht eingebettete Schriftdateien. Ob die Schrift des Design-Systems
-  dafür lizenzrechtlich und technisch geeignet ist, ist zu prüfen.
-- **Laufzeitgrenze:** Ob und ab welcher Zeitraumlänge die Erzeugung begrenzt oder in den
-  Hintergrund verlagert werden muss, entscheidet die Messung aus EXP-15.
+Alle drei durch den Prototyp am Anfang der Teilphase bzw. die EXP-15-Messung geklärt — Details in
+der Umsetzungsnotiz (3) und in [ADR-0015](../../adr/0015-pdf-report-generation.md).
+
+- [x] **SVG-Fähigkeiten von `@react-pdf/renderer`** — ausreichend: SVG-Strings werden als Vektoren
+  gezeichnet, die vorbereitete Raster-Rückfallebene wurde nicht gebraucht.
+- [x] **Schriftarten** — der CSS-`sans`-Stack des Design-Systems ist nicht einbettbar; stattdessen
+  vier statische Inter-Schnitte (SIL OFL 1.1) gevendort.
+- [x] **Laufzeitgrenze** — Messung ergab ~80–115 ms / ~12–23 MB über 1–24 Monate; harte Grenze
+  `MAX_REPORT_PERIOD_DAYS = 731`, keine Hintergrundverarbeitung nötig.
+- [ ] **Manuelle Prüfung in Acrobat / auf einem echten Gerät** — bislang nur per `sips`-Rasterung
+  verifiziert. Bewusst zurückgestellt (siehe `docs/known-issues.md`), analog zu den offenen
+  Geräte-Checks aus Phase 4/5.
 
 ## Aufgaben
 
-- [ ] Prototyp: Diagramm-SVG durch `@react-pdf/renderer` (früh, entscheidet EXP-4); bei zu geringem SVG-Umfang auf serverseitig gerastertes Bild ausweichen
-- [ ] ADR „PDF-Berichtserzeugung" schreiben
-- [ ] `ReportDocument`-Zwischendarstellung und `ReportDocumentBuilder` im `export`-Modul
-- [ ] Datenbeschaffung/Aggregation je Abschnitt (Wachstum, Meilensteine, Medizin, Tracking-Kennzahlen)
-- [ ] `ReactPdfRenderer` inkl. Schrift-Einbettung
-- [ ] Token-Build-Skript um react-pdf-`StyleSheet`-Ausgabe erweitern
-- [ ] `RemoteHtmlRenderer` inkl. HTML-Ausgabe des `ReportDocument`
-- [ ] Konfigurationsschema um `export.pdf` erweitern (fail-fast bei `remote` ohne URL) und `config.example.yml` kommentiert ergänzen
-- [ ] Optionalen Gotenberg-Service in `docker-compose.yml` dokumentieren (auskommentiert, nicht aktiv)
-- [ ] PDF-Endpunkt inkl. Zeitraum-/Abschnitts-/Sprachparametern
-- [ ] Neue CSV-Endpunkte für Wachstum, Meilensteine, Medizin; JSON-Export erweitern
-- [ ] Export-Seite im Frontend um den Berichtsabschnitt erweitern
-- [ ] i18n-Texte (de/en) für Oberfläche **und** Berichtsinhalte
-- [ ] Laufzeit-/Speichermessung für lange Zeiträume (EXP-15)
-- [ ] Tests: `ReportDocument`-Aufbau je Abschnittsauswahl, CSV-Serialisierung, Renderer-Auswahl aus der Konfiguration, Fehlerverhalten bei nicht erreichbarem externen Dienst
+- [x] Prototyp: Diagramm-SVG durch `@react-pdf/renderer` (früh, entscheidet EXP-4); bei zu geringem SVG-Umfang auf serverseitig gerastertes Bild ausweichen
+- [x] ADR „PDF-Berichtserzeugung" schreiben
+- [x] `ReportDocument`-Zwischendarstellung und `ReportDocumentBuilder` im `export`-Modul
+- [x] Datenbeschaffung/Aggregation je Abschnitt (Wachstum, Meilensteine, Medizin, Tracking-Kennzahlen)
+- [x] `ReactPdfRenderer` inkl. Schrift-Einbettung
+- [x] Token-Build-Skript um react-pdf-`StyleSheet`-Ausgabe erweitern
+- [ ] `RemoteHtmlRenderer` inkl. HTML-Ausgabe des `ReportDocument` — **zurückgestellt**, siehe Umsetzungsnotiz
+- [ ] Konfigurationsschema um `export.pdf` erweitern (fail-fast bei `remote` ohne URL) und `config.example.yml` kommentiert ergänzen — **zurückgestellt**, siehe Umsetzungsnotiz
+- [ ] Optionalen Gotenberg-Service in `docker-compose.yml` dokumentieren (auskommentiert, nicht aktiv) — **zurückgestellt**, siehe Umsetzungsnotiz
+- [x] PDF-Endpunkt inkl. Zeitraum-/Abschnitts-/Sprachparametern
+- [x] ~~Neue CSV-Endpunkte für Wachstum, Meilensteine, Medizin~~; JSON-Export erweitern — bereits durch 7.1–7.3 erfüllt, siehe Umsetzungsnotiz (1)
+- [x] Export-Seite im Frontend um den Berichtsabschnitt erweitern
+- [x] i18n-Texte (de/en) für Oberfläche **und** Berichtsinhalte
+- [x] Laufzeit-/Speichermessung für lange Zeiträume (EXP-15)
+- [x] Tests: `ReportDocument`-Aufbau je Abschnittsauswahl (Renderer-Auswahl aus der Konfiguration und Fehlerverhalten bei nicht erreichbarem externen Dienst entfallen mit dem zurückgestellten Renderer; CSV-Serialisierung ist unverändert durch die Bestandstests abgedeckt)
 
 ## Definition of Done
 
-- Ein PDF-Bericht kann für einen wählbaren Zeitraum und wählbare Abschnitte erzeugt und
+- [x] Ein PDF-Bericht kann für einen wählbaren Zeitraum und wählbare Abschnitte erzeugt und
   heruntergeladen werden; er enthält alle Daten aus 7.1–7.3 in lesbarer Form.
-- Der Bericht ist optisch erkennbar dasselbe Design-System wie die Anwendung und liegt in Deutsch
+- [x] Der Bericht ist optisch erkennbar dasselbe Design-System wie die Anwendung und liegt in Deutsch
   und Englisch vor.
-- Ohne zusätzliche Konfiguration funktioniert die Erzeugung mit dem eingebauten Renderer; kein
+- [x] Ohne zusätzliche Konfiguration funktioniert die Erzeugung mit dem eingebauten Renderer; kein
   Chromium im Anwendungsimage.
-- Der externe Renderer ist per Konfiguration aktivierbar, fällt bei Nichterreichbarkeit sichtbar
-  aus und erzeugt inhaltlich denselben Bericht.
-- Wachstum, Meilensteine und Medizin sind zusätzlich über den Rohdaten-Export abrufbar; die
-  bestehende Event-CSV-Spaltenliste ist unverändert.
-- Die Datenschutz-Ausnahme beim externen Renderer ist im ADR und in der Beispielkonfiguration
-  dokumentiert.
-- Keine Regression in der bestehenden Testsuite.
+- [ ] **Offen:** Der externe Renderer ist per Konfiguration aktivierbar, fällt bei Nichterreichbarkeit
+  sichtbar aus und erzeugt inhaltlich denselben Bericht.
+- [x] Wachstum, Meilensteine und Medizin sind zusätzlich über den Rohdaten-Export abrufbar; die
+  bestehende Event-CSV-Spaltenliste ist unverändert. (Bereits durch 7.1–7.3 erfüllt — siehe
+  Umsetzungsnotiz (1).)
+- [ ] **Offen:** Die Datenschutz-Ausnahme beim externen Renderer ist im ADR und in der
+  Beispielkonfiguration dokumentiert. (Im ADR als *beabsichtigte künftige Form* beschrieben; die
+  Beispielkonfiguration hat noch keinen `export.pdf`-Abschnitt, weil es noch nichts zu konfigurieren
+  gibt.)
+- [x] Keine Regression in der bestehenden Testsuite.
+
+## Umsetzungsnotiz (reduzierter Scope)
+
+Umgesetzt am 2026-09-03. Der Kern der Teilphase steht — Bericht erzeugen, herunterladen, in beiden
+Sprachen, im Design-System, ohne Chromium. Zurückgestellt wurde alles, was ausschließlich den
+**zweiten** Renderer betrifft. Volle Begründung in
+[ADR-0015](../../adr/0015-pdf-report-generation.md).
+
+### (1) Abweichung: keine getrennten CSV-Endpunkte
+
+Die API-Tabelle oben nennt `growth.csv`, `milestones.csv` und `health.csv`; sie wurden **nicht**
+gebaut, und EXP-13 ist trotzdem erfüllt.
+
+7.1, 7.2 und 7.3 haben ihre Domäne jeweils an die bestehende flache Exportliste angehängt: ein
+`recordKind`-Diskriminator plus eigene Spalten strikt am Ende von `RawExportRow`/`CSV_COLUMNS`, die
+vorhandenen Event-Spalten unangetastet. Wachstum, Meilensteine und Medikamente/Impfungen sind damit
+bereits über JSON **und** CSV abrufbar — genau das, was EXP-13 verlangt. Drei weitere Endpunkte
+jetzt nachzuziehen hieße, eine dritte Exportform (eine flache Datei, drei schmale Dateien, ein
+Bericht) für Daten einzuführen, die schon in der ersten stehen, und zwei überlappende CSV-Formate
+dauerhaft synchron zu halten. `export.service.ts` bleibt deshalb in dieser Teilphase unverändert.
+Die domänenweise **Aufbereitung** liegt stattdessen im PDF-Bericht.
+
+Damit ist auch [Festlegung 5](README.md#bereichsübergreifende-festlegungen-ergebnis-des-refinements)
+der Phasenübersicht überholt; dort ist ein entsprechender Nachtrag ergänzt.
+
+### (2) Zurückgestellt auf eine Folgeaufgabe
+
+- **`RemoteHtmlRenderer` inkl. HTML-Ausgabe des `ReportDocument`** (EXP-10, zweiter Renderer)
+- **Gotenberg-Service (auskommentiert) in `docker-compose.yml`**
+- **`export.pdf`-Konfigurationsabschnitt** inkl. Schema-Validierung und `config.example.yml`
+  (EXP-11/EXP-12)
+
+Der Grund ist derselbe für alle drei: **solange es nur einen Renderer gibt, wäre
+`renderer: builtin | remote` ein Konfigurationsschlüssel mit genau einem zulässigen Wert** — also
+Konfiguration, die eine Absicht dokumentiert statt Verhalten zu steuern, samt Schema, Tests und
+Beispielkonfiguration, die alle nichts prüfen. Die Konfiguration entsteht sinnvoll erst zusammen mit
+dem Renderer, den sie auswählt.
+
+Die Vorarbeit dafür ist bewusst geleistet und additiv nutzbar:
+
+- `ReportDocument` ist renderer-neutral (keine `@react-pdf/renderer`-Typen im Builder oder in den
+  Typen), sieben stabile Blocktypen, alle Werte bereits formatiert und übersetzt.
+- Der aktive Renderer hängt am Injection-Token `REPORT_RENDERER` in `report.module.ts`; ein Wechsel
+  ist ein Provider-Eintrag.
+- Die Frontend-Fehlerbehandlung unterscheidet heute nur „keine Daten im Zeitraum" von einem
+  allgemeinen Fehler. Der dritte Fall „Dienst nicht erreichbar" fehlt **absichtlich** — mit einem
+  Codekommentar an der Stelle —, weil es den Dienst noch nicht gibt.
+
+### (3) Weitere Festlegungen dieser Umsetzung
+
+- **Diagramm als SVG, nicht gerastert.** Der Prototyp am Anfang der Teilphase hat gezeigt, dass
+  `@react-pdf/renderer` SVG-Strings als Vektoren zeichnet. Die vorbereitete Rückfallebene
+  (serverseitiges Rastern) wurde nicht gebraucht; die Abhängigkeit ist nie hinzugekommen.
+- **Kein zweites Chart.** Der SVG-Rumpf des Wachstumsdiagramms liegt jetzt im Workspace-Paket
+  `packages/growth-chart-static/`, das Frontend legt seine interaktiven Teile darüber.
+- **Zeitraum hart begrenzt (EXP-15).** `MAX_REPORT_PERIOD_DAYS = 731`. Die Messung
+  (`bun run --cwd apps/backend report:bench`, Tabelle im ADR) ergab ~80–115 ms und ~12–23 MB über
+  den gesamten Bereich, also kein Bedarf für Hintergrundverarbeitung.
+- **Vollständig leerer Bericht → 422 `REPORT_EMPTY_PERIOD`** statt eines leeren PDFs; ein
+  *teilweise* leerer Bericht wird erzeugt und weist die leeren Abschnitte ausdrücklich aus.

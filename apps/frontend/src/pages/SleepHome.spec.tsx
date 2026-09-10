@@ -5,7 +5,9 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { SleepHome } from './SleepHome';
 import * as childApi from '../api/child-api';
 import * as sleepApi from '../api/sleep-api';
+import * as householdApi from '../api/household-api';
 import * as useAuthModule from '../auth/useAuth';
+import type { HouseholdRole } from '../lib/householdPermissions';
 import {
   deletePendingEvent,
   listAllPendingEvents,
@@ -15,11 +17,13 @@ import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
 vi.mock('../api/sleep-api');
+vi.mock('../api/household-api');
 vi.mock('../auth/useAuth');
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedChildApi = vi.mocked(childApi);
 const mockedSleepApi = vi.mocked(sleepApi);
+const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
 function mockAuthUser() {
@@ -49,6 +53,7 @@ const child: childApi.ChildSummary = {
   name: 'Alex',
   birthDate: '2024-01-01T00:00:00.000Z',
   hasPhoto: false,
+  sex: null,
   createdAt: '2024-01-02T00:00:00.000Z',
 };
 
@@ -64,6 +69,16 @@ const runningTimer: sleepApi.SleepEventSummary = {
   createdAt: '2026-01-01T20:00:00.000Z',
   updatedAt: '2026-01-01T20:00:00.000Z',
 };
+
+/** Resolves the household query `useHouseholdRole` reads the timer's role from. */
+function givenHouseholdRole(role: HouseholdRole = 'OWNER') {
+  mockedHouseholdApi.fetchHousehold.mockResolvedValue({
+    id: HOUSEHOLD_ID,
+    name: 'Team Müller',
+    role,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+}
 
 function renderSleepHome() {
   return render(
@@ -81,6 +96,7 @@ describe('SleepHome', () => {
   beforeEach(() => {
     queryClient.clear();
     mockAuthUser();
+    givenHouseholdRole();
     mockedChildApi.fetchChild.mockResolvedValue(child);
     mockedSleepApi.listSleepEvents.mockResolvedValue([]);
   });
@@ -154,5 +170,42 @@ describe('SleepHome', () => {
       'href',
       `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/sleep/new`,
     );
+  });
+
+  it('passes the household role down, so an OBSERVER cannot stop the running timer', async () => {
+    givenHouseholdRole('OBSERVER');
+    mockedSleepApi.fetchActiveSleepTimer.mockResolvedValueOnce(runningTimer);
+
+    renderSleepHome();
+
+    // The timer itself still renders — only its Stop action is withheld.
+    expect(await screen.findByRole('timer')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+  });
+
+  describe('role-dependent create affordances', () => {
+    it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+      'offers quick entry and the backfill link to a %s',
+      async (role) => {
+        givenHouseholdRole(role);
+        mockedSleepApi.fetchActiveSleepTimer.mockResolvedValueOnce(null);
+
+        renderSleepHome();
+
+        expect(await screen.findByText('Quick entry')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Add entry manually' })).toBeInTheDocument();
+      },
+    );
+
+    it('hides both from an OBSERVER while keeping the event list readable', async () => {
+      givenHouseholdRole('OBSERVER');
+      mockedSleepApi.fetchActiveSleepTimer.mockResolvedValueOnce(null);
+
+      renderSleepHome();
+
+      expect(await screen.findByRole('heading', { name: 'Sleep — Alex' })).toBeInTheDocument();
+      await vi.waitFor(() => expect(screen.queryByText('Quick entry')).not.toBeInTheDocument());
+      expect(screen.queryByRole('link', { name: 'Add entry manually' })).not.toBeInTheDocument();
+    });
   });
 });

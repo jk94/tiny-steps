@@ -28,6 +28,7 @@ const child: childApi.ChildSummary = {
   name: 'Alex',
   birthDate: '2024-01-01T00:00:00.000Z',
   hasPhoto: false,
+  sex: null,
   createdAt: '2024-01-02T00:00:00.000Z',
 };
 
@@ -87,7 +88,13 @@ describe('DailyTimeline', () => {
     });
     mockedEventApi.fetchDailyEvents.mockResolvedValue([feedingEvent, sleepEvent]);
     mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([
-      { userId: 'user-1', email: 'parent@example.com' },
+      {
+        userId: 'user-1',
+        email: 'parent@example.com',
+        name: null,
+        role: 'OWNER',
+        joinedAt: '2026-01-01T00:00:00.000Z',
+      },
     ]);
   });
 

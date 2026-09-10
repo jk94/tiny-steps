@@ -1,4 +1,6 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
+import { HouseholdRole } from '../household/household-role.enum';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
 import { EventConflictException } from '../event/event-conflict.exception';
@@ -11,6 +13,12 @@ import { DiaperType } from './diaper-type.enum';
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
 const USER_ID = 'user-1';
+const OTHER_USER_ID = 'user-2';
+
+// Role scoping (Phase 7.5): most tests act as an OWNER, who may edit anything;
+// CAREGIVER_ACTOR exercises the own-entries-only rule.
+const OWNER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.OWNER };
+const CAREGIVER_ACTOR: HouseholdActor = { userId: USER_ID, role: HouseholdRole.CAREGIVER };
 const EVENT_ID = 'event-1';
 
 function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
@@ -252,6 +260,26 @@ describe('DiaperService', () => {
   });
 
   describe('update', () => {
+    it('lets a CAREGIVER edit their own event', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findUnique.mockResolvedValue(makeEvent({ userId: USER_ID }));
+      prisma.event.update.mockResolvedValue(makeEvent());
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR, { note: 'mine' }),
+      ).resolves.toBeDefined();
+    });
+
+    it("rejects a CAREGIVER editing another member's event", async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findUnique.mockResolvedValue(makeEvent({ userId: OTHER_USER_ID }));
+
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, CAREGIVER_ACTOR, { note: 'theirs' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.event.update).not.toHaveBeenCalled();
+    });
+
     it('patches occurredAt only when supplied', async () => {
       prisma.child.findUnique.mockResolvedValue(makeChild());
       prisma.event.findUnique.mockResolvedValue(makeEvent());
@@ -260,7 +288,7 @@ describe('DiaperService', () => {
       );
 
       const dto: UpdateDiaperEventDto = { occurredAt: '2026-01-01T09:00:00.000Z' };
-      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, dto);
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, dto);
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -285,7 +313,9 @@ describe('DiaperService', () => {
       prisma.event.findUnique.mockResolvedValue(makeEvent());
       prisma.event.update.mockResolvedValue(makeEvent());
 
-      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { diaperType: DiaperType.STOOL });
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
+        diaperType: DiaperType.STOOL,
+      });
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -302,7 +332,7 @@ describe('DiaperService', () => {
       prisma.event.findUnique.mockResolvedValue(makeEvent());
       prisma.event.update.mockResolvedValue(makeEvent());
 
-      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
         diaperType: DiaperType.BOTH,
         note: 'Needs cream',
       });
@@ -325,7 +355,7 @@ describe('DiaperService', () => {
       // Distinct from "leaves untouched fields alone" below, where `note`
       // is simply absent from the DTO (left untouched) — here it is
       // explicitly `null` (cleared).
-      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: null });
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, { note: null });
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -339,7 +369,7 @@ describe('DiaperService', () => {
       prisma.event.findUnique.mockResolvedValue(makeEvent());
       prisma.event.update.mockResolvedValue(makeEvent());
 
-      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: 'Just a note' });
+      await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, { note: 'Just a note' });
 
       expect(prisma.event.update).toHaveBeenCalledWith({
         where: { id: EVENT_ID },
@@ -351,9 +381,9 @@ describe('DiaperService', () => {
     it('throws NotFoundException when scoped to a different child/household', async () => {
       prisma.child.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: 'x' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, { note: 'x' }),
+      ).rejects.toThrow(NotFoundException);
       expect(prisma.event.update).not.toHaveBeenCalled();
     });
 
@@ -364,7 +394,7 @@ describe('DiaperService', () => {
         prisma.event.findUnique.mockResolvedValue(existing);
         prisma.event.update.mockResolvedValue(existing);
 
-        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, { note: 'x' });
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, { note: 'x' });
 
         expect(prisma.event.update).toHaveBeenCalled();
       });
@@ -375,7 +405,7 @@ describe('DiaperService', () => {
         prisma.event.findUnique.mockResolvedValue(existing);
         prisma.event.update.mockResolvedValue(existing);
 
-        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+        await service.update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
           note: 'x',
           clientTimestamp: '2026-01-01T11:00:00.000Z',
         });
@@ -390,7 +420,7 @@ describe('DiaperService', () => {
         );
 
         const error = await service
-          .update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, {
+          .update(HOUSEHOLD_ID, CHILD_ID, EVENT_ID, OWNER_ACTOR, {
             note: 'x',
             clientTimestamp: '2026-01-01T11:00:00.000Z',
           })

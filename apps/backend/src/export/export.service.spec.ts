@@ -4,7 +4,21 @@ import { FeedingType } from '../feeding/feeding-type.enum';
 import { FeedingSide } from '../feeding/feeding-side.enum';
 import { DiaperType } from '../diaper/diaper-type.enum';
 import { EventType } from '../event/event-type.enum';
-import { ExportService } from './export.service';
+import { ChildSex } from '../child/child-sex.enum';
+import { LengthMeasurementPosition } from '../growth/length-measurement-position.enum';
+import { MilestoneCategory } from '../milestone/milestone-category.enum';
+import { MilestoneTemplate } from '../milestone/milestone-template.enum';
+import { HealthRecordKind } from '../health-record/health-record-kind.enum';
+import {
+  ExportService,
+  GROWTH_EXPORT_TYPE,
+  HEALTH_RECORD_EXPORT_TYPE,
+  MILESTONE_EXPORT_TYPE,
+  RECORD_KIND_EVENT,
+  RECORD_KIND_GROWTH_MEASUREMENT,
+  RECORD_KIND_HEALTH_RECORD,
+  RECORD_KIND_MILESTONE,
+} from './export.service';
 
 const HOUSEHOLD_ID = 'household-1';
 const CHILD_ID = 'child-1';
@@ -20,7 +34,90 @@ function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
     birthDate: new Date('2024-01-01T00:00:00.000Z'),
     photoPath: null,
     photoMimeType: null,
+    sex: ChildSex.MALE as string | null,
     createdAt: new Date('2024-01-02T00:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+/** Empty domain columns, spread into every expected event row. */
+const NO_GROWTH_COLUMNS = {
+  recordKind: RECORD_KIND_EVENT,
+  weightGrams: null,
+  lengthMillimeters: null,
+  headCircumferenceMillimeters: null,
+  lengthMeasurementPosition: null,
+  weightPercentile: null,
+  lengthPercentile: null,
+  headCircumferencePercentile: null,
+  weightZScore: null,
+  lengthZScore: null,
+  headCircumferenceZScore: null,
+  milestoneTemplateKey: null,
+  milestoneTitle: null,
+  milestoneCategory: null,
+  milestonePhotoCount: null,
+  healthRecordKind: null,
+  healthRecordName: null,
+  healthRecordAdministeredAt: null,
+  healthRecordDueAt: null,
+  healthRecordDoseAmount: null,
+  healthRecordDoseUnit: null,
+  healthRecordVaccineBatch: null,
+};
+
+function makeHealthRecord(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'health-record-1',
+    childId: CHILD_ID,
+    userId: USER_ID,
+    kind: HealthRecordKind.MEDICATION as string,
+    name: 'Paracetamol',
+    administeredAt: new Date('2026-01-01T08:50:00.000Z') as Date | null,
+    dueAt: null as Date | null,
+    doseAmount: 5 as number | null,
+    doseUnit: 'ml' as string | null,
+    vaccineBatch: null as string | null,
+    note: 'Bei Fieber',
+    reminderEnabled: false,
+    reminderLastSentAt: null as Date | null,
+    createdAt: new Date('2026-01-01T08:55:00.000Z'),
+    updatedAt: new Date('2026-01-01T08:55:00.000Z'),
+    ...overrides,
+  };
+}
+
+function makeMilestone(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'milestone-1',
+    childId: CHILD_ID,
+    userId: USER_ID,
+    templateKey: MilestoneTemplate.FIRST_STEPS as string | null,
+    title: 'Erste Schritte',
+    category: MilestoneCategory.MOTOR as string | null,
+    achievedAt: new Date('2026-01-01T08:45:00.000Z'),
+    note: 'Im Wohnzimmer',
+    createdAt: new Date('2026-01-01T18:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T18:00:00.000Z'),
+    _count: { photos: 3 },
+    ...overrides,
+  };
+}
+
+function makeGrowthMeasurement(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'growth-1',
+    childId: CHILD_ID,
+    userId: USER_ID,
+    // 731 completed days after the 2024-01-01 birth date.
+    measuredAt: new Date('2026-01-01T08:30:00.000Z'),
+    weightGrams: 12000,
+    lengthMillimeters: 870,
+    headCircumferenceMillimeters: 480,
+    lengthMeasurementPosition: null as string | null,
+    note: 'U7 check-up',
+    createdAt: new Date('2026-01-01T08:30:00.000Z'),
+    updatedAt: new Date('2026-01-01T08:30:00.000Z'),
     ...overrides,
   };
 }
@@ -80,6 +177,7 @@ function makeDiaperEvent(overrides: Partial<Record<string, unknown>> = {}) {
     diaperDetail: {
       eventId: 'diaper-1',
       diaperType: DiaperType.BOTH,
+      ...NO_GROWTH_COLUMNS,
       note: 'soft',
     },
     ...overrides,
@@ -90,13 +188,19 @@ describe('ExportService', () => {
   let prisma: {
     child: { findUnique: jest.Mock };
     event: { findMany: jest.Mock };
+    growthMeasurement: { findMany: jest.Mock };
+    milestone: { findMany: jest.Mock };
+    healthRecord: { findMany: jest.Mock };
   };
   let service: ExportService;
 
   beforeEach(() => {
     prisma = {
       child: { findUnique: jest.fn() },
-      event: { findMany: jest.fn() },
+      event: { findMany: jest.fn().mockResolvedValue([]) },
+      growthMeasurement: { findMany: jest.fn().mockResolvedValue([]) },
+      milestone: { findMany: jest.fn().mockResolvedValue([]) },
+      healthRecord: { findMany: jest.fn().mockResolvedValue([]) },
     };
     service = new ExportService(prisma as unknown as PrismaService);
   });
@@ -128,6 +232,15 @@ describe('ExportService', () => {
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
     });
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID },
+      orderBy: { measuredAt: 'asc' },
+    });
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
+    });
   });
 
   it('applies the [from, to) filter when both from and to are given', async () => {
@@ -140,6 +253,18 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID, occurredAt: { gte: FROM, lt: TO } },
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
+    });
+    // The same window applies to `measuredAt`, the growth equivalent of
+    // `occurredAt`.
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, measuredAt: { gte: FROM, lt: TO } },
+      orderBy: { measuredAt: 'asc' },
+    });
+    // And to `achievedAt`, the milestone equivalent.
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, achievedAt: { gte: FROM, lt: TO } },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
     });
   });
 
@@ -154,6 +279,15 @@ describe('ExportService', () => {
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
     });
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, measuredAt: { gte: FROM } },
+      orderBy: { measuredAt: 'asc' },
+    });
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, achievedAt: { gte: FROM } },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
+    });
   });
 
   it('applies an open-ended lower bound when only to is given', async () => {
@@ -166,6 +300,15 @@ describe('ExportService', () => {
       where: { childId: CHILD_ID, occurredAt: { lt: TO } },
       include: { feedingDetail: true, diaperDetail: true },
       orderBy: { occurredAt: 'asc' },
+    });
+    expect(prisma.growthMeasurement.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, measuredAt: { lt: TO } },
+      orderBy: { measuredAt: 'asc' },
+    });
+    expect(prisma.milestone.findMany).toHaveBeenCalledWith({
+      where: { childId: CHILD_ID, achievedAt: { lt: TO } },
+      include: { _count: { select: { photos: true } } },
+      orderBy: { achievedAt: 'asc' },
     });
   });
 
@@ -191,6 +334,7 @@ describe('ExportService', () => {
       note: 'good latch',
       createdAt: '2026-01-01T08:00:00.000Z',
       updatedAt: '2026-01-01T08:16:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -216,6 +360,7 @@ describe('ExportService', () => {
       note: null,
       createdAt: '2026-01-01T09:00:00.000Z',
       updatedAt: '2026-01-01T10:00:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
@@ -241,10 +386,11 @@ describe('ExportService', () => {
       note: 'soft',
       createdAt: '2026-01-01T07:00:00.000Z',
       updatedAt: '2026-01-01T07:00:00.000Z',
+      ...NO_GROWTH_COLUMNS,
     });
   });
 
-  it('flattens a mixed result preserving Prisma order, each row mapped to its type', async () => {
+  it('flattens a mixed result in chronological order, each row mapped to its type', async () => {
     prisma.child.findUnique.mockResolvedValue(makeChild());
     prisma.event.findMany.mockResolvedValue([
       makeDiaperEvent(),
@@ -262,5 +408,362 @@ describe('ExportService', () => {
     expect(rows[0].diaperType).toBe(DiaperType.BOTH);
     expect(rows[1].feedingType).toBe(FeedingType.BREAST);
     expect(rows[2].durationSeconds).toBe(3600);
+  });
+
+  describe('growth measurements', () => {
+    it('flattens a measurement with its values, method and computed percentiles', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toMatchObject({
+        id: 'growth-1',
+        recordKind: RECORD_KIND_GROWTH_MEASUREMENT,
+        childId: CHILD_ID,
+        userId: USER_ID,
+        type: GROWTH_EXPORT_TYPE,
+        // `measuredAt` fills the shared occurredAt column.
+        occurredAt: '2026-01-01T08:30:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        durationSeconds: null,
+        feedingType: null,
+        side: null,
+        amountMl: null,
+        diaperType: null,
+        weightGrams: 12000,
+        lengthMillimeters: 870,
+        headCircumferenceMillimeters: 480,
+        lengthMeasurementPosition: null,
+        note: 'U7 check-up',
+      });
+      expect(row.weightPercentile).toBeGreaterThan(0);
+      expect(row.weightPercentile).toBeLessThan(100);
+      expect(row.lengthPercentile).not.toBeNull();
+      expect(row.headCircumferencePercentile).not.toBeNull();
+    });
+
+    it('rounds the percentile to whole numbers and the z-score to two decimals', () => {
+      // The exported percentile must read the same as the one on screen, and
+      // the z-score is only useful at the precision it is quoted with.
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      return service.getRawEvents(HOUSEHOLD_ID, CHILD_ID).then(([row]) => {
+        expect(row.weightPercentile).toBe(Math.round(row.weightPercentile as number));
+        expect(row.weightZScore).toBeCloseTo(
+          Math.round((row.weightZScore as number) * 100) / 100,
+          10,
+        );
+      });
+    });
+
+    it('exports the z-score alongside the percentile (W-9)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(typeof row.weightZScore).toBe('number');
+      expect(typeof row.lengthZScore).toBe('number');
+      expect(typeof row.headCircumferenceZScore).toBe('number');
+    });
+
+    it('carries the stored measurement-method override', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([
+        makeGrowthMeasurement({ lengthMeasurementPosition: LengthMeasurementPosition.LYING }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row.lengthMeasurementPosition).toBe(LengthMeasurementPosition.LYING);
+    });
+
+    it('leaves the percentile columns empty when the child has no sex (W-10)', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild({ sex: null }));
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row.weightGrams).toBe(12000);
+      expect(row.weightPercentile).toBeNull();
+      expect(row.lengthPercentile).toBeNull();
+      expect(row.headCircumferencePercentile).toBeNull();
+      expect(row.weightZScore).toBeNull();
+    });
+
+    it('leaves the percentile column of an absent value empty', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.growthMeasurement.findMany.mockResolvedValue([
+        makeGrowthMeasurement({ lengthMillimeters: null, headCircumferenceMillimeters: null }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row.lengthPercentile).toBeNull();
+      expect(row.headCircumferencePercentile).toBeNull();
+      expect(row.weightPercentile).not.toBeNull();
+    });
+
+    it('merges events and measurements into one chronologically sorted list', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findMany.mockResolvedValue([makeDiaperEvent(), makeSleepEvent()]);
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // Diaper 07:00, growth 08:30, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual(['diaper-1', 'growth-1', 'sleep-1']);
+      expect(rows.map((row) => row.recordKind)).toEqual([
+        RECORD_KIND_EVENT,
+        RECORD_KIND_GROWTH_MEASUREMENT,
+        RECORD_KIND_EVENT,
+      ]);
+    });
+  });
+
+  describe('milestones', () => {
+    it('flattens a milestone with its frozen title, category and photo count', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findMany.mockResolvedValue([makeMilestone()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toEqual({
+        id: 'milestone-1',
+        recordKind: RECORD_KIND_MILESTONE,
+        childId: CHILD_ID,
+        userId: USER_ID,
+        type: MILESTONE_EXPORT_TYPE,
+        // `achievedAt` fills the shared occurredAt column.
+        occurredAt: '2026-01-01T08:45:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        durationSeconds: null,
+        feedingType: null,
+        side: null,
+        amountMl: null,
+        diaperType: null,
+        note: 'Im Wohnzimmer',
+        createdAt: '2026-01-01T18:00:00.000Z',
+        updatedAt: '2026-01-01T18:00:00.000Z',
+        weightGrams: null,
+        lengthMillimeters: null,
+        headCircumferenceMillimeters: null,
+        lengthMeasurementPosition: null,
+        weightPercentile: null,
+        lengthPercentile: null,
+        headCircumferencePercentile: null,
+        weightZScore: null,
+        lengthZScore: null,
+        headCircumferenceZScore: null,
+        milestoneTemplateKey: MilestoneTemplate.FIRST_STEPS,
+        milestoneTitle: 'Erste Schritte',
+        milestoneCategory: MilestoneCategory.MOTOR,
+        milestonePhotoCount: 3,
+        healthRecordKind: null,
+        healthRecordName: null,
+        healthRecordAdministeredAt: null,
+        healthRecordDueAt: null,
+        healthRecordDoseAmount: null,
+        healthRecordDoseUnit: null,
+        healthRecordVaccineBatch: null,
+      });
+    });
+
+    it('exports a free entry with no template key and no category', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.milestone.findMany.mockResolvedValue([
+        makeMilestone({
+          templateKey: null,
+          category: null,
+          title: 'Erste Zugfahrt',
+          _count: { photos: 0 },
+        }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toMatchObject({
+        milestoneTemplateKey: null,
+        milestoneCategory: null,
+        milestoneTitle: 'Erste Zugfahrt',
+        milestonePhotoCount: 0,
+      });
+    });
+
+    it('merges events, measurements and milestones into one chronological list', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findMany.mockResolvedValue([makeDiaperEvent(), makeSleepEvent()]);
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+      prisma.milestone.findMany.mockResolvedValue([makeMilestone()]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // Diaper 07:00, growth 08:30, milestone 08:45, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual(['diaper-1', 'growth-1', 'milestone-1', 'sleep-1']);
+      expect(rows.map((row) => row.recordKind)).toEqual([
+        RECORD_KIND_EVENT,
+        RECORD_KIND_GROWTH_MEASUREMENT,
+        RECORD_KIND_MILESTONE,
+        RECORD_KIND_EVENT,
+      ]);
+    });
+  });
+
+  describe('health records', () => {
+    it('flattens an administered medication with its dose', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([makeHealthRecord()]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toEqual({
+        id: 'health-record-1',
+        recordKind: RECORD_KIND_HEALTH_RECORD,
+        childId: CHILD_ID,
+        userId: USER_ID,
+        type: HEALTH_RECORD_EXPORT_TYPE,
+        // `administeredAt` fills the shared occurredAt column.
+        occurredAt: '2026-01-01T08:50:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        durationSeconds: null,
+        feedingType: null,
+        side: null,
+        amountMl: null,
+        diaperType: null,
+        // The free-text note reuses the shared column.
+        note: 'Bei Fieber',
+        createdAt: '2026-01-01T08:55:00.000Z',
+        updatedAt: '2026-01-01T08:55:00.000Z',
+        weightGrams: null,
+        lengthMillimeters: null,
+        headCircumferenceMillimeters: null,
+        lengthMeasurementPosition: null,
+        weightPercentile: null,
+        lengthPercentile: null,
+        headCircumferencePercentile: null,
+        weightZScore: null,
+        lengthZScore: null,
+        headCircumferenceZScore: null,
+        milestoneTemplateKey: null,
+        milestoneTitle: null,
+        milestoneCategory: null,
+        milestonePhotoCount: null,
+        healthRecordKind: HealthRecordKind.MEDICATION,
+        healthRecordName: 'Paracetamol',
+        healthRecordAdministeredAt: '2026-01-01T08:50:00.000Z',
+        healthRecordDueAt: null,
+        healthRecordDoseAmount: 5,
+        healthRecordDoseUnit: 'ml',
+        healthRecordVaccineBatch: null,
+      });
+    });
+
+    it('sorts a purely planned entry by its due date instead', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({
+          kind: HealthRecordKind.VACCINATION,
+          name: '6-fach-Impfung',
+          administeredAt: null,
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+          doseAmount: null,
+          doseUnit: null,
+          vaccineBatch: 'AB1234',
+        }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      expect(row).toMatchObject({
+        occurredAt: '2026-01-01T00:00:00.000Z',
+        healthRecordAdministeredAt: null,
+        healthRecordDueAt: '2026-01-01T00:00:00.000Z',
+        healthRecordVaccineBatch: 'AB1234',
+        healthRecordDoseAmount: null,
+      });
+    });
+
+    it('prefers the administration date over the due date once both are set', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({
+          administeredAt: new Date('2026-01-03T10:00:00.000Z'),
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+        }),
+      ]);
+
+      const [row] = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // What actually happened wins over what had been planned, but both
+      // columns survive so the plan/reality pair is not lost to the merge.
+      expect(row.occurredAt).toBe('2026-01-03T10:00:00.000Z');
+      expect(row.healthRecordDueAt).toBe('2026-01-01T00:00:00.000Z');
+    });
+
+    it('merges health records into the one chronological list', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.event.findMany.mockResolvedValue([makeDiaperEvent(), makeSleepEvent()]);
+      prisma.growthMeasurement.findMany.mockResolvedValue([makeGrowthMeasurement()]);
+      prisma.milestone.findMany.mockResolvedValue([makeMilestone()]);
+      prisma.healthRecord.findMany.mockResolvedValue([makeHealthRecord()]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID);
+
+      // Diaper 07:00, growth 08:30, milestone 08:45, health 08:50, sleep 09:00.
+      expect(rows.map((row) => row.id)).toEqual([
+        'diaper-1',
+        'growth-1',
+        'milestone-1',
+        'health-record-1',
+        'sleep-1',
+      ]);
+    });
+
+    it('fetches the whole table and windows it in memory', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({ id: 'before', administeredAt: new Date('2025-12-31T23:59:00.000Z') }),
+        makeHealthRecord({ id: 'inside', administeredAt: new Date('2026-01-01T12:00:00.000Z') }),
+        // Planned-only, dated inside the window through `dueAt`.
+        makeHealthRecord({
+          id: 'planned-inside',
+          administeredAt: null,
+          dueAt: new Date('2026-01-01T00:00:00.000Z'),
+          doseAmount: null,
+          doseUnit: null,
+        }),
+        makeHealthRecord({ id: 'after', administeredAt: new Date('2026-01-02T00:00:00.000Z') }),
+      ]);
+
+      const rows = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, FROM, TO);
+
+      // The range key is `administeredAt ?? dueAt`, so there is no single
+      // column for the DB to filter on — the whole (small) table is read.
+      expect(prisma.healthRecord.findMany).toHaveBeenCalledWith({
+        where: { childId: CHILD_ID },
+        orderBy: { createdAt: 'asc' },
+      });
+      // `[from, to)`: the upper bound is exclusive.
+      expect(rows.map((row) => row.id)).toEqual(['planned-inside', 'inside']);
+    });
+
+    it('applies an open-ended bound when only one of from/to is given', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.healthRecord.findMany.mockResolvedValue([
+        makeHealthRecord({ id: 'before', administeredAt: new Date('2025-12-31T23:59:00.000Z') }),
+        makeHealthRecord({ id: 'after', administeredAt: new Date('2026-06-01T00:00:00.000Z') }),
+      ]);
+
+      const fromOnly = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, FROM);
+      expect(fromOnly.map((row) => row.id)).toEqual(['after']);
+
+      const toOnly = await service.getRawEvents(HOUSEHOLD_ID, CHILD_ID, undefined, TO);
+      expect(toOnly.map((row) => row.id)).toEqual(['before']);
+    });
   });
 });

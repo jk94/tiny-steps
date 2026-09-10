@@ -7,6 +7,7 @@ import { ChildForm } from '../components/ChildForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { mapHouseholdError } from '../household/mapHouseholdError';
+import { canWrite, FULL_WRITE_ROLES } from '../lib/householdPermissions';
 import { queryClient } from '../lib/query-client';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
@@ -33,12 +34,15 @@ export function ChildCreate() {
 
   const household = householdQuery.data;
 
-  // Child creation is OWNER-only server-side (see `ChildController`). The
-  // "add child" link that leads here is already hidden for a CO_PARENT
-  // (see `ChildList`), so this is only reachable by a direct URL visit or a
-  // stale-role race (e.g. a second open tab) — defense in depth, not the
-  // primary UX gate.
-  if (household.role !== 'OWNER') {
+  // Child creation needs `FULL_WRITE_ROLES` server-side
+  // (`@RequireRole(...FULL_WRITE_ROLES)` on `ChildController.create`), i.e.
+  // OWNER *and* CO_PARENT. This must stay in step with the same check in
+  // `ChildList`, which decides whether the "add child" link is shown at all —
+  // a stricter guard here would send anyone who follows that link into a dead
+  // end. For a CAREGIVER/OBSERVER the link is hidden, so this is reached only
+  // by a direct URL visit or a stale-role race (e.g. a second open tab):
+  // defense in depth, not the primary UX gate.
+  if (!canWrite(household.role, FULL_WRITE_ROLES)) {
     return <ErrorMessage message={t('child.errors.forbidden')} />;
   }
 

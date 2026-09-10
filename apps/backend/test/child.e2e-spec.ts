@@ -39,6 +39,7 @@ interface ChildResponseBody {
   name: string;
   birthDate: string;
   hasPhoto: boolean;
+  sex: 'FEMALE' | 'MALE' | null;
   createdAt: string;
 }
 
@@ -191,7 +192,7 @@ describe('Child profiles (e2e)', () => {
   function createChildRequest(
     user: AuthenticatedTestUser,
     householdId: string,
-    fields: { name?: string; birthDate?: string },
+    fields: { name?: string; birthDate?: string; sex?: string },
   ) {
     let req = request(app.getHttpServer())
       .post(`/api/households/${householdId}/children`)
@@ -199,6 +200,7 @@ describe('Child profiles (e2e)', () => {
       .set(CSRF_HEADER_NAME, user.csrfToken);
     if (fields.name !== undefined) req = req.field('name', fields.name);
     if (fields.birthDate !== undefined) req = req.field('birthDate', fields.birthDate);
+    if (fields.sex !== undefined) req = req.field('sex', fields.sex);
     return req;
   }
 
@@ -206,7 +208,7 @@ describe('Child profiles (e2e)', () => {
     user: AuthenticatedTestUser,
     householdId: string,
     childId: string,
-    fields: { name?: string; birthDate?: string },
+    fields: { name?: string; birthDate?: string; sex?: string },
   ) {
     let req = request(app.getHttpServer())
       .patch(`/api/households/${householdId}/children/${childId}`)
@@ -214,6 +216,7 @@ describe('Child profiles (e2e)', () => {
       .set(CSRF_HEADER_NAME, user.csrfToken);
     if (fields.name !== undefined) req = req.field('name', fields.name);
     if (fields.birthDate !== undefined) req = req.field('birthDate', fields.birthDate);
+    if (fields.sex !== undefined) req = req.field('sex', fields.sex);
     return req;
   }
 
@@ -233,6 +236,7 @@ describe('Child profiles (e2e)', () => {
       name: 'Mia',
       birthDate: '2023-05-01T00:00:00.000Z',
       hasPhoto: false,
+      sex: null,
       createdAt: expect.any(String),
     });
 
@@ -325,21 +329,19 @@ describe('Child profiles (e2e)', () => {
     expect(afterRow.photoPath).toBe(beforeRow.photoPath);
   });
 
-  it('Co-Parent cannot create or delete, but CAN update including replacing a photo', async () => {
-    // Key reconciliation case: the roadmap checklist says "bearbeiten/löschen
-    // (nur Owner)", but this phase's Definition of Done says "Co-Parent kann
-    // Kind-Profile lesen/bearbeiten aber keine Nutzer verwalten" — edit is
-    // allowed for Co-Parent, only create/delete are Owner-only. See ADR-0003.
+  it('Co-Parent can create, update (including replacing a photo) and delete', async () => {
+    // Changed in Phase 7.5: create/delete used to be OWNER-only (the
+    // ADR-0003 reconciliation of the roadmap's "nur Owner" against
+    // "Co-Parent kann Kind-Profile lesen/bearbeiten"). The Phase 7.5
+    // permission matrix grants "Kindprofile anlegen/ändern/löschen" to both
+    // OWNER and CO_PARENT — the `FULL_WRITE_ROLES` bundle — and withholds it
+    // from the two new roles instead. `roles.e2e-spec.ts` covers the CAREGIVER
+    // and OBSERVER 403s.
     const owner = await registerUser('reconcile-owner');
     const household = await createHousehold(owner, 'Reconcile Household');
     const coParent = await addCoParent(owner, household.id, 'reconcile-co-parent');
 
-    await createChildRequest(coParent, household.id, {
-      name: 'Should Not Exist',
-      birthDate: '2020-01-01T00:00:00.000Z',
-    }).expect(403);
-
-    const createResponse = await createChildRequest(owner, household.id, {
+    const createResponse = await createChildRequest(coParent, household.id, {
       name: 'Sam',
       birthDate: '2020-01-01T00:00:00.000Z',
     }).expect(201);
@@ -357,7 +359,7 @@ describe('Child profiles (e2e)', () => {
       .delete(`/api/households/${household.id}/children/${child.id}`)
       .set('Cookie', coParent.cookies)
       .set(CSRF_HEADER_NAME, coParent.csrfToken)
-      .expect(403);
+      .expect(204);
   });
 
   it('returns 404 on all six routes for a user with no membership in the household', async () => {
@@ -583,6 +585,59 @@ describe('Child profiles (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`/api/households/${household.id}/children/${child.id}`)
         .expect(401);
+    });
+  });
+
+  describe('sex (optional, drives WHO growth percentiles only)', () => {
+    it('round-trips an explicitly chosen sex through create and read', async () => {
+      const owner = await registerUser('sex-create-owner');
+      const household = await createHousehold(owner, 'Sex Household');
+
+      const created = await createChildRequest(owner, household.id, {
+        name: 'Mia',
+        birthDate: '2023-05-01T00:00:00.000Z',
+        sex: 'FEMALE',
+      }).expect(201);
+      expect((created.body as ChildResponseBody).sex).toBe('FEMALE');
+
+      const read = await request(app.getHttpServer())
+        .get(`/api/households/${household.id}/children/${created.body.id}`)
+        .set('Cookie', owner.cookies)
+        .expect(200);
+      expect((read.body as ChildResponseBody).sex).toBe('FEMALE');
+    });
+
+    it('sets and then clears the sex via PATCH', async () => {
+      const owner = await registerUser('sex-update-owner');
+      const household = await createHousehold(owner, 'Sex Update Household');
+      const created = await createChildRequest(owner, household.id, {
+        name: 'Noah',
+        birthDate: '2023-05-01T00:00:00.000Z',
+      }).expect(201);
+      const childId = (created.body as ChildResponseBody).id;
+      expect((created.body as ChildResponseBody).sex).toBeNull();
+
+      const updated = await updateChildRequest(owner, household.id, childId, {
+        sex: 'MALE',
+      }).expect(200);
+      expect((updated.body as ChildResponseBody).sex).toBe('MALE');
+
+      // The empty string is the multipart wire form of "not specified".
+      const cleared = await updateChildRequest(owner, household.id, childId, {
+        sex: '',
+      }).expect(200);
+      expect((cleared.body as ChildResponseBody).sex).toBeNull();
+    });
+
+    it('rejects an unsupported sex value', async () => {
+      const owner = await registerUser('sex-invalid-owner');
+      const household = await createHousehold(owner, 'Sex Invalid Household');
+
+      await createChildRequest(owner, household.id, {
+        name: 'Robin',
+        birthDate: '2023-05-01T00:00:00.000Z',
+        sex: 'UNKNOWN',
+      }).expect(400);
     });
   });
 });

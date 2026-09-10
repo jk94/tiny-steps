@@ -1,4 +1,6 @@
+import { HOUSEHOLD_ROLES_KEY } from './guards/require-role.decorator';
 import { HouseholdController } from './household.controller';
+import { OWNER_ROLES } from './household-permissions';
 import { HouseholdRole } from './household-role.enum';
 import { HouseholdService } from './household.service';
 import { InviteService } from './invite.service';
@@ -11,15 +13,32 @@ const currentUser: AuthenticatedUser = {
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
 };
 
+const member = {
+  userId: 'user-2',
+  email: 'co-parent@example.com',
+  name: 'Co Parent',
+  role: HouseholdRole.CO_PARENT,
+  joinedAt: new Date('2026-01-01T00:00:00.000Z'),
+};
+
 describe('HouseholdController', () => {
   let householdService: jest.Mocked<
-    Pick<HouseholdService, 'create' | 'listForUser' | 'listMembers'>
+    Pick<
+      HouseholdService,
+      'create' | 'listForUser' | 'listMembers' | 'changeMemberRole' | 'removeMember'
+    >
   >;
   let inviteService: jest.Mocked<Pick<InviteService, 'create'>>;
   let controller: HouseholdController;
 
   beforeEach(() => {
-    householdService = { create: jest.fn(), listForUser: jest.fn(), listMembers: jest.fn() };
+    householdService = {
+      create: jest.fn(),
+      listForUser: jest.fn(),
+      listMembers: jest.fn(),
+      changeMemberRole: jest.fn(),
+      removeMember: jest.fn(),
+    };
     inviteService = { create: jest.fn() };
     controller = new HouseholdController(
       householdService as unknown as HouseholdService,
@@ -97,7 +116,7 @@ describe('HouseholdController', () => {
 
   describe('listMembers', () => {
     it('delegates to HouseholdService.listMembers with the householdId param', async () => {
-      const members = [{ userId: 'user-1', email: 'parent@example.com' }];
+      const members = [member];
       householdService.listMembers.mockResolvedValue(members);
 
       const result = await controller.listMembers('household-1');
@@ -116,14 +135,85 @@ describe('HouseholdController', () => {
   });
 
   describe('createInvite', () => {
-    it('delegates to InviteService.create with the current user and householdId param', async () => {
+    it('forwards the requested role to InviteService.create', async () => {
       const invite = { token: 'raw-token', expiresAt: new Date() };
       inviteService.create.mockResolvedValue(invite);
 
-      const result = await controller.createInvite('household-1', currentUser);
+      const result = await controller.createInvite(
+        'household-1',
+        { role: HouseholdRole.CAREGIVER },
+        currentUser,
+      );
 
-      expect(inviteService.create).toHaveBeenCalledWith('user-1', 'household-1');
+      expect(inviteService.create).toHaveBeenCalledWith(
+        'user-1',
+        'household-1',
+        HouseholdRole.CAREGIVER,
+      );
       expect(result).toBe(invite);
     });
+
+    it('leaves the role undefined for a body-less invite, so the service default applies', async () => {
+      inviteService.create.mockResolvedValue({ token: 'raw-token', expiresAt: new Date() });
+
+      await controller.createInvite('household-1', {}, currentUser);
+
+      expect(inviteService.create).toHaveBeenCalledWith('user-1', 'household-1', undefined);
+    });
+  });
+
+  describe('member management', () => {
+    it('changeMemberRole passes the acting user and the target user id', async () => {
+      householdService.changeMemberRole.mockResolvedValue(member);
+
+      const result = await controller.changeMemberRole(
+        'household-1',
+        'user-2',
+        { role: HouseholdRole.CO_PARENT },
+        currentUser,
+      );
+
+      expect(householdService.changeMemberRole).toHaveBeenCalledWith(
+        'household-1',
+        'user-1',
+        'user-2',
+        HouseholdRole.CO_PARENT,
+      );
+      expect(result).toBe(member);
+    });
+
+    it('removeMember passes the acting user and the target user id', async () => {
+      householdService.removeMember.mockResolvedValue(undefined);
+
+      await expect(
+        controller.removeMember('household-1', 'user-2', currentUser),
+      ).resolves.toBeUndefined();
+
+      expect(householdService.removeMember).toHaveBeenCalledWith('household-1', 'user-1', 'user-2');
+    });
+
+    it.each(['createInvite', 'changeMemberRole', 'removeMember'] as const)(
+      'restricts %s to OWNER',
+      (methodName) => {
+        expect(
+          Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, HouseholdController.prototype[methodName]),
+        ).toEqual([...OWNER_ROLES]);
+      },
+    );
+
+    it('answers DELETE .../members/:userId with 204 No Content', () => {
+      expect(Reflect.getMetadata('__httpCode__', HouseholdController.prototype.removeMember)).toBe(
+        204,
+      );
+    });
+
+    it.each(['getOne', 'listMembers'] as const)(
+      'leaves the read route %s open to any member',
+      (methodName) => {
+        expect(
+          Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, HouseholdController.prototype[methodName]),
+        ).toBeUndefined();
+      },
+    );
   });
 });

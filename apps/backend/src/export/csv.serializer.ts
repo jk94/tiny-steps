@@ -22,6 +22,37 @@ const CSV_COLUMNS: (keyof RawExportRow)[] = [
   'note',
   'createdAt',
   'updatedAt',
+  // Appended in Phase 7.1, strictly after the original columns: a consumer
+  // that reads this CSV positionally keeps working, since nothing before this
+  // point moved. Blank on every event row.
+  'recordKind',
+  'weightGrams',
+  'lengthMillimeters',
+  'headCircumferenceMillimeters',
+  'lengthMeasurementPosition',
+  'weightPercentile',
+  'lengthPercentile',
+  'headCircumferencePercentile',
+  'weightZScore',
+  'lengthZScore',
+  'headCircumferenceZScore',
+  // Appended in Phase 7.2, again strictly after everything before it — same
+  // positional-stability rule as the Phase 7.1 block. Blank on every event and
+  // growth row.
+  'milestoneTemplateKey',
+  'milestoneTitle',
+  'milestoneCategory',
+  'milestonePhotoCount',
+  // Appended in Phase 7.3, again strictly last — same positional-stability
+  // rule. Blank on every event, growth and milestone row. The free-text note
+  // is not repeated here: it lives in the shared `note` column above.
+  'healthRecordKind',
+  'healthRecordName',
+  'healthRecordAdministeredAt',
+  'healthRecordDueAt',
+  'healthRecordDoseAmount',
+  'healthRecordDoseUnit',
+  'healthRecordVaccineBatch',
 ];
 
 /**

@@ -31,6 +31,16 @@ const BADGE_VARIANT_TOKEN_PAIRS: Record<string, { background: string; foreground
   'diaper-pee': { background: 'diaper-pee', foreground: 'diaper-pee-foreground' },
   'diaper-stool': { background: 'diaper-stool', foreground: 'diaper-stool-foreground' },
   'diaper-both': { background: 'diaper-both', foreground: 'diaper-both-foreground' },
+  'milestone-motor': { background: 'milestone-motor', foreground: 'milestone-motor-foreground' },
+  'milestone-language': {
+    background: 'milestone-language',
+    foreground: 'milestone-language-foreground',
+  },
+  'milestone-social': { background: 'milestone-social', foreground: 'milestone-social-foreground' },
+  'milestone-physical': {
+    background: 'milestone-physical',
+    foreground: 'milestone-physical-foreground',
+  },
 };
 
 const WCAG_AA_NORMAL_TEXT_MIN_RATIO = 4.5;

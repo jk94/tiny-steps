@@ -5,15 +5,32 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { ChildHome } from './ChildHome';
 import * as childApi from '../api/child-api';
 import * as eventApi from '../api/event-api';
+import * as growthApi from '../api/growth-api';
+import * as milestoneApi from '../api/milestone-api';
+import * as healthRecordApi from '../api/health-record-api';
 import { ApiError } from '../api/http-client';
 import { queryClient } from '../lib/query-client';
 
 vi.mock('../api/child-api');
 vi.mock('../api/event-api');
+vi.mock('../api/growth-api');
+// Partial mock: the query-key factories must stay real, since an
+// auto-mocked one returns `undefined` and React Query rejects that.
+vi.mock('../api/milestone-api', async () => {
+  const actual = await vi.importActual<typeof milestoneApi>('../api/milestone-api');
+  return { ...actual, listMilestones: vi.fn() };
+});
+vi.mock('../api/health-record-api', async () => {
+  const actual = await vi.importActual<typeof healthRecordApi>('../api/health-record-api');
+  return { ...actual, listHealthRecords: vi.fn() };
+});
 vi.mock('../realtime/useHouseholdRoom');
 
 const mockedChildApi = vi.mocked(childApi);
 const mockedEventApi = vi.mocked(eventApi);
+const mockedGrowthApi = vi.mocked(growthApi);
+const mockedMilestoneApi = vi.mocked(milestoneApi);
+const mockedHealthRecordApi = vi.mocked(healthRecordApi);
 
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
@@ -24,6 +41,7 @@ const child: childApi.ChildSummary = {
   name: 'Alex',
   birthDate: '2025-09-01T00:00:00.000Z',
   hasPhoto: false,
+  sex: null,
   createdAt: '2025-09-02T00:00:00.000Z',
 };
 
@@ -49,6 +67,9 @@ describe('ChildHome', () => {
 
     queryClient.clear();
     mockedChildApi.fetchChild.mockResolvedValue(child);
+    mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([]);
+    mockedMilestoneApi.listMilestones.mockResolvedValue([]);
+    mockedHealthRecordApi.listHealthRecords.mockResolvedValue([]);
     mockedEventApi.fetchEventStats.mockResolvedValue({
       sleepHoursToday: 0.5,
       feedingCountToday: 1,
@@ -157,5 +178,121 @@ describe('ChildHome', () => {
       'href',
       `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/timeline`,
     );
+  });
+
+  describe('growth card (W-15)', () => {
+    it('renders the latest measurement below the time-since section', async () => {
+      mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([
+        {
+          id: 'm1',
+          childId: CHILD_ID,
+          userId: 'u1',
+          measuredAt: '2025-12-01T12:00:00.000Z',
+          ageInDaysAtMeasurement: 91,
+          weightGrams: 6400,
+          lengthMillimeters: null,
+          headCircumferenceMillimeters: null,
+          lengthMeasurementPosition: null,
+          effectiveLengthMeasurementPosition: null,
+          lengthOrHeightReferenceUsed: null,
+          note: null,
+          createdAt: '2025-12-01T12:00:00.000Z',
+          updatedAt: '2025-12-01T12:00:00.000Z',
+          percentiles: {
+            weight: { status: 'COMPUTED', zScore: 0.1, percentile: 54 },
+            length: null,
+            headCircumference: null,
+          },
+        },
+      ]);
+
+      renderChildHome();
+
+      expect(await screen.findByText('Weight: 6.4 kg')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'View trend' })).toHaveAttribute(
+        'href',
+        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/growth`,
+      );
+    });
+
+    it('invites the parent to record a first measurement when there is none', async () => {
+      renderChildHome();
+
+      expect(await screen.findByText('No measurement recorded yet.')).toBeInTheDocument();
+    });
+  });
+
+  describe('milestone card (M-13)', () => {
+    it('renders the latest milestone with its date, age and a link to the timeline', async () => {
+      mockedMilestoneApi.listMilestones.mockResolvedValue([
+        {
+          id: 'ms1',
+          childId: CHILD_ID,
+          userId: 'u1',
+          templateKey: 'FIRST_STEPS',
+          title: 'First steps',
+          category: 'MOTOR',
+          achievedAt: '2025-08-20T00:00:00.000Z',
+          ageInDaysAtMilestone: 212,
+          ageInMonthsAtMilestone: 7,
+          note: null,
+          createdAt: '2025-08-21T09:00:00.000Z',
+          updatedAt: '2025-08-21T09:00:00.000Z',
+          photos: [],
+        },
+      ]);
+
+      renderChildHome();
+
+      expect(await screen.findByText('First steps')).toBeInTheDocument();
+      expect(screen.getByText('at 7 months')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'View all milestones' })).toHaveAttribute(
+        'href',
+        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones`,
+      );
+    });
+
+    it('invites the parent to record a first milestone when there is none', async () => {
+      renderChildHome();
+
+      expect(await screen.findByText('No milestone recorded yet.')).toBeInTheDocument();
+    });
+  });
+
+  describe('medical card (MED-13)', () => {
+    it('names the next due appointment and links to the overview', async () => {
+      mockedHealthRecordApi.listHealthRecords.mockResolvedValue([
+        {
+          id: 'hr1',
+          childId: CHILD_ID,
+          userId: 'u1',
+          kind: 'VACCINATION',
+          name: '6-in-1 vaccine',
+          administeredAt: null,
+          dueAt: '2026-02-01T00:00:00.000Z',
+          doseAmount: null,
+          doseUnit: null,
+          vaccineBatch: null,
+          note: null,
+          reminderEnabled: true,
+          createdAt: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z',
+        },
+      ]);
+
+      renderChildHome();
+
+      expect(await screen.findByText(/6-in-1 vaccine/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'View all entries' })).toHaveAttribute(
+        'href',
+        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/health`,
+      );
+    });
+
+    it('invites the parent to add a first entry when there is none', async () => {
+      renderChildHome();
+
+      expect(await screen.findByText('Nothing recorded yet.')).toBeInTheDocument();
+    });
   });
 });

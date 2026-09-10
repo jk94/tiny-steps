@@ -37,8 +37,18 @@ export class InviteService {
    * Creates a fresh invite for a household. The raw `token` is returned
    * once to the caller (to share via link/code) — only its hash is
    * persisted, and the raw value is never logged.
+   *
+   * `role` is what the invitee will hold on acceptance. It is always chosen
+   * server-side from the inviting OWNER's request (ROL-8) — the invitee never
+   * influences it — and defaults to `CO_PARENT` for a body-less invite, which
+   * is what every invite granted before Phase 7.5 was. Restricting it to
+   * `INVITABLE_ROLES` (no OWNER) is the DTO's job; see `CreateInviteDto`.
    */
-  async create(createdByUserId: string, householdId: string): Promise<CreatedInvite> {
+  async create(
+    createdByUserId: string,
+    householdId: string,
+    role: HouseholdRole = HouseholdRole.CO_PARENT,
+  ): Promise<CreatedInvite> {
     const token = generateInviteToken();
     const expiresAt = new Date(Date.now() + INVITE_TOKEN_TTL_MS);
 
@@ -47,7 +57,7 @@ export class InviteService {
         tokenHash: hashInviteToken(token),
         householdId,
         createdByUserId,
-        role: HouseholdRole.CO_PARENT,
+        role,
         expiresAt,
       },
     });

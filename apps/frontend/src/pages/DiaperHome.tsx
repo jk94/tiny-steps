@@ -7,6 +7,8 @@ import { DiaperEventList } from '../components/DiaperEventList';
 import { DiaperQuickEntry } from '../components/DiaperQuickEntry';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Skeleton } from '../components/ui';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
 
 /**
@@ -20,6 +22,7 @@ export function DiaperHome() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
   useHouseholdRoom(householdId);
+  const { role } = useHouseholdRole(householdId);
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -73,14 +76,20 @@ export function DiaperHome() {
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex flex-col gap-3 lg:w-home-sidebar lg:flex-none">
-          <DiaperQuickEntry householdId={householdId!} childId={childId!} />
+          {/* Both are create affordances; the event list beside them stays
+              readable for every role. */}
+          {canWrite(role, ENTRY_WRITE_ROLES) && (
+            <>
+              <DiaperQuickEntry householdId={householdId!} childId={childId!} />
 
-          <Link
-            to={`/households/${householdId}/children/${childId}/diaper/new`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {t('diaper.home.backfillLink')}
-          </Link>
+              <Link
+                to={`/households/${householdId}/children/${childId}/diaper/new`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {t('diaper.home.backfillLink')}
+              </Link>
+            </>
+          )}
         </div>
 
         <div className="flex-1">

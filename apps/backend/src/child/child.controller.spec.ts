@@ -1,7 +1,7 @@
 import { StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
 import { HOUSEHOLD_ROLES_KEY } from '../household/guards/require-role.decorator';
-import { HouseholdRole } from '../household/household-role.enum';
+import { FULL_WRITE_ROLES } from '../household/household-permissions';
 import { ChildController } from './child.controller';
 import { ChildService } from './child.service';
 import type { ChildSummary } from './child.service';
@@ -17,6 +17,7 @@ const summary: ChildSummary = {
   name: 'Alex',
   birthDate: new Date('2024-01-01T00:00:00.000Z'),
   hasPhoto: false,
+  sex: null,
   createdAt: new Date('2024-01-02T00:00:00.000Z'),
 };
 
@@ -74,9 +75,9 @@ describe('ChildController', () => {
       expect(childService.create).toHaveBeenCalledWith(HOUSEHOLD_ID, dto, undefined);
     });
 
-    it('requires the OWNER role', () => {
+    it('requires a full-write role', () => {
       const roles = Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, ChildController.prototype.create);
-      expect(roles).toEqual([HouseholdRole.OWNER]);
+      expect(roles).toEqual([...FULL_WRITE_ROLES]);
     });
   });
 
@@ -143,9 +144,12 @@ describe('ChildController', () => {
       expect(result).toBe(summary);
     });
 
-    it('has no required role (Co-Parent may edit, per the role reconciliation)', () => {
+    // Was unannotated before Phase 7.5, which the guard now rejects outright
+    // for any write: managing child profiles is FULL_WRITE_ROLES, so CAREGIVER
+    // and OBSERVER cannot rename a child.
+    it('requires a full-write role', () => {
       const roles = Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, ChildController.prototype.update);
-      expect(roles).toBeUndefined();
+      expect(roles).toEqual([...FULL_WRITE_ROLES]);
     });
   });
 
@@ -158,9 +162,9 @@ describe('ChildController', () => {
       expect(childService.remove).toHaveBeenCalledWith(HOUSEHOLD_ID, CHILD_ID);
     });
 
-    it('requires the OWNER role', () => {
+    it('requires a full-write role', () => {
       const roles = Reflect.getMetadata(HOUSEHOLD_ROLES_KEY, ChildController.prototype.remove);
-      expect(roles).toEqual([HouseholdRole.OWNER]);
+      expect(roles).toEqual([...FULL_WRITE_ROLES]);
     });
   });
 });

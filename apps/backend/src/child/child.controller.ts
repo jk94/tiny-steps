@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseFilePipeBuilder,
   Patch,
   Post,
   Res,
@@ -17,71 +15,23 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { memoryStorage } from 'multer';
 import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { MulterExceptionFilter } from '../common/photo/multer-exception.filter';
+import { photoFileInterceptor, photoValidationPipe } from '../common/photo/photo-upload';
 import { HouseholdMembershipGuard } from '../household/guards/household-membership.guard';
 import { RequireRole } from '../household/guards/require-role.decorator';
-import { HouseholdRole } from '../household/household-role.enum';
-import { MAX_PHOTO_BYTES } from './child-photo.constants';
+import { FULL_WRITE_ROLES } from '../household/household-permissions';
 import { ChildService } from './child.service';
 import type { ChildSummary } from './child.service';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
 import { ChildValidationExceptionFilter } from './filters/child-validation.exception-filter';
-import { MulterExceptionFilter } from './filters/multer-exception.filter';
 
-const PHOTO_FIELD_NAME = 'photo';
-// Mirrors ALLOWED_PHOTO_MIME_TYPES; kept as a literal regex since
-// ParseFilePipeBuilder's addFileTypeValidator expects a RegExp/string, not
-// an array of exact values.
-const PHOTO_MIME_TYPE_PATTERN = /^image\/(jpeg|png|webp)$/;
-
-// Internal-only marker strings threaded through each validator's
-// `errorMessage` so photoValidationPipe()'s shared `exceptionFactory` can
-// tell which validator failed and attach the right machine-readable `code`
-// — matching human-facing message text would be fragile, this isn't.
-const PHOTO_TYPE_MISMATCH_MARKER = 'photo-invalid-type';
-const PHOTO_TOO_LARGE_MARKER = 'photo-too-large';
-
-/**
- * `photo` arrives as a memory buffer (not written to disk by Multer
- * itself) so `ChildService`/`ChildPhotoStorageService` fully control where/
- * when/under what name it lands on disk — see ADR-0003. `limits.fileSize`
- * is a hard backstop against buffering an abusive upload into memory;
- * `ParseFilePipeBuilder` below is the actual product-facing 400 for size/
- * type violations.
- */
-function photoFileInterceptor() {
-  return FileInterceptor(PHOTO_FIELD_NAME, {
-    storage: memoryStorage(),
-    limits: { fileSize: MAX_PHOTO_BYTES },
-  });
-}
-
-function photoValidationPipe() {
-  return new ParseFilePipeBuilder()
-    .addFileTypeValidator({
-      fileType: PHOTO_MIME_TYPE_PATTERN,
-      errorMessage: PHOTO_TYPE_MISMATCH_MARKER,
-    })
-    .addMaxSizeValidator({ maxSize: MAX_PHOTO_BYTES, errorMessage: PHOTO_TOO_LARGE_MARKER })
-    .build({
-      fileIsRequired: false,
-      errorHttpStatusCode: HttpStatus.BAD_REQUEST,
-      exceptionFactory: (marker) => {
-        const code =
-          marker === PHOTO_TYPE_MISMATCH_MARKER ? 'PHOTO_INVALID_TYPE' : 'PHOTO_TOO_LARGE';
-        const message =
-          code === 'PHOTO_INVALID_TYPE'
-            ? 'Please choose a JPEG, PNG, or WebP image.'
-            : 'The photo must be at most 2 MB.';
-        return new BadRequestException({ statusCode: 400, code, message });
-      },
-    });
-}
+// A child photo is an optional part of a larger create/update body, so the
+// shared pipe is built in its "not required" flavour here.
+const childPhotoValidationPipe = () => photoValidationPipe({ isRequired: false });
 
 @Controller('households/:householdId/children')
 export class ChildController {
@@ -89,17 +39,21 @@ export class ChildController {
 
   // Guard order matters: HouseholdMembershipGuard reads request.user
   // (populated by JwtAuthGuard), and CsrfGuard is last, mirroring
-  // HouseholdController's `createInvite` route. Creation is restricted to
-  // OWNER — see the role-scoping reconciliation in ADR-0003/roadmap.
+  // HouseholdController's `createInvite` route.
+  //
+  // Managing child profiles is `FULL_WRITE_ROLES` (Phase 7.5): CO_PARENT joins
+  // OWNER here — the Phase 7.5 permission matrix grants "create/change/delete
+  // child profiles" to both, superseding the narrower OWNER-only scoping
+  // ADR-0003 set when CO_PARENT was the only other role.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
-  @RequireRole(HouseholdRole.OWNER)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Post()
   @UseInterceptors(photoFileInterceptor())
   @UseFilters(MulterExceptionFilter, ChildValidationExceptionFilter)
   async create(
     @Param('householdId') householdId: string,
     @Body() dto: CreateChildDto,
-    @UploadedFile(photoValidationPipe()) photo: Express.Multer.File | undefined,
+    @UploadedFile(childPhotoValidationPipe()) photo: Express.Multer.File | undefined,
   ): Promise<ChildSummary> {
     return this.childService.create(householdId, dto, photo);
   }
@@ -134,10 +88,11 @@ export class ChildController {
     return new StreamableFile(photo.buffer);
   }
 
-  // No @RequireRole: Co-Parent can read/edit children per the role
-  // reconciliation (create/delete only are Owner-restricted) — see
-  // ADR-0003 and the roadmap's Definition of Done.
+  // Editing a child profile is a household-management action, not an entry
+  // edit: it is role-gated only, with no per-row ownership check — a child
+  // profile has no single "recorded by" owner to compare against.
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Patch(':childId')
   @UseInterceptors(photoFileInterceptor())
   @UseFilters(MulterExceptionFilter, ChildValidationExceptionFilter)
@@ -145,13 +100,13 @@ export class ChildController {
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
     @Body() dto: UpdateChildDto,
-    @UploadedFile(photoValidationPipe()) photo: Express.Multer.File | undefined,
+    @UploadedFile(childPhotoValidationPipe()) photo: Express.Multer.File | undefined,
   ): Promise<ChildSummary> {
     return this.childService.update(householdId, childId, dto, photo);
   }
 
   @UseGuards(JwtAuthGuard, HouseholdMembershipGuard, CsrfGuard)
-  @RequireRole(HouseholdRole.OWNER)
+  @RequireRole(...FULL_WRITE_ROLES)
   @Delete(':childId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(

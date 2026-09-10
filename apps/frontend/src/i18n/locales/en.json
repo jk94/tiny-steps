@@ -19,6 +19,9 @@
     "conflict": {
       "message": "Your change was overridden because this entry was updated elsewhere in the meantime.",
       "dismiss": "Dismiss notice"
+    },
+    "forbidden": {
+      "message": "Your change was not saved: your role in this household does not allow this action."
     }
   },
   "nav": {
@@ -86,9 +89,13 @@
     "list": {
       "title": "Households",
       "empty": "You aren't a member of any household yet.",
-      "createLink": "Create household",
-      "roleOwner": "Owner",
-      "roleCoParent": "Member"
+      "createLink": "Create household"
+    },
+    "roles": {
+      "ownerLabel": "Owner",
+      "coParentLabel": "Member",
+      "caregiverLabel": "Carer",
+      "observerLabel": "Viewer"
     },
     "create": {
       "title": "Create household",
@@ -109,11 +116,34 @@
       "copiedConfirmation": "Copied!",
       "copyFailed": "Copy failed. Please copy the link manually.",
       "expiresAtLabel": "Valid until",
-      "ownerOnlyHint": "Only the household owner can generate invites."
+      "ownerOnlyHint": "Only the household owner can generate invites.",
+      "roleSelectLabel": "Role for the invited person",
+      "roleDescription": {
+        "coParent": "Full access to all entries and child profiles, but cannot manage the household.",
+        "caregiver": "Can record entries and edit their own, but cannot delete anything or manage child profiles.",
+        "observer": "Read-only access, plus their own notification settings."
+      }
     },
     "members": {
       "title": "Members",
-      "empty": "No members found."
+      "empty": "No members found.",
+      "roleLabel": "Role",
+      "joinedAtLabel": "Member since",
+      "removeButton": "Remove",
+      "removeDialog": {
+        "title": "Remove member?",
+        "description": "{{name}} loses access to this household immediately. Entries they recorded are kept.",
+        "confirmButton": "Remove",
+        "cancelButton": "Cancel"
+      },
+      "roleChangeDialog": {
+        "title": "Change role?",
+        "description": "{{name}} will get the \"{{role}}\" role.",
+        "descriptionDemotion": "{{name}} will get the \"{{role}}\" role and lose permissions they have today.",
+        "descriptionPromotionToOwner": "{{name}} will get the \"{{role}}\" role and will then be able to manage members and the household itself.",
+        "confirmButton": "Change role",
+        "cancelButton": "Cancel"
+      }
     },
     "validation": {
       "nameRequired": "Please enter a name for the household.",
@@ -122,6 +152,10 @@
     "errors": {
       "notFound": "This household wasn't found, or you aren't a member.",
       "forbidden": "Only the household owner can perform this action.",
+      "cannotChangeOwnRole": "You can't change your own role. Ask another owner to do it.",
+      "cannotRemoveSelf": "You can't remove yourself from the household. Ask another owner to do it.",
+      "lastOwnerCannotBeDemoted": "This is the household's last owner. Make someone else an owner first.",
+      "lastOwnerCannotBeRemoved": "This is the household's last owner. Make someone else an owner first.",
       "generic": "Something went wrong. Please try again later."
     }
   },
@@ -162,7 +196,10 @@
       "feedingLink": "Feeding",
       "sleepLink": "Sleep",
       "diaperLink": "Diaper",
-      "timelineLink": "Overview"
+      "timelineLink": "Overview",
+      "growthLink": "Growth",
+      "milestonesLink": "Milestones",
+      "healthLink": "Medical"
     },
     "create": {
       "title": "Create child profile",
@@ -186,7 +223,12 @@
       "birthDateLabel": "Birth date",
       "photoLabel": "Photo (optional)",
       "photoPlaceholder": "Add photo",
-      "photoHint": "JPEG, PNG, or WebP, maximum 2 MB."
+      "photoHint": "JPEG, PNG, or WebP, maximum 2 MB.",
+      "sexLabel": "Sex (optional)",
+      "sexHint": "Used only for the WHO growth percentiles. Without it, values and trends are shown but percentiles are not.",
+      "sexOptionNotSpecified": "Not specified",
+      "sexOptionFemale": "Female",
+      "sexOptionMale": "Male"
     },
     "validation": {
       "nameRequired": "Please enter a name.",
@@ -416,6 +458,387 @@
       "generic": "Something went wrong. Please try again later."
     }
   },
+  "growth": {
+    "home": {
+      "title": "Growth — {{name}}",
+      "backLink": "Back to household",
+      "addLink": "Add measurement",
+      "subtitle": "Weight, length/height and head circumference over time."
+    },
+    "measures": {
+      "weight": "Weight",
+      "length": "Length/height",
+      "headCircumference": "Head circumference"
+    },
+    "units": {
+      "kg": "kg",
+      "cm": "cm"
+    },
+    "chart": {
+      "ariaLabel": "{{measure}} trend: use the arrow keys to move between measurement points",
+      "figureLabel": "{{measure}} growth trend",
+      "keyboardHint": "Focus the chart and use the arrow keys to move from point to point. On a touchscreen, press and hold.",
+      "liveReadout": "{{date}}: {{measure}} {{value}} {{unit}}, {{percentile}}",
+      "liveReadoutNoPercentile": "{{date}}: {{measure}} {{value}} {{unit}}",
+      "valueText": "{{date}}: {{value}} {{unit}}",
+      "valueTextEmpty": "No measurement point selected",
+      "noReferenceHint": "No WHO reference curves exist for this range, so only the measured values are shown, without percentile bands.",
+      "empty": "No entries for this measure yet.",
+      "band": {
+        "label": "P{{percentile}}"
+      },
+      "position": {
+        "lying": "Measured lying down",
+        "standing": "Measured standing"
+      },
+      "axis": {
+        "months_one": "{{count}} mo",
+        "months_other": "{{count}} mo",
+        "years_one": "{{count}} yr",
+        "years_other": "{{count}} yrs"
+      }
+    },
+    "list": {
+      "title": "Measurements",
+      "empty": {
+        "title": "No measurements yet",
+        "description": "Enter the values from the next check-up to see the trend.",
+        "cta": "Record the first measurement"
+      },
+      "recordedBy": "Recorded by {{name}}",
+      "unknownUser": "Unknown",
+      "ageAtMeasurement_one": "{{count}} month old",
+      "ageAtMeasurement_other": "{{count}} months old",
+      "editLink": "Edit",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete measurement?",
+        "description": "This action cannot be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "form": {
+      "titleCreate": "Record measurement",
+      "titleEdit": "Edit measurement",
+      "backLink": "Back to growth",
+      "measuredAtLabel": "Measurement date",
+      "weightLabel": "Weight (kg)",
+      "lengthLabel": "Length/height (cm)",
+      "headCircumferenceLabel": "Head circumference (cm)",
+      "valuesHint": "At least one of the three values must be filled in.",
+      "position": {
+        "label": "Length/height measurement method",
+        "auto": "Automatic (by age)",
+        "lying": "Measured lying down",
+        "standing": "Measured standing",
+        "explanation": "The WHO reference distinguishes recumbent length (up to 24 months) from standing height (from 24 months). This is normally derived from the age — only change it if the child was actually measured the other way."
+      },
+      "noteLabel": "Note (optional)",
+      "submit": {
+        "create": "Save",
+        "createPending": "Saving…",
+        "edit": "Save changes",
+        "editPending": "Saving…"
+      }
+    },
+    "validation": {
+      "atLeastOneValue": "Please enter at least one value.",
+      "weightRange": "The weight must be between {{min}} and {{max}} kg.",
+      "lengthRange": "The length/height must be between {{min}} and {{max}} cm.",
+      "headCircumferenceRange": "The head circumference must be between {{min}} and {{max}} cm.",
+      "measuredAtRequired": "Please enter a date.",
+      "measuredAtFuture": "The date must not be in the future.",
+      "measuredAtBeforeBirth": "The date must not be before the birth date.",
+      "noteTooLong": "The note must be at most 500 characters long.",
+      "saveFailed": "The measurement could not be saved. Please check your connection and try again.",
+      "deleteFailed": "The measurement could not be deleted. Please try again.",
+      "loadFailed": "The measurements could not be loaded. Please try again."
+    },
+    "percentile": {
+      "value": "{{value}}th percentile",
+      "zScore": "z-score {{value}}",
+      "unavailable": {
+        "sexUnknown": "Percentiles need the child's sex.",
+        "sexUnknownLink": "Add it in the child profile",
+        "ageBelowRange": "Before the birth date — outside the WHO reference range.",
+        "ageOutOfRange": "Outside the WHO reference range (0–5 years)."
+      }
+    },
+    "card": {
+      "title": "Growth",
+      "link": "View trend",
+      "empty": "No measurement recorded yet.",
+      "cta": "Record a measurement",
+      "measuredOn": "Measured on {{date}}"
+    }
+  },
+  "milestone": {
+    "timeline": {
+      "title": "Milestones — {{name}}",
+      "backLink": "Back to household",
+      "addLink": "Add milestone",
+      "subtitle": "Your child's development, kept in order.",
+      "tabTimeline": "Timeline",
+      "tabCatalog": "What's next?"
+    },
+    "list": {
+      "title": "Recorded milestones",
+      "empty": {
+        "title": "No milestones yet",
+        "description": "Record the first step — from the template list or entirely in your own words.",
+        "cta": "Record the first milestone"
+      },
+      "recordedBy": "Recorded by {{name}}",
+      "unknownUser": "Unknown",
+      "ageAtMilestone_one": "at {{count}} month",
+      "ageAtMilestone_other": "at {{count}} months",
+      "photoCount_one": "{{count}} photo",
+      "photoCount_other": "{{count}} photos",
+      "morePhotos": "+{{count}}",
+      "openGallery": "View photos of “{{title}}”",
+      "editLink": "Edit",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete this milestone?",
+        "description": "The entry and its photos will be removed permanently. This cannot be undone.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "catalog": {
+      "title": "What's next?",
+      "intro": "Typical developmental steps for orientation — not a schedule. Every child moves at their own pace.",
+      "ageGroupLabel": "{{min}}–{{max}} months",
+      "achievedMarker": "Recorded",
+      "typicalRange": "usually between {{min}} and {{max}} months",
+      "openAchieved": "Open “{{title}}”",
+      "recordTemplate": "Record “{{title}}”"
+    },
+    "form": {
+      "createTitle": "Record a milestone",
+      "editTitle": "Edit milestone",
+      "backLink": "Back to milestones",
+      "modeTemplate": "From a template",
+      "modeFree": "Free entry",
+      "templateLabel": "Template",
+      "templatePlaceholder": "Choose a template",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. First visit to the zoo",
+      "titleFixedHint": "The title comes from the template and cannot be changed.",
+      "categoryLabel": "Category (optional)",
+      "categoryNone": "No category",
+      "categoryHint": "For grouping only, never an assessment.",
+      "categoryFixedHint": "The category follows from the template.",
+      "achievedAtLabel": "Date",
+      "noteLabel": "Note (optional)",
+      "submit": {
+        "create": "Save",
+        "createPending": "Saving…",
+        "edit": "Save changes",
+        "editPending": "Saving…"
+      },
+      "photos": {
+        "sectionLabel": "Photos",
+        "addLabel": "Choose photos",
+        "hint": "Up to {{max}} photos, each at most 2 MB (JPEG, PNG or WebP).",
+        "statusPending": "Waiting to upload",
+        "statusDone": "Uploaded",
+        "statusError": "Failed",
+        "removeLabel": "Remove “{{name}}”",
+        "limitReached": "A milestone can carry at most {{max}} photos. {{count}} file(s) were not added.",
+        "existingLabel": "Already uploaded",
+        "deleteExisting": "Delete photo"
+      }
+    },
+    "gallery": {
+      "title": "Photos",
+      "previous": "Previous photo",
+      "next": "Next photo",
+      "counter": "{{current}} of {{total}}",
+      "photoAlt": "Photo {{index}} of “{{title}}”",
+      "deleteConfirm": {
+        "title": "Delete this photo?",
+        "description": "The photo will be removed permanently.",
+        "confirmButton": "Delete permanently",
+        "cancelButton": "Cancel"
+      }
+    },
+    "validation": {
+      "titleRequired": "Please enter a title.",
+      "titleTooLong": "The title may be at most {{max}} characters long.",
+      "templateRequired": "Please choose a template.",
+      "achievedAtRequired": "Please enter a date.",
+      "achievedAtInFuture": "The date must not be in the future.",
+      "achievedAtBeforeBirth": "The date must not be before the birth date.",
+      "noteTooLong": "The note may be at most {{max}} characters long.",
+      "photoInvalidType": "“{{name}}” is not a JPEG, PNG or WebP image.",
+      "photoTooLarge": "“{{name}}” is larger than 2 MB.",
+      "photosNeedAttention": "Some photos were rejected. Please remove them or choose different files before saving.",
+      "saveFailed": "The milestone could not be saved. Please check your connection and try again.",
+      "photoUploadFailed": "The milestone was saved, but {{count}} photo(s) could not be uploaded. The affected files are listed below — tap Save again to retry them.",
+      "photoDeleteFailed": "The photo could not be deleted. Please try again.",
+      "deleteFailed": "The milestone could not be deleted. Please try again.",
+      "loadFailed": "The milestones could not be loaded. Please try again."
+    },
+    "errors": {
+      "notFound": "This milestone could not be found.",
+      "forbidden": "You are not allowed to perform this action.",
+      "templateAlreadyRecorded": "This milestone has already been recorded for this child.",
+      "photoLimitReached": "A milestone can carry at most 10 photos.",
+      "photoTooLarge": "The photo may be at most 2 MB.",
+      "photoInvalidType": "Please choose a JPEG, PNG or WebP image.",
+      "photoUploadError": "The photo could not be uploaded. Please try again.",
+      "templateFieldNotEditable": "The title and category of a template milestone cannot be changed.",
+      "invalidTitle": "Please enter a valid title.",
+      "invalidAchievedAt": "Please enter a valid date that is not in the future.",
+      "invalidInput": "Your input could not be saved. Please check the title and date.",
+      "generic": "Something went wrong. Please try again later."
+    },
+    "card": {
+      "title": "Milestones",
+      "link": "View all milestones",
+      "empty": "No milestone recorded yet.",
+      "cta": "Record a milestone",
+      "achievedOn": "On {{date}}",
+      "ageAt_one": "at {{count}} month",
+      "ageAt_other": "at {{count}} months"
+    },
+    "categories": {
+      "motor": "Motor",
+      "language": "Language",
+      "social": "Social",
+      "physical": "Physical"
+    },
+    "templates": {
+      "FIRST_SMILE": "First smile",
+      "HOLDS_HEAD_UP": "Holds their head up",
+      "FIRST_LAUGH": "First laugh",
+      "GRASPS_OBJECT": "Reaches for an object",
+      "ROLLS_OVER": "Rolls from back to front",
+      "FIRST_SOLID_FOOD": "First solid food",
+      "BABBLES": "First babbling",
+      "FIRST_TOOTH": "First tooth",
+      "SITS_UNSUPPORTED": "Sits unsupported",
+      "CRAWLS": "Crawls",
+      "PULLS_TO_STAND": "Pulls up to stand",
+      "WAVES_BYE": "Waves goodbye",
+      "FIRST_WORD": "First word",
+      "FIRST_STEPS": "First steps",
+      "DRINKS_FROM_CUP": "Drinks from a cup",
+      "CLIMBS_STAIRS": "Climbs stairs",
+      "RUNS": "Runs steadily",
+      "TWO_WORD_SENTENCE": "First two-word sentence",
+      "SAYS_OWN_NAME": "Says their own name",
+      "POTTY_TRAINED_DAY": "Dry during the day"
+    }
+  },
+  "health": {
+    "overview": {
+      "title": "Medications & vaccinations for {{name}}",
+      "subtitle": "Upcoming appointments and the history so far.",
+      "backLink": "Back to the overview",
+      "addLink": "Add entry",
+      "upcomingSectionTitle": "Upcoming & overdue",
+      "historySectionTitle": "History",
+      "upcomingEmpty": "No appointment planned.",
+      "historyEmpty": "Nothing recorded yet.",
+      "loadFailed": "The entries could not be loaded."
+    },
+    "kinds": {
+      "medication": "Medication",
+      "vaccination": "Vaccination"
+    },
+    "form": {
+      "createTitle": "Add entry",
+      "editTitle": "Edit entry",
+      "backLink": "Back to medications & vaccinations",
+      "kindLabel": "Type",
+      "kindFixedHint": "The type cannot be changed afterwards.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Paracetamol 125 mg",
+      "namePlaceholderVaccination": "e.g. 6-in-1 vaccine",
+      "administeredAtLabel": "Administered at (optional)",
+      "administeredAtHint": "Leave empty while the appointment is only planned.",
+      "dueAtLabel": "Due on (optional)",
+      "dueAtHint": "A date in the past counts as overdue.",
+      "doseAmountLabel": "Dose (optional)",
+      "doseUnitLabel": "Unit",
+      "doseUnitPlaceholder": "e.g. ml",
+      "doseUnitSuggestions": {
+        "milliliters": "ml",
+        "milligrams": "mg",
+        "drops": "drops",
+        "pieces": "pieces"
+      },
+      "vaccineBatchLabel": "Vaccine / batch (optional)",
+      "vaccineBatchPlaceholder": "e.g. Infanrix hexa, batch AB1234",
+      "noteLabel": "Note (optional)",
+      "reminderToggleLabel": "Remind me about this appointment",
+      "reminderHint": "Every household member with medical reminders switched on is notified in advance and on the due day.",
+      "submit": {
+        "create": "Save",
+        "createPending": "Saving…",
+        "edit": "Save changes",
+        "editPending": "Saving…"
+      }
+    },
+    "row": {
+      "dueOn": "Due on {{date}}",
+      "administeredOn": "Administered on {{date}}",
+      "doseFormat": "{{amount}} {{unit}}",
+      "batchFormat": "Batch: {{batch}}",
+      "overdueBadge": "Overdue",
+      "reminderBadge": "Reminder on",
+      "markDone": "Mark as done",
+      "markDonePending": "Saving…",
+      "editLink": "Edit",
+      "deleteButton": "Delete",
+      "deleteDialog": {
+        "title": "Delete entry?",
+        "description": "The entry is removed permanently. This cannot be undone.",
+        "confirmButton": "Delete",
+        "cancelButton": "Cancel"
+      }
+    },
+    "card": {
+      "title": "Medical",
+      "link": "View all entries",
+      "empty": "Nothing recorded yet.",
+      "cta": "Add entry",
+      "nextDue": "Next appointment: {{name}} on {{date}}",
+      "overdue": "{{name}} was due on {{date}}"
+    },
+    "validation": {
+      "nameRequired": "Please enter a name.",
+      "nameTooLong": "The name may be at most {{max}} characters long.",
+      "missingDate": "Please give either an administration date or a due date.",
+      "doseUnitRequired": "Please give a unit for the dose as well.",
+      "doseAmountInvalid": "Please enter a dose greater than 0.",
+      "doseUnitTooLong": "The unit may be at most {{max}} characters long.",
+      "vaccineBatchTooLong": "This value may be at most {{max}} characters long.",
+      "noteTooLong": "The note may be at most {{max}} characters long.",
+      "fieldNotAllowedForKind": "This field belongs to the other type of entry.",
+      "administeredAtBeforeBirth": "The time must not be before the birth date.",
+      "administeredAtInFuture": "The time must not be in the future.",
+      "deleteFailed": "The entry could not be deleted. Please try again."
+    },
+    "errors": {
+      "forbidden": "You do not have permission to do that.",
+      "notFound": "The entry was not found.",
+      "invalidName": "Please enter a valid name.",
+      "invalidInput": "Please check your input.",
+      "generic": "The entry could not be saved. Please try again."
+    },
+    "push": {
+      "reminderTitleLead": "Upcoming appointment",
+      "reminderTitleDue": "Due today",
+      "reminderTitleOverdue": "Overdue appointment",
+      "reminderBodyLead": "{{kind}} \"{{name}}\" is due on {{date}}.",
+      "reminderBodyDue": "{{kind}} \"{{name}}\" is due today.",
+      "reminderBodyOverdue": "{{kind}} \"{{name}}\" was due on {{date}}."
+    }
+  },
   "timeline": {
     "title": "Daily timeline — {{name}}",
     "backLink": "Back to overview",
@@ -461,7 +884,29 @@
     "toLabel": "To (optional)",
     "downloadButton": "Download",
     "downloadButtonPending": "Preparing…",
-    "error": "The export couldn't be generated. Please try again."
+    "error": "The export couldn't be generated. Please try again.",
+    "includesGrowthNote": "Besides the logged entries, the export also contains all growth measurements.",
+    "report": {
+      "sectionTitle": "Report",
+      "description": "A readable PDF report for the paediatrician — with growth curves, milestones, medications/vaccinations and a tracking summary.",
+      "periodLabel": "Period",
+      "periodLastMonth": "Last month",
+      "periodLast3Months": "Last 3 months",
+      "periodLastYear": "Last year",
+      "periodCustom": "Custom",
+      "fromLabel": "From",
+      "toLabel": "To",
+      "sectionsLabel": "Included sections",
+      "sectionCore": "Master data (always included)",
+      "sectionGrowth": "Growth",
+      "sectionMilestones": "Milestones",
+      "sectionMedical": "Medications & vaccinations",
+      "sectionTracking": "Tracking summary",
+      "downloadButton": "Download report",
+      "downloadButtonPending": "Creating report…",
+      "errorEmptyPeriod": "There is no data for the selected period and sections.",
+      "errorGeneric": "The report could not be created. Please try again."
+    }
   },
   "profile": {
     "title": "Profile",
@@ -499,7 +944,11 @@
     "saveButtonPending": "Saving…",
     "saved": "Settings saved.",
     "saveError": "Couldn't save your settings. Please try again.",
-    "loadError": "Couldn't load your notification settings."
+    "loadError": "Couldn't load your notification settings.",
+    "medicalReminderLabel": "Medical reminders",
+    "medicalReminderHint": "Applies to planned medications and vaccinations with a reminder switched on — in advance and on the due day.",
+    "medicalLeadDaysLabel": "Lead time (days)",
+    "medicalLeadDaysInvalid": "Please enter a whole number of days between 1 and 30."
   },
   "ui": {
     "eventTypes": {

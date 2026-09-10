@@ -57,6 +57,7 @@ const child = {
   name: 'Alex',
   birthDate: '2020-01-01T00:00:00.000Z',
   hasPhoto: false,
+  sex: null,
   createdAt: '2020-01-01T00:00:00.000Z',
 };
 
@@ -65,6 +66,8 @@ const notificationSettings: NotificationSettings = {
   feedingReminderThresholdHours: 4,
   dailySummaryEnabled: true,
   dailySummaryHourLocal: 20,
+  medicalReminderEnabled: true,
+  medicalReminderLeadDays: 3,
 };
 
 function renderChildSettings() {
@@ -128,23 +131,77 @@ describe('ChildSettings', () => {
     expect(screen.getByLabelText('Summary hour (0–23)')).toHaveValue(20);
   });
 
-  it('shows the delete button for an OWNER', async () => {
-    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+  it.each(['OWNER', 'CO_PARENT'] as const)(
+    'shows the editable profile section, including delete, for a %s',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+      renderChildSettings();
+
+      expect(await screen.findByLabelText('Name')).toHaveValue('Alex');
+      expect(screen.getByRole('button', { name: 'Delete child profile' })).toBeInTheDocument();
+    },
+  );
+
+  it.each(['CAREGIVER', 'OBSERVER'] as const)(
+    'hides the whole profile section for a %s, who may not edit or delete server-side',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+      renderChildSettings();
+
+      // Wait on the part of the page that stays, so the absence assertions
+      // below can't pass merely because nothing has rendered yet.
+      await screen.findByRole('checkbox', { name: 'Feeding reminder' });
+      expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Delete child profile' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(['CAREGIVER', 'OBSERVER'] as const)(
+    'still lets a %s manage their own notification settings',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+      renderChildSettings();
+
+      // Own reminders are ALL_ROLES server-side, so the page keeps a purpose
+      // for these roles — which is why its nav entry stays unguarded.
+      expect(await screen.findByRole('checkbox', { name: 'Feeding reminder' })).toBeChecked();
+      expect(screen.getByLabelText('Remind after (hours)')).toHaveValue(4);
+    },
+  );
+
+  it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+    'offers the export to a %s, who may generate reports server-side',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role });
+      mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+
+      renderChildSettings();
+
+      expect(await screen.findByRole('link', { name: 'Export data' })).toHaveAttribute(
+        'href',
+        `/households/${household.id}/children/${child.id}/settings/export`,
+      );
+    },
+  );
+
+  it('hides the export from an OBSERVER, who has read-only access', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OBSERVER' });
     mockedChildApi.fetchChild.mockResolvedValueOnce(child);
 
     renderChildSettings();
 
-    expect(await screen.findByRole('button', { name: 'Delete child profile' })).toBeInTheDocument();
-  });
-
-  it('hides the delete button for a CO_PARENT', async () => {
-    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'CO_PARENT' });
-    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
-
-    renderChildSettings();
-
-    await screen.findByLabelText('Name');
-    expect(screen.queryByRole('button', { name: 'Delete child profile' })).not.toBeInTheDocument();
+    // Wait on the part of the page that stays, so the absence assertion
+    // below can't pass merely because nothing has rendered yet.
+    await screen.findByRole('checkbox', { name: 'Feeding reminder' });
+    expect(screen.queryByRole('link', { name: 'Export data' })).not.toBeInTheDocument();
   });
 
   it('opens the confirm dialog when Delete is clicked, and cancel closes it without deleting', async () => {
@@ -240,9 +297,56 @@ describe('ChildSettings', () => {
         feedingReminderThresholdHours: 6,
         dailySummaryEnabled: false,
         dailySummaryHourLocal: 20,
+        // Untouched fields round-trip unchanged — the form is a full PUT
+        // representation, not a patch.
+        medicalReminderEnabled: true,
+        medicalReminderLeadDays: 3,
       },
     );
     expect(await screen.findByRole('status')).toHaveTextContent('Settings saved.');
+  });
+
+  it('saves the medical reminder toggle and lead time (MED-8)', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    const user = userEvent.setup();
+
+    renderChildSettings();
+
+    const leadDays = await screen.findByLabelText('Lead time (days)');
+    await user.clear(leadDays);
+    await user.type(leadDays, '7');
+    await user.click(screen.getByRole('checkbox', { name: 'Medical reminders' }));
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+
+    expect(mockedNotificationSettingsApi.updateNotificationSettings).toHaveBeenCalledWith(
+      'h1',
+      'c1',
+      expect.objectContaining({
+        medicalReminderEnabled: false,
+        medicalReminderLeadDays: 7,
+      }),
+    );
+  });
+
+  it('rejects a lead time outside 1–30 days without calling the API', async () => {
+    mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({ ...household, role: 'OWNER' });
+    mockedChildApi.fetchChild.mockResolvedValueOnce(child);
+    const user = userEvent.setup();
+
+    renderChildSettings();
+
+    const leadDays = await screen.findByLabelText('Lead time (days)');
+    await user.clear(leadDays);
+    await user.type(leadDays, '99');
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+
+    // The bound is validated in JS rather than via HTML `min`/`max`, so the
+    // user actually sees our own message instead of a silently blocked submit.
+    expect(
+      await screen.findByText('Please enter a whole number of days between 1 and 30.'),
+    ).toBeInTheDocument();
+    expect(mockedNotificationSettingsApi.updateNotificationSettings).not.toHaveBeenCalled();
   });
 
   it('rejects a non-positive threshold client-side without calling the API', async () => {

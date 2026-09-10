@@ -1,6 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { ChildPhotoStorageService } from './child-photo-storage.service';
+import { ChildSex } from './child-sex.enum';
 import { ChildService } from './child.service';
+import { CLEAR_CHILD_SEX } from './dto/update-child.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 const HOUSEHOLD_ID = 'household-1';
@@ -14,6 +16,7 @@ function makeChild(overrides: Partial<Record<string, unknown>> = {}) {
     birthDate: new Date('2024-01-01T00:00:00.000Z'),
     photoPath: null,
     photoMimeType: null,
+    sex: null,
     createdAt: new Date('2024-01-02T00:00:00.000Z'),
     ...overrides,
   };
@@ -95,8 +98,38 @@ describe('ChildService', () => {
         name: created.name,
         birthDate: created.birthDate,
         hasPhoto: false,
+        sex: null,
         createdAt: created.createdAt,
       });
+    });
+
+    it('stores an explicitly chosen sex', async () => {
+      prisma.child.create.mockResolvedValue(makeChild({ sex: ChildSex.FEMALE }));
+
+      const result = await service.create(HOUSEHOLD_ID, {
+        name: 'Alex',
+        birthDate: '2024-01-01T00:00:00.000Z',
+        sex: ChildSex.FEMALE,
+      });
+
+      expect(prisma.child.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ sex: ChildSex.FEMALE }),
+      });
+      expect(result.sex).toBe(ChildSex.FEMALE);
+    });
+
+    it('stores "not specified" as a null column rather than a placeholder string', async () => {
+      prisma.child.create.mockResolvedValue(makeChild());
+
+      const result = await service.create(HOUSEHOLD_ID, {
+        name: 'Alex',
+        birthDate: '2024-01-01T00:00:00.000Z',
+      });
+
+      expect(prisma.child.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ sex: null }),
+      });
+      expect(result.sex).toBeNull();
     });
 
     it('writes the photo file before the DB row, and includes its path/mime type', async () => {
@@ -173,6 +206,44 @@ describe('ChildService', () => {
   });
 
   describe('update', () => {
+    it('sets the sex when one is supplied', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild());
+      prisma.child.update.mockResolvedValue(makeChild({ sex: ChildSex.MALE }));
+
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, { sex: ChildSex.MALE });
+
+      expect(prisma.child.update).toHaveBeenCalledWith({
+        where: { id: CHILD_ID, householdId: HOUSEHOLD_ID },
+        data: { sex: ChildSex.MALE },
+      });
+      expect(result.sex).toBe(ChildSex.MALE);
+    });
+
+    it('clears the sex back to "not specified" on the empty-string sentinel', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild({ sex: ChildSex.MALE }));
+      prisma.child.update.mockResolvedValue(makeChild({ sex: null }));
+
+      const result = await service.update(HOUSEHOLD_ID, CHILD_ID, { sex: CLEAR_CHILD_SEX });
+
+      expect(prisma.child.update).toHaveBeenCalledWith({
+        where: { id: CHILD_ID, householdId: HOUSEHOLD_ID },
+        data: { sex: null },
+      });
+      expect(result.sex).toBeNull();
+    });
+
+    it('leaves the stored sex untouched when the field is absent', async () => {
+      prisma.child.findUnique.mockResolvedValue(makeChild({ sex: ChildSex.MALE }));
+      prisma.child.update.mockResolvedValue(makeChild({ sex: ChildSex.MALE }));
+
+      await service.update(HOUSEHOLD_ID, CHILD_ID, { name: 'Alexa' });
+
+      expect(prisma.child.update).toHaveBeenCalledWith({
+        where: { id: CHILD_ID, householdId: HOUSEHOLD_ID },
+        data: { name: 'Alexa' },
+      });
+    });
+
     it('writes new -> updates DB -> deletes old, in that order, when replacing a photo', async () => {
       const callOrder: string[] = [];
       prisma.child.findUnique.mockResolvedValue(

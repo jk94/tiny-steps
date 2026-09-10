@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Child, DiaperDetail, Event, Prisma } from '@prisma/client';
+import { assertMayEditEntry } from '../common/authorization/assert-entry-owner';
+import type { HouseholdActor } from '../household/decorators/household-actor.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventType } from '../event/event-type.enum';
 import { assertNoLaterServerWrite } from '../event/event-conflict.exception';
@@ -150,6 +152,7 @@ export class DiaperService {
     householdId: string,
     childId: string,
     eventId: string,
+    actor: HouseholdActor,
     dto: UpdateDiaperEventDto,
   ): Promise<DiaperEventSummary> {
     // The LWW read-check-write must be atomic: reading `updatedAt`, gating on
@@ -161,6 +164,10 @@ export class DiaperService {
     // read-check-write call site.
     const updated = await this.prisma.$transaction(async (tx) => {
       const existing = await this.findDiaperEventOrThrow(householdId, childId, eventId, tx);
+
+      // A CAREGIVER may only edit what they recorded themselves — a check the
+      // route-level role annotation cannot make, since it needs the row.
+      assertMayEditEntry(actor, existing.userId);
 
       // Last-Write-Wins: a buffered offline edit older than the current server
       // row loses — see ADR-0011. Checked before any write.

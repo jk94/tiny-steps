@@ -140,6 +140,8 @@ model MilestonePhoto {
 ```
 
 Hinweise:
+- **Umgesetzt weicht ab:** statt `customTitle` gibt es ein immer gesetztes `title` — siehe
+  „Zu treffende Entscheidungen" Punkt 2. Maßgeblich ist `apps/backend/prisma/schema.prisma`.
 - Die Eindeutigkeitsregel `@@unique([childId, templateKey])` behandelt in SQLite mehrere
   `NULL`-Werte als verschieden — freie Einträge kollidieren also nicht. Dieses Verhalten ist
   gewollt und gehört in einen Kommentar am Modell, weil es je nach Datenbank abweichen kann und
@@ -193,11 +195,22 @@ Haushalt ist bewusst **nicht** Teil des Umfangs.
 
 1. **Vorlagenkatalog im Code statt in der Datenbank** — im Umsetzungs-PR kurz begründen; ein
    eigener ADR ist dafür vermutlich zu schwer, sofern die Entscheidung unstrittig bleibt.
-2. **Anzeigetext bei Vorlagen nicht mitspeichern** (Übersetzung zur Laufzeit) — hat die Folge, dass
-   ein späteres Umbenennen einer Vorlage rückwirkend alle Einträge umbenennt. Das ist gewollt
-   (Sprachwechsel soll wirken), muss aber bewusst bestätigt sein.
+2. ~~**Anzeigetext bei Vorlagen nicht mitspeichern**~~ — bei der Umsetzung **umgekehrt entschieden**:
+   `Milestone.title` ist immer gesetzt und wird bei Vorlagen aus dem übersetzten Katalogtext zum
+   Zeitpunkt der Erfassung eingefroren. Der Preis (ein Sprachwechsel übersetzt bestehende Einträge
+   nicht mit) ist bewusst akzeptiert: Ein Meilenstein ist eine Erinnerung, und das Umbenennen einer
+   Vorlage in einem späteren Release darf nicht rückwirkend umformulieren, was Eltern vor Jahren
+   festgehalten haben. Der i18n-Katalog bleibt bestehen, speist aber nur noch die Katalogansicht und
+   das Vorbelegen des Formulars — nie die Anzeige gespeicherter Einträge. Entsprechend ist bei einem
+   Vorlagen-Eintrag `title` (wie `category`) nicht mehr änderbar.
 3. **Kategorie-Farben** in die Design-Tokens aufnehmen — durchläuft den
    [Abgleichsprozess](../../design-system/reconciliation-process.md).
+
+Ebenfalls abweichend umgesetzt: Meilensteine landen — wie schon die Wachstumsmessungen aus 7.1 —
+im **bestehenden flachen Rohdaten-Export** (neue Spalten strikt am Ende, `recordKind='MILESTONE'`)
+statt als eigener Datensatz gemäß [bereichsübergreifender Festlegung 5](README.md). Eine Datei mit
+Diskriminator-Spalte ist das, womit ein Tabellen-Nutzer arbeiten kann; die domänenspezifische
+Aufbereitung gehört in den PDF-Bericht aus 7.4.
 
 ## Offene Punkte
 
@@ -208,20 +221,20 @@ Haushalt ist bewusst **nicht** Teil des Umfangs.
 
 ## Aufgaben
 
-- [ ] Datenmodell `Milestone`/`MilestonePhoto` inkl. Prisma-Migration
-- [ ] Vorlagenkatalog (20 Einträge, siehe oben) als Code-Konstante anlegen und Texte final formulieren
-- [ ] Backend-Modul `milestone` (Controller, Service, DTOs, Validierung nach M-1 bis M-6)
-- [ ] Foto-Upload/-Auslieferung/-Löschung unter Wiederverwendung der Konstanten und Muster aus ADR-0003
-- [ ] Gemeinsame Foto-Konstanten aus `child-photo.constants.ts` extrahieren, statt sie zu duplizieren
-- [ ] Timeline-Ansicht mit Kategorie-Kennzeichnung und Fotovorschau
-- [ ] Vorlagenkatalog-Ansicht mit Erledigt-Kennzeichnung (M-12)
-- [ ] Erfassungs-/Bearbeitungs-UI inkl. Mehrfach-Upload mit Einzelfehlerbehandlung
-- [ ] Kategorie-Farb-Tokens ergänzen, `design-tokens:build` ausführen, Kontrasttest erweitern
-- [ ] Übersichtskarte „Meilensteine" auf `ChildHome` (M-13)
-- [ ] i18n-Texte (de/en) inkl. aller Vorlagenbezeichnungen
-- [ ] Rohdaten-Export um Meilensteine erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
-- [ ] Betreiber-Dokumentation um den Speicherplatz-/Backup-Hinweis ergänzen
-- [ ] Unit-/Komponententests: Vorlagen-Eindeutigkeit, Validierung, Foto-Grenzen, Löschkaskade, Fehlerzustände
+- [x] Datenmodell `Milestone`/`MilestonePhoto` inkl. Prisma-Migration
+- [x] Vorlagenkatalog (20 Einträge, siehe oben) als Code-Konstante anlegen und Texte final formulieren
+- [x] Backend-Modul `milestone` (Controller, Service, DTOs, Validierung nach M-1 bis M-6)
+- [x] Foto-Upload/-Auslieferung/-Löschung unter Wiederverwendung der Konstanten und Muster aus ADR-0003
+- [x] Gemeinsame Foto-Konstanten aus `child-photo.constants.ts` extrahieren, statt sie zu duplizieren
+- [x] Timeline-Ansicht mit Kategorie-Kennzeichnung und Fotovorschau
+- [x] Vorlagenkatalog-Ansicht mit Erledigt-Kennzeichnung (M-12)
+- [x] Erfassungs-/Bearbeitungs-UI inkl. Mehrfach-Upload mit Einzelfehlerbehandlung
+- [x] Kategorie-Farb-Tokens ergänzen, `design-tokens:build` ausführen, Kontrasttest erweitern
+- [x] Übersichtskarte „Meilensteine" auf `ChildHome` (M-13)
+- [x] i18n-Texte (de/en) inkl. aller Vorlagenbezeichnungen
+- [x] Rohdaten-Export um Meilensteine erweitern (Abstimmung mit [7.4](phase-7-4-erweiterter-export-pdf.md))
+- [x] Betreiber-Dokumentation um den Speicherplatz-/Backup-Hinweis ergänzen
+- [x] Unit-/Komponententests: Vorlagen-Eindeutigkeit, Validierung, Foto-Grenzen, Löschkaskade, Fehlerzustände
 
 ## Definition of Done
 
@@ -230,8 +243,10 @@ Haushalt ist bewusst **nicht** Teil des Umfangs.
 - Mehrere Fotos pro Meilenstein können hochgeladen, angezeigt und einzeln gelöscht werden; beim
   Löschen eines Meilensteins bleiben keine Dateien zurück.
 - Fotos sind nur für Haushaltsmitglieder abrufbar; Dateipfade verlassen den Server nie.
-- Timeline und Vorlagenkatalog sind vollständig übersetzt (de/en); Vorlagentexte kommen aus den
-  i18n-Ressourcen, nicht aus der Datenbank.
+- Timeline und Vorlagenkatalog sind vollständig übersetzt (de/en); die Vorlagentexte **im Katalog
+  und im Formular** kommen aus den i18n-Ressourcen. Der Anzeigetext eines **gespeicherten** Eintrags
+  kommt hingegen aus `Milestone.title` — er wird bei der Erfassung aus dem übersetzten Katalogtext
+  eingefroren (siehe „Zu treffende Entscheidungen" Punkt 2, bei der Umsetzung umgekehrt entschieden).
 - Kategorie-Farben erfüllen den WCAG-AA-Kontrast und sind über den Kontrast-Regressionstest
   abgesichert.
 - Meilensteine sind im Rohdaten-Export enthalten.

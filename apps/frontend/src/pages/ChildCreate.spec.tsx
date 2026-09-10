@@ -66,7 +66,7 @@ describe('ChildCreate', () => {
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
 
-  it('shows a forbidden message for a CO_PARENT instead of the form', async () => {
+  it('renders the ChildForm for a CO_PARENT, who may create children server-side', async () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({
       id: 'h1',
       name: 'Team Müller',
@@ -77,10 +77,29 @@ describe('ChildCreate', () => {
     renderChildCreate();
 
     expect(
-      await screen.findByText('Only the household owner can perform this action.'),
+      await screen.findByRole('heading', { name: 'Create child profile' }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
+
+  it.each(['CAREGIVER', 'OBSERVER'] as const)(
+    'shows a forbidden message for a %s instead of the form',
+    async (role) => {
+      mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({
+        id: 'h1',
+        name: 'Team Müller',
+        role,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      });
+
+      renderChildCreate();
+
+      expect(
+        await screen.findByText('Only the household owner can perform this action.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    },
+  );
 
   it('creates the child, invalidates the children query, and navigates on success', async () => {
     mockedHouseholdApi.fetchHousehold.mockResolvedValueOnce({
@@ -95,6 +114,7 @@ describe('ChildCreate', () => {
       name: 'Alex',
       birthDate: '2020-01-01',
       hasPhoto: false,
+      sex: null,
       createdAt: '2020-01-01T00:00:00.000Z',
     });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');

@@ -6,19 +6,22 @@ import { ChildPhoto } from './ChildPhoto';
 import { LoadingIndicator } from './LoadingIndicator';
 import { Card, EmptyState } from './ui';
 import { cn } from '../lib/cn';
+import { canWrite, FULL_WRITE_ROLES, type HouseholdRole } from '../lib/householdPermissions';
 
 export interface ChildListProps {
   householdId: string;
-  role: 'OWNER' | 'CO_PARENT';
+  role: HouseholdRole;
 }
 
 const EVENT_TYPE_PILL = 'bg-feeding text-feeding-foreground';
 const PILL_CLASS = 'rounded-full px-2.5 py-1 text-xs font-medium hover:opacity-90';
 
 /**
- * Children list within `HouseholdDetail`. "Add child" is OWNER-only (child
- * creation is restricted server-side to OWNER — see `ChildController`),
- * completely hidden rather than disabled for a CO_PARENT. Each child row is
+ * Children list within `HouseholdDetail`. "Add child" needs `FULL_WRITE_ROLES`
+ * — OWNER *and* CO_PARENT, matching the `@RequireRole(...FULL_WRITE_ROLES)` on
+ * `ChildController.create`; it used to be hidden for a CO_PARENT who was in
+ * fact allowed to add children. It stays completely hidden, not disabled, for
+ * a CAREGIVER/OBSERVER. Each child row is
  * the entry point into that child's routes — there's no other UI to pick a
  * "current child". The whole row opens that child's home dashboard
  * (`ChildHome`), which links onward to the daily timeline, via the
@@ -45,7 +48,7 @@ export function ChildList({ householdId, role }: ChildListProps) {
         <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
           {t('child.list.title')}
         </h2>
-        {role === 'OWNER' && (
+        {canWrite(role, FULL_WRITE_ROLES) && (
           <Link
             to={`/households/${householdId}/children/new`}
             className="text-sm font-medium text-primary hover:underline"

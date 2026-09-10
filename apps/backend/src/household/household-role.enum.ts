@@ -1,7 +1,16 @@
 /**
- * Roles a `Membership` can carry within a `Household`. MVP only defines
- * `OWNER`/`CO_PARENT` (see PRD section 3) — `Betreuer`/`Beobachter` are
- * later additions.
+ * Roles a `Membership` can carry within a `Household` (see PRD section 3):
+ *
+ * - `OWNER` (Elternteil) — full read/write plus household administration
+ *   (invite/remove members, change roles, rename/delete the household).
+ * - `CO_PARENT` — full read/write on the household's data, no administration.
+ * - `CAREGIVER` (Betreuer) — may record entries and edit their *own*, may
+ *   export, but may not delete, edit others' entries or manage child profiles.
+ * - `OBSERVER` (Beobachter) — read-only, plus their own notification settings.
+ *
+ * Which role may do what is expressed once, declaratively, in
+ * `household-permissions.ts`; routes reference the named bundles from there
+ * rather than listing roles inline.
  *
  * Persisted as a plain `String` column on `Membership.role`, not a Prisma
  * `enum`, because Prisma's `enum` type is not supported on the SQLite
@@ -13,6 +22,8 @@
 export enum HouseholdRole {
   OWNER = 'OWNER',
   CO_PARENT = 'CO_PARENT',
+  CAREGIVER = 'CAREGIVER',
+  OBSERVER = 'OBSERVER',
 }
 
 /**

@@ -24,6 +24,13 @@ const badgeVariants = cva(
         'diaper-pee': 'border-transparent bg-diaper-pee text-diaper-pee-foreground',
         'diaper-stool': 'border-transparent bg-diaper-stool text-diaper-stool-foreground',
         'diaper-both': 'border-transparent bg-diaper-both text-diaper-both-foreground',
+        'milestone-motor': 'border-transparent bg-milestone-motor text-milestone-motor-foreground',
+        'milestone-language':
+          'border-transparent bg-milestone-language text-milestone-language-foreground',
+        'milestone-social':
+          'border-transparent bg-milestone-social text-milestone-social-foreground',
+        'milestone-physical':
+          'border-transparent bg-milestone-physical text-milestone-physical-foreground',
       },
       size: {
         sm: 'px-2 py-0.5 text-xs',
@@ -46,9 +53,9 @@ export interface BadgeProps
  * Small, purely-presentational status/category label. Renders a non-interactive
  * `<span>` — it must never be a button/link (assert-tested), which is why it
  * deliberately does NOT take shadcn's `asChild`/`Slot` escape hatch. Provides
- * semantic variants (default/success/warning/destructive) and one variant per
- * event type so timeline/list entries can be color-coded from the design
- * tokens.
+ * semantic variants (default/success/warning/destructive), one variant per
+ * event type, and one per milestone category, so timeline/list entries can be
+ * color-coded from the design tokens.
  */
 export function Badge({ className, variant, size, ...props }: BadgeProps) {
   return (

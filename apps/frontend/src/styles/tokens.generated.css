@@ -50,6 +50,18 @@
   --rt-color-diaper-stool-foreground: #ffffff;
   --rt-color-diaper-both: #0d9488;
   --rt-color-diaper-both-foreground: #000000;
+  --rt-color-growth-weight: #4338ca;
+  --rt-color-growth-length: #047857;
+  --rt-color-growth-head-circumference: #a21caf;
+  --rt-color-growth-band: #4338ca;
+  --rt-color-milestone-motor: #4338ca;
+  --rt-color-milestone-motor-foreground: #ffffff;
+  --rt-color-milestone-language: #0f766e;
+  --rt-color-milestone-language-foreground: #ffffff;
+  --rt-color-milestone-social: #d97706;
+  --rt-color-milestone-social-foreground: #000000;
+  --rt-color-milestone-physical: #be123c;
+  --rt-color-milestone-physical-foreground: #ffffff;
 
   /* Breakpoints */
   --breakpoint-sm: 480px;
@@ -74,6 +86,7 @@
   /* Typography */
   --font-family-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-family-report: Inter;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -145,6 +158,18 @@
     --rt-color-diaper-stool-foreground: #1f2933;
     --rt-color-diaper-both: #2dd4bf;
     --rt-color-diaper-both-foreground: #1f2933;
+    --rt-color-growth-weight: #818cf8;
+    --rt-color-growth-length: #34d399;
+    --rt-color-growth-head-circumference: #e879f9;
+    --rt-color-growth-band: #818cf8;
+    --rt-color-milestone-motor: #a5b4fc;
+    --rt-color-milestone-motor-foreground: #1f2933;
+    --rt-color-milestone-language: #5eead4;
+    --rt-color-milestone-language-foreground: #1f2933;
+    --rt-color-milestone-social: #fcd34d;
+    --rt-color-milestone-social-foreground: #1f2933;
+    --rt-color-milestone-physical: #fda4af;
+    --rt-color-milestone-physical-foreground: #1f2933;
   }
 }
 
@@ -191,6 +216,18 @@
   --rt-color-diaper-stool-foreground: #1f2933;
   --rt-color-diaper-both: #2dd4bf;
   --rt-color-diaper-both-foreground: #1f2933;
+  --rt-color-growth-weight: #818cf8;
+  --rt-color-growth-length: #34d399;
+  --rt-color-growth-head-circumference: #e879f9;
+  --rt-color-growth-band: #818cf8;
+  --rt-color-milestone-motor: #a5b4fc;
+  --rt-color-milestone-motor-foreground: #1f2933;
+  --rt-color-milestone-language: #5eead4;
+  --rt-color-milestone-language-foreground: #1f2933;
+  --rt-color-milestone-social: #fcd34d;
+  --rt-color-milestone-social-foreground: #1f2933;
+  --rt-color-milestone-physical: #fda4af;
+  --rt-color-milestone-physical-foreground: #1f2933;
 }
 
 @theme inline {
@@ -236,6 +273,18 @@
   --color-diaper-stool-foreground: var(--rt-color-diaper-stool-foreground);
   --color-diaper-both: var(--rt-color-diaper-both);
   --color-diaper-both-foreground: var(--rt-color-diaper-both-foreground);
+  --color-growth-weight: var(--rt-color-growth-weight);
+  --color-growth-length: var(--rt-color-growth-length);
+  --color-growth-head-circumference: var(--rt-color-growth-head-circumference);
+  --color-growth-band: var(--rt-color-growth-band);
+  --color-milestone-motor: var(--rt-color-milestone-motor);
+  --color-milestone-motor-foreground: var(--rt-color-milestone-motor-foreground);
+  --color-milestone-language: var(--rt-color-milestone-language);
+  --color-milestone-language-foreground: var(--rt-color-milestone-language-foreground);
+  --color-milestone-social: var(--rt-color-milestone-social);
+  --color-milestone-social-foreground: var(--rt-color-milestone-social-foreground);
+  --color-milestone-physical: var(--rt-color-milestone-physical);
+  --color-milestone-physical-foreground: var(--rt-color-milestone-physical-foreground);
   /* Breakpoints (literal — media queries cannot read a CSS variable) */
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
@@ -257,6 +306,7 @@
   /* Typography */
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);
+  --font-report: var(--font-family-report);
   --text-xs: var(--font-size-xs);
   --text-sm: var(--font-size-sm);
   --text-base: var(--font-size-base);

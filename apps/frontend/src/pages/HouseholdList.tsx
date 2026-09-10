@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listHouseholds } from '../api/household-api';
 import { Badge, Card, EmptyState, Skeleton } from '../components/ui';
+import { householdRoleLabelKey } from '../household/householdRoleLabelKey';
 
 /**
  * `['households']` query key — also invalidated by `HouseholdCreate`,
@@ -60,13 +61,7 @@ export function HouseholdList() {
                     <span aria-hidden="true" className="font-semibold text-foreground">
                       {household.name}
                     </span>
-                    <Badge>
-                      {t(
-                        household.role === 'OWNER'
-                          ? 'household.list.roleOwner'
-                          : 'household.list.roleCoParent',
-                      )}
-                    </Badge>
+                    <Badge>{t(householdRoleLabelKey(household.role))}</Badge>
                   </Link>
                 </Card.Body>
               </Card>

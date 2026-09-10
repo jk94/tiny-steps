@@ -5,6 +5,10 @@ import { MemoryRouter } from 'react-router';
 import App from './App';
 import * as useAuthModule from './auth/useAuth';
 import * as oidcApi from './api/oidc-api';
+import * as childApi from './api/child-api';
+import * as growthApi from './api/growth-api';
+import * as milestoneApi from './api/milestone-api';
+import * as healthRecordApi from './api/health-record-api';
 import * as householdApi from './api/household-api';
 import * as inviteApi from './api/invite-api';
 import { queryClient } from './lib/query-client';
@@ -12,6 +16,18 @@ import * as useRealtimeConnectionModule from './realtime/useRealtimeConnection';
 
 vi.mock('./auth/useAuth');
 vi.mock('./api/oidc-api');
+vi.mock('./api/child-api');
+vi.mock('./api/growth-api');
+// Partial mock: the query-key factories must stay real, since an
+// auto-mocked one returns `undefined` and React Query rejects that.
+vi.mock('./api/milestone-api', async () => {
+  const actual = await vi.importActual<typeof milestoneApi>('./api/milestone-api');
+  return { ...actual, listMilestones: vi.fn() };
+});
+vi.mock('./api/health-record-api', async () => {
+  const actual = await vi.importActual<typeof healthRecordApi>('./api/health-record-api');
+  return { ...actual, listHealthRecords: vi.fn() };
+});
 vi.mock('./api/household-api');
 vi.mock('./api/invite-api');
 vi.mock('./realtime/useRealtimeConnection');
@@ -19,6 +35,10 @@ vi.mock('./realtime/useHouseholdRoom');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedOidcApi = vi.mocked(oidcApi);
+const mockedChildApi = vi.mocked(childApi);
+const mockedGrowthApi = vi.mocked(growthApi);
+const mockedMilestoneApi = vi.mocked(milestoneApi);
+const mockedHealthRecordApi = vi.mocked(healthRecordApi);
 const mockedHouseholdApi = vi.mocked(householdApi);
 const mockedInviteApi = vi.mocked(inviteApi);
 const mockedUseRealtimeConnection = vi.mocked(useRealtimeConnectionModule.useRealtimeConnection);
@@ -206,5 +226,112 @@ describe('App', () => {
     renderAppAt('/invites/a-token');
 
     expect(screen.getByRole('heading', { name: 'Invitation' })).toBeInTheDocument();
+  });
+
+  it('renders the growth page at the child growth route', async () => {
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      updateName: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedChildApi.fetchChild.mockResolvedValue({
+      id: 'c1',
+      householdId: 'h1',
+      name: 'Mia',
+      birthDate: '2025-01-01T00:00:00.000Z',
+      hasPhoto: false,
+      sex: 'FEMALE',
+      createdAt: '2025-01-02T00:00:00.000Z',
+    });
+    mockedGrowthApi.listGrowthMeasurements.mockResolvedValue([]);
+    mockedGrowthApi.fetchGrowthReference.mockResolvedValue({
+      indicator: 'WEIGHT_FOR_AGE',
+      sex: null,
+      available: false,
+      reason: 'CHILD_SEX_NOT_SET',
+    });
+    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([]);
+
+    renderAppAt('/households/h1/children/c1/growth');
+
+    expect(await screen.findByRole('heading', { name: 'Growth — Mia' })).toBeInTheDocument();
+  });
+
+  it('renders the milestone page at the child milestones route', async () => {
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      updateName: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedChildApi.fetchChild.mockResolvedValue({
+      id: 'c1',
+      householdId: 'h1',
+      name: 'Mia',
+      birthDate: '2025-01-01T00:00:00.000Z',
+      hasPhoto: false,
+      sex: 'FEMALE',
+      createdAt: '2025-01-02T00:00:00.000Z',
+    });
+    mockedMilestoneApi.listMilestones.mockResolvedValue([]);
+    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([]);
+
+    renderAppAt('/households/h1/children/c1/milestones');
+
+    expect(await screen.findByRole('heading', { name: 'Milestones — Mia' })).toBeInTheDocument();
+  });
+
+  it('renders the health-record overview at the child health route', async () => {
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: '1',
+        email: 'parent@example.com',
+        name: 'Bernd',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      updateName: vi.fn(),
+      logout: vi.fn(),
+    });
+    mockedChildApi.fetchChild.mockResolvedValue({
+      id: 'c1',
+      householdId: 'h1',
+      name: 'Mia',
+      birthDate: '2025-01-01T00:00:00.000Z',
+      hasPhoto: false,
+      sex: 'FEMALE',
+      createdAt: '2025-01-02T00:00:00.000Z',
+    });
+    mockedHealthRecordApi.listHealthRecords.mockResolvedValue([]);
+    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([]);
+
+    renderAppAt('/households/h1/children/c1/health');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Medications & vaccinations for Mia' }),
+    ).toBeInTheDocument();
   });
 });

@@ -38,6 +38,9 @@ model User {
 
   memberships          Membership[]
   events               Event[]
+  growthMeasurements   GrowthMeasurement[]
+  milestones           Milestone[]
+  healthRecords        HealthRecord[]
   refreshTokens        RefreshToken[]
   createdInvites       Invite[]               @relation("InviteCreatedBy")
   acceptedInvites      Invite[]               @relation("InviteAcceptedBy")
@@ -86,8 +89,9 @@ model Membership {
   id          String   @id @default(cuid())
   userId      String
   householdId String
-  // Stores a `HouseholdRole` string value (Owner/Co-Parent/...; see PRD
-  // section 3 and `src/household/household-role.enum.ts`). Kept as a plain
+  // Stores a `HouseholdRole` string value (OWNER/CO_PARENT/CAREGIVER/
+  // OBSERVER; see PRD section 3 and `src/household/household-role.enum.ts`,
+  // with the per-action rules in `household-permissions.ts`). Kept as a plain
   // `String`, not a Prisma `enum`, because Prisma's `enum` type is not
   // supported on the SQLite connector — this is permanent, not a migration
   // stepping stone. Enforced at the application layer via
@@ -106,7 +110,9 @@ model Invite {
   tokenHash        String    @unique
   householdId      String
   createdByUserId  String
-  // HouseholdRole granted on acceptance; MVP always CO_PARENT, set server-side only.
+  // HouseholdRole granted on acceptance. Chosen by the inviting OWNER out of
+  // `INVITABLE_ROLES` (never OWNER) and always set server-side; the invitee
+  // cannot influence it.
   role             String
   expiresAt        DateTime
   revokedAt        DateTime?
@@ -130,11 +136,235 @@ model Child {
   // ADR-0003. Null when no photo has been uploaded.
   photoPath     String?
   photoMimeType String?
+  // Optional biological sex ('FEMALE' | 'MALE'; see
+  // `src/child/child-sex.enum.ts`). Null means "not specified", which is a
+  // first-class state, not missing data: without it the app shows growth
+  // values and trends but deliberately no WHO percentiles (W-10), rather than
+  // guessing a default. This is the ONLY thing the field drives — nothing
+  // else in the app branches on it. Plain `String`, not a Prisma `enum`, for
+  // the same reason as `Membership.role`/`Event.type` (SQLite connector); read
+  // exclusively through `toChildSex()`. See ADR-0002 and ADR-0006's
+  // GrowthMeasurement addendum.
+  sex           String?
   createdAt     DateTime @default(now())
 
   household            Household              @relation(fields: [householdId], references: [id])
   events               Event[]
+  growthMeasurements   GrowthMeasurement[]
+  milestones           Milestone[]
+  healthRecords        HealthRecord[]
   notificationSettings NotificationSettings[]
+}
+
+/// A body-measurement record (weight / length or height / head circumference)
+/// taken at an arbitrary point in time, typically after a pediatric check-up.
+///
+/// Deliberately a standalone table beside `Event` rather than a fourth event
+/// type: it has its own `measuredAt` semantics, no timer duality, several
+/// optional values per row, sex-specific derived percentiles, and it is not
+/// part of the mixed daily activity timeline — see ADR-0006's addendum.
+model GrowthMeasurement {
+  id                           String   @id @default(cuid())
+  childId                      String
+  // The household member who recorded the measurement, mirroring
+  // `Event.userId` (W-7).
+  userId                       String
+  measuredAt                   DateTime
+  // All three values are individually optional (W-2), but at least one must be
+  // present (W-1) — enforced at the application layer, since that is a
+  // cross-column rule SQLite cannot express as a column constraint.
+  // Stored as integers in fixed base units (W-3): grams and millimetres. No
+  // floats, so a value can never drift through rounding.
+  weightGrams                  Int?
+  lengthMillimeters            Int?
+  headCircumferenceMillimeters Int?
+  // Manual override of the body-measure method (W-18): 'LYING' | 'STANDING'.
+  // Null means "derive automatically from age at measurement time" (W-17) —
+  // the normal case, not a missing value. Plain `String`, not a Prisma `enum`
+  // (SQLite connector, ADR-0002); read via `toLengthMeasurementPosition()`.
+  lengthMeasurementPosition    String?
+  note                         String?
+  createdAt                    DateTime @default(now())
+  // Server-side write timestamp. Unlike `Event.updatedAt` this is NOT a
+  // Last-Write-Wins tiebreak: growth tracking is an online-only feature with
+  // no offline buffering (W-16), so ADR-0011 does not apply here. Kept for
+  // traceability and the raw-data export.
+  updatedAt                    DateTime @updatedAt
+
+  // Cascade: a measurement is meaningless without its child, and deleting a
+  // child profile must not be blocked by an FK constraint — same pattern as
+  // the Event detail tables.
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  // Deliberately no cascade: deleting a user must not silently erase the
+  // measurements they recorded for a shared child, mirroring `Event.user`.
+  user  User  @relation(fields: [userId], references: [id])
+
+  // The only access pattern: a child's measurements in chronological order,
+  // optionally windowed by `measuredAt`.
+  @@index([childId, measuredAt])
+}
+
+/// A developmental milestone ("first smile", "first steps"), either picked
+/// from the code-side template catalog or written freely by a parent.
+///
+/// Like `GrowthMeasurement` a standalone table beside `Event` rather than a
+/// fourth event type (see ADR-0006's addendum): it is a remembrance record
+/// read far more often than written, has no timer semantics, carries photos,
+/// and is deliberately absent from the mixed daily activity timeline.
+model Milestone {
+  id          String   @id @default(cuid())
+  childId     String
+  // The household member who recorded the milestone, mirroring `Event.userId`
+  // (M-14).
+  userId      String
+  // Key from the template catalog (e.g. "FIRST_SMILE"), or null for a free
+  // entry (M-2/M-4). Drives both the uniqueness rule below and the "already
+  // recorded" marker in the catalog view (M-5). Plain `String`, not a Prisma
+  // `enum` (SQLite connector, ADR-0002); read via `toMilestoneTemplate()`.
+  templateKey String?
+  // ALWAYS set, for template and free entries alike. For a template entry this
+  // is the translated catalog label as it read when the entry was created —
+  // the frontend sends it, and it is then frozen. Deliberately a stored value
+  // rather than a runtime translation of `templateKey`: a milestone is a
+  // memory, and renaming a catalog template in a later release must not
+  // retroactively reword what a parent recorded years earlier.
+  title       String
+  // 'MOTOR' | 'LANGUAGE' | 'SOCIAL' | 'PHYSICAL' (M-3). Derived server-side
+  // from the catalog for template entries; an optional free choice for free
+  // entries. Plain `String` for the same reason as `templateKey`; read via
+  // `toMilestoneCategory()`.
+  category    String?
+  // A calendar day (`YYYY-MM-DD` parsed to UTC midnight), stored exactly like
+  // `Child.birthDate` and `GrowthMeasurement.measuredAt` — a milestone happens
+  // on a day, not at an instant.
+  achievedAt  DateTime
+  note        String?
+  createdAt   DateTime @default(now())
+  // Server-side write timestamp. Like `GrowthMeasurement.updatedAt` this is
+  // NOT a Last-Write-Wins tiebreak — milestones are online-only with no
+  // offline buffering (M-15), so ADR-0011 does not apply. Traceability and the
+  // raw-data export only.
+  updatedAt   DateTime @updatedAt
+
+  // Cascade: a milestone is meaningless without its child, and deleting a
+  // child profile must not be blocked by an FK constraint — same pattern as
+  // `GrowthMeasurement`.
+  child  Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  // Deliberately no cascade: deleting a user must not silently erase the
+  // milestones they recorded for a shared child, mirroring `Event.user`.
+  user   User             @relation(fields: [userId], references: [id])
+  photos MilestonePhoto[]
+
+  // Enforces M-5 (one entry per template per child) at the database level.
+  // SQLite treats multiple NULLs as distinct, so free entries (`templateKey`
+  // = null) are unaffected — that is intended, but it is connector-specific
+  // behaviour and has to be re-checked when moving to PostgreSQL/MySQL.
+  @@unique([childId, templateKey])
+  // The only access pattern: a child's milestones in chronological order,
+  // optionally windowed by `achievedAt`.
+  @@index([childId, achievedAt])
+}
+
+/// One photo attached to a milestone (M-7/M-8). Reuses the local-disk storage
+/// pattern from ADR-0003 rather than introducing object storage.
+model MilestonePhoto {
+  id          String   @id @default(cuid())
+  milestoneId String
+  // Path relative to `resolveUploadsDir()` (e.g.
+  // "milestones/<milestoneId>-<uuid>.jpg"), NOT an absolute host path and
+  // NEVER returned to API clients — see `MilestonePhotoStorageService` and
+  // ADR-0003.
+  path        String
+  mimeType    String
+  // Stable render order within one milestone's gallery (M-10), assigned on
+  // upload as "current maximum + 1" so the gallery cannot reshuffle between
+  // loads.
+  sortIndex   Int
+  createdAt   DateTime @default(now())
+
+  // Cascade: deleting a milestone drops its photo rows in one step; the files
+  // themselves are removed best-effort afterwards by `MilestoneService`
+  // (M-9).
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@index([milestoneId, sortIndex])
+}
+
+/// A medication administration or a vaccination — either already given
+/// (`administeredAt`) or still only planned (`dueAt`), or both once a planned
+/// appointment is marked as done.
+///
+/// ONE table with a `kind` discriminator rather than two near-identical ones
+/// (phase-7 Festlegung 1): a medication and a vaccination differ in exactly two
+/// optional columns but share the timing, the reminder state and the whole
+/// overview presentation. Two tables would have doubled both the scheduler
+/// query and the list view for no modelling gain.
+///
+/// The per-`kind` field validity (dose only on a medication, batch only on a
+/// vaccination) and the "at least one date" rule (MED-2) are enforced in
+/// `HealthRecordService`, not in the schema — the same compromise `FeedingDetail`
+/// already makes, see ADR-0006.
+model HealthRecord {
+  id      String @id @default(cuid())
+  childId String
+  // The household member who recorded the entry, mirroring `Event.userId`.
+  userId  String
+  // 'MEDICATION' | 'VACCINATION'. Plain `String`, not a Prisma `enum` (SQLite
+  // connector, ADR-0002); read via `toHealthRecordKind()`.
+  kind    String
+  name    String
+
+  // Set once the dose/vaccination was actually given. Null for a purely
+  // planned appointment. At least one of `administeredAt`/`dueAt` must be set
+  // (MED-2) — a cross-column rule SQLite cannot express, checked in the
+  // service.
+  //
+  // Unlike `Milestone.achievedAt` this is a real instant, not a calendar day:
+  // "which medication at what time" is exactly what matters when several doses
+  // fall on the same day.
+  administeredAt DateTime?
+  // The planned due day, stored as UTC midnight like `Child.birthDate` — a
+  // pediatric appointment is agreed on a day, never on a minute. May lie in
+  // the past, which is what makes an entry overdue (MED-6).
+  dueAt          DateTime?
+
+  // Only for kind = MEDICATION. A dose without a unit is meaningless and
+  // rejected (MED-3).
+  doseAmount Float?
+  doseUnit   String?
+  // Only for kind = VACCINATION — the vaccine/batch designation parents copy
+  // out of the vaccination record (MED-4).
+  vaccineBatch String?
+
+  note String?
+
+  // Opt-in per entry (MED-7), so recording a past dose never schedules a push.
+  reminderEnabled    Boolean   @default(false)
+  // Last reminder push actually delivered for this entry — the de-duplication
+  // basis (MED-9), analogous to `NotificationSettings.feedingReminderLastSentAt`
+  // but stored per record rather than per (user, child), since the trigger it
+  // guards belongs to the appointment, not to a person. Reset to null whenever
+  // `dueAt` changes, which re-arms both triggers.
+  reminderLastSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  // Server-side write timestamp. Like `Milestone.updatedAt` this is NOT a
+  // Last-Write-Wins tiebreak — health records are online-only (MED-15), so
+  // ADR-0011 does not apply. Traceability and the raw-data export only.
+  updatedAt DateTime @updatedAt
+
+  // Cascade: an entry is meaningless without its child, and deleting a child
+  // profile must not be blocked by an FK constraint — same pattern as
+  // `Milestone`.
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  // Deliberately no cascade: deleting a user must not silently erase the
+  // records they made for a shared child, mirroring `Event.user`.
+  user  User  @relation(fields: [userId], references: [id])
+
+  // The overview's two sections (MED-12) and the scheduler's due-window scan
+  // are the only access patterns, and each reads one of the two dates.
+  @@index([childId, dueAt])
+  @@index([childId, administeredAt])
 }
 
 model Event {
@@ -239,6 +469,15 @@ model NotificationSettings {
   // handling yet), matching how the scheduler compares against the current
   // server hour.
   dailySummaryHourLocal         Int       @default(20)
+  // Reminders for planned medications/vaccinations (MED-8). Opt-OUT: a
+  // household member with no settings row at all is treated as enabled with
+  // the default lead time, so a shared appointment is not silently missed.
+  medicalReminderEnabled        Boolean   @default(true)
+  // How many days before `HealthRecord.dueAt` the advance reminder goes out.
+  // The `3` mirrors `MEDICAL_REMINDER_DEFAULT_LEAD_DAYS` in
+  // `notification-settings.service.ts`. De-duplication does NOT live here — it
+  // is per record, on `HealthRecord.reminderLastSentAt`.
+  medicalReminderLeadDays       Int       @default(3)
   createdAt                     DateTime  @default(now())
   updatedAt                     DateTime  @updatedAt
 

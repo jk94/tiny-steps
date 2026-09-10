@@ -8,6 +8,9 @@ import { type EventStatsSummary, fetchEventStats } from '../api/event-api';
 import { mapChildError } from '../child/mapChildError';
 import { ChildPhoto } from '../components/ChildPhoto';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { GrowthSummaryCard } from '../components/growth/GrowthSummaryCard';
+import { MilestoneSummaryCard } from '../components/milestone/MilestoneSummaryCard';
+import { HealthSummaryCard } from '../components/health/HealthSummaryCard';
 import { TimeSinceBadgeCard } from '../components/TimeSinceBadgeCard';
 import { Card, Skeleton } from '../components/ui';
 import { ageInMonths } from '../lib/childAge';
@@ -193,6 +196,16 @@ export function ChildHome() {
         isLoading={statsQuery.isLoading}
         lastEventAt={statsQuery.data?.lastEventAt}
       />
+
+      <GrowthSummaryCard
+        householdId={householdId!}
+        childId={childId!}
+        birthDate={child.birthDate}
+      />
+
+      <MilestoneSummaryCard householdId={householdId!} childId={childId!} />
+
+      <HealthSummaryCard householdId={householdId!} childId={childId!} />
 
       <Link
         to={`/households/${householdId}/children/${childId}/timeline`}
