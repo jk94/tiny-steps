@@ -590,6 +590,20 @@ describe('NotificationSchedulerService', () => {
       });
     });
 
+    it('retries then swallows a failure to stamp reminderLastSentAt, keeping the cron run alive', async () => {
+      clock.now.mockReturnValue(at(20));
+      prisma.healthRecord.findMany.mockResolvedValue([makeRecord()]);
+      withMembers(USER_ID);
+      prisma.notificationSettings.findMany.mockResolvedValue([makeMedicalSettings()]);
+      prisma.healthRecord.update.mockRejectedValue(new Error('DB hiccup'));
+
+      await expect(service.checkMedicalReminders()).resolves.toBeUndefined();
+
+      expect(pushSender.sendToTokens).toHaveBeenCalledTimes(1);
+      // One retry before giving up and logging, rather than propagating.
+      expect(prisma.healthRecord.update).toHaveBeenCalledTimes(2);
+    });
+
     it('still reaches the second member when the first send rejects', async () => {
       const now = at(20);
       clock.now.mockReturnValue(now);

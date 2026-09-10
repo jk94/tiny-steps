@@ -336,10 +336,37 @@ export class NotificationSchedulerService {
     }
 
     if (anySent) {
-      await this.prisma.healthRecord.update({
-        where: { id: record.id },
-        data: { reminderLastSentAt: now },
-      });
+      await this.markReminderSent(record.id, now);
+    }
+  }
+
+  /**
+   * Advances `reminderLastSentAt` after at least one member was notified.
+   *
+   * This bookkeeping write is fault-isolated with a single retry: if it were
+   * to throw and be swallowed by the per-record handler in
+   * `checkMedicalReminders`, the next cron run would still see the stale value
+   * and re-fire the *same* LEAD/DUE trigger for every member who already got
+   * it. A transient failure here is far more acceptable as a logged error than
+   * as a silent duplicate push to the whole household.
+   */
+  private async markReminderSent(recordId: string, now: Date): Promise<void> {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await this.prisma.healthRecord.update({
+          where: { id: recordId },
+          data: { reminderLastSentAt: now },
+        });
+        return;
+      } catch (error) {
+        if (attempt === 2) {
+          this.logger.error(
+            `Failed to record reminderLastSentAt for health record ${recordId} after a sent ` +
+              `medical reminder — the next cron run may re-send this trigger`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        }
+      }
     }
   }
 
