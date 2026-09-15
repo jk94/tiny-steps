@@ -12,6 +12,9 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege default: no GITHUB_TOKEN scopes unless a job opts in below.
+permissions: {}
+
 env:
   # Keep the Bun version pinned in sync with the Dockerfile's build stage.
   BUN_VERSION: 1.3.14
@@ -21,6 +24,8 @@ jobs:
     name: Lint & format check
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -53,6 +58,8 @@ jobs:
     name: Backend (test & build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -90,6 +97,8 @@ jobs:
     name: Frontend (test & build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
