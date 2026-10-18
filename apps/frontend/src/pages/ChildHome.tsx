@@ -7,6 +7,7 @@ import { fetchChild } from '../api/child-api';
 import { type EventStatsSummary, fetchEventStats } from '../api/event-api';
 import { mapChildError } from '../child/mapChildError';
 import { ChildPhoto } from '../components/ChildPhoto';
+import { DevelopmentStageCard } from '../components/development/DevelopmentStageCard';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { GrowthSummaryCard } from '../components/growth/GrowthSummaryCard';
 import { MilestoneSummaryCard } from '../components/milestone/MilestoneSummaryCard';
@@ -93,8 +94,9 @@ function TimeSinceSection({ isLoading, lastEventAt }: TimeSinceSectionProps) {
 /**
  * Per-child home/dashboard — the landing screen after drilling into a
  * household and picking a child (`ChildList` links here). Shows who you're
- * looking at (photo, name, age) and how long ago each of the three tracked
- * event types last happened, then hands off to the daily timeline for detail.
+ * looking at (photo, name, age), what is developmentally typical right now,
+ * and how long ago each of the three tracked event types last happened, then
+ * hands off to the daily timeline for detail.
  *
  * Deliberately not the app's `/` route: that stays the generic post-login
  * welcome page, since there is no global "current child" concept.
@@ -191,6 +193,13 @@ export function ChildHome() {
           </div>
         </Card.Body>
       </Card>
+
+      <DevelopmentStageCard
+        householdId={householdId!}
+        childId={childId!}
+        birthDate={child.birthDate}
+        now={mountedAt}
+      />
 
       <TimeSinceSection
         isLoading={statsQuery.isLoading}

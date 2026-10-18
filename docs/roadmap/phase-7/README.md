@@ -22,6 +22,7 @@ Aufgabenliste mehr.
 | 7.4 | [Erweiterter Export (PDF-Bericht)](phase-7-4-erweiterter-export-pdf.md) | Arztbericht, austauschbarer Renderer | Teilweise umgesetzt (2026-09-03) — externer Renderer offen, siehe [Umsetzungsnotiz](phase-7-4-erweiterter-export-pdf.md#umsetzungsnotiz-reduzierter-scope) |
 | 7.5 | [Erweiterte Rollen](phase-7-5-erweiterte-rollen.md) | Betreuer/Beobachter, Mitglieder- & Rollenverwaltung | Offen |
 | 7.6 | [Nutzereinstellungen & Sprache](phase-7-6-nutzereinstellungen-sprache.md) | Settings-Bereich, persistierte Sprachwahl | Offen |
+| 7.7 | [Entwicklungskalender](phase-7-7-entwicklungskalender.md) | Typische Entwicklung pro Lebenswoche/-monat, Dashboard-Kachel + Detailseite (nachträglicher Wunsch, nicht im PRD) | Umgesetzt (2026-10-18) |
 
 ## Reihenfolge & Abhängigkeiten
 
