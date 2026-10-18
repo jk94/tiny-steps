@@ -1,4 +1,5 @@
 const MONTHS_PER_YEAR = 12;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** A calendar day with no time or timezone attached. */
 interface CalendarDate {
@@ -74,4 +75,26 @@ export function ageInMonths(birthDate: string, now: Date = new Date()): number {
   const hasReachedBirthDayOfMonth = now.getDate() >= effectiveBirthDay;
 
   return Math.max(0, hasReachedBirthDayOfMonth ? elapsedMonths : elapsedMonths - 1);
+}
+
+/**
+ * Whole calendar days since the birth date, counted between the two *local
+ * calendar days* — the child is 0 days old on the day of birth and turns 1 at
+ * the user's next local midnight.
+ *
+ * Both days are projected onto UTC midnight before subtracting, so a DST switch
+ * between them (a 23- or 25-hour local day) cannot round the difference off by
+ * one. Same parsing rules and floor as `ageInMonths`: an unparseable value or a
+ * future birth date yields 0.
+ */
+export function ageInDays(birthDate: string, now: Date = new Date()): number {
+  const birth = parseCalendarDate(birthDate);
+  if (!birth) {
+    return 0;
+  }
+
+  const birthDay = Date.UTC(birth.year, birth.month, birth.day);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return Math.max(0, Math.round((today - birthDay) / MS_PER_DAY));
 }

@@ -839,6 +839,44 @@
       "reminderBodyOverdue": "{{kind}} \"{{name}}\" was due on {{date}}."
     }
   },
+  "development": {
+    "stage": {
+      "week": "Week {{number}}",
+      "month": "Month {{number}}",
+      "monthAge_one": "{{count}} month old",
+      "monthAge_other": "{{count}} months old"
+    },
+    "card": {
+      "title": "Development",
+      "readMore": "Read more",
+      "beyondTitle": "The first three years are done",
+      "beyondText": "The development calendar covers the first three years of life. You can still browse it at any time.",
+      "beyondLink": "Browse the calendar"
+    },
+    "detail": {
+      "backLink": "Back to overview",
+      "currentHint": "This is where {{name}} is now",
+      "toCurrent": "Go to {{name}}’s current stage",
+      "beyondNotice": "{{name}} is already older than three — this is where the development calendar ends. You can still browse every stage.",
+      "tipsTitle": "Ideas for everyday life",
+      "milestonesTitle": "Already happened?",
+      "milestonesText": "Record the moment as a milestone:",
+      "sourcesTitle": "Learn more",
+      "sourceLanguage": {
+        "de": "in German",
+        "en": "in English"
+      },
+      "opensInNewTab": "(opens in a new tab)",
+      "disclaimerTitle": "Good to know",
+      "disclaimer": "Every child develops at their own pace. These texts describe what many children do around this time — they are a guide, not a yardstick, and no substitute for medical advice. If you are worried, talk to your paediatrician.",
+      "prematureHint": "If your child was born more than three weeks early, go by their corrected age (counted from the due date). The calendar counts from the actual date of birth.",
+      "navLabel": "Browse the development calendar",
+      "previous": "Previous: {{label}}",
+      "next": "Next: {{label}}",
+      "notFound": "This stage doesn’t exist in the development calendar.",
+      "loadFailed": "The development calendar couldn’t be loaded. Please check your connection and try again."
+    }
+  },
   "timeline": {
     "title": "Daily timeline — {{name}}",
     "backLink": "Back to overview",

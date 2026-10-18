@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageInMonths } from './childAge';
+import { ageInDays, ageInMonths } from './childAge';
 
 /** Local-time `now` values, so these assertions hold in any test-runner timezone. */
 function localDate(year: number, month: number, day: number): Date {
@@ -52,5 +52,35 @@ describe('ageInMonths', () => {
   it('falls back to 0 for an unparseable birth date rather than returning NaN', () => {
     expect(ageInMonths('', localDate(2026, 3, 14))).toBe(0);
     expect(ageInMonths('not-a-date', localDate(2026, 3, 14))).toBe(0);
+  });
+});
+
+describe('ageInDays', () => {
+  it('is 0 on the day of birth', () => {
+    expect(ageInDays('2026-03-14', localDate(2026, 3, 14))).toBe(0);
+  });
+
+  it('counts calendar days, ignoring the time of day', () => {
+    expect(ageInDays('2026-03-14', new Date(2026, 2, 15, 0, 1))).toBe(1);
+    expect(ageInDays('2026-03-14', new Date(2026, 2, 15, 23, 59))).toBe(1);
+  });
+
+  it('accepts the backend’s UTC-midnight serialization', () => {
+    expect(ageInDays('2026-03-14T00:00:00.000Z', localDate(2026, 3, 21))).toBe(7);
+  });
+
+  it('is not thrown off by a daylight-saving switch in between', () => {
+    // Spans the last Sunday of March (CET -> CEST) and of October.
+    expect(ageInDays('2026-03-20', localDate(2026, 4, 3))).toBe(14);
+    expect(ageInDays('2026-10-20', localDate(2026, 11, 3))).toBe(14);
+  });
+
+  it('spans leap days correctly', () => {
+    expect(ageInDays('2028-02-28', localDate(2028, 3, 1))).toBe(2);
+  });
+
+  it('floors at 0 for a future or unparseable birth date', () => {
+    expect(ageInDays('2026-03-14', localDate(2026, 3, 1))).toBe(0);
+    expect(ageInDays('not a date', localDate(2026, 3, 1))).toBe(0);
   });
 });

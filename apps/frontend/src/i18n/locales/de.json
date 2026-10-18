@@ -839,6 +839,44 @@
       "reminderBodyOverdue": "{{kind}} „{{name}}“ war am {{date}} fällig."
     }
   },
+  "development": {
+    "stage": {
+      "week": "Lebenswoche {{number}}",
+      "month": "Lebensmonat {{number}}",
+      "monthAge_one": "{{count}} Monat alt",
+      "monthAge_other": "{{count}} Monate alt"
+    },
+    "card": {
+      "title": "Entwicklung",
+      "readMore": "Mehr lesen",
+      "beyondTitle": "Die ersten drei Jahre sind geschafft",
+      "beyondText": "Der Entwicklungskalender begleitet die ersten drei Lebensjahre. Du kannst ihn trotzdem jederzeit durchblättern.",
+      "beyondLink": "Kalender durchblättern"
+    },
+    "detail": {
+      "backLink": "Zurück zur Übersicht",
+      "currentHint": "Hier steht {{name}} gerade",
+      "toCurrent": "Zum aktuellen Stand von {{name}}",
+      "beyondNotice": "{{name}} ist schon älter als drei Jahre – hier endet der Entwicklungskalender. Alle Abschnitte lassen sich weiterhin durchblättern.",
+      "tipsTitle": "Ideen für den Alltag",
+      "milestonesTitle": "Schon erlebt?",
+      "milestonesText": "Halte den Moment als Meilenstein fest:",
+      "sourcesTitle": "Mehr erfahren",
+      "sourceLanguage": {
+        "de": "auf Deutsch",
+        "en": "auf Englisch"
+      },
+      "opensInNewTab": "(öffnet in neuem Tab)",
+      "disclaimerTitle": "Gut zu wissen",
+      "disclaimer": "Jedes Kind entwickelt sich in seinem eigenen Tempo. Die Texte beschreiben, was viele Kinder um diese Zeit herum tun – sie sind Orientierung, keine Messlatte, und ersetzen keine ärztliche Beratung. Wenn du dir Sorgen machst, sprich mit deiner Kinderarztpraxis.",
+      "prematureHint": "Kam dein Kind mehr als drei Wochen zu früh zur Welt, orientiere dich am korrigierten Alter (gerechnet ab dem errechneten Geburtstermin). Der Kalender rechnet ab dem tatsächlichen Geburtsdatum.",
+      "navLabel": "Im Entwicklungskalender blättern",
+      "previous": "Zurück: {{label}}",
+      "next": "Weiter: {{label}}",
+      "notFound": "Diesen Abschnitt gibt es im Entwicklungskalender nicht.",
+      "loadFailed": "Die Inhalte des Entwicklungskalenders konnten nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut."
+    }
+  },
   "timeline": {
     "title": "Tagesübersicht — {{name}}",
     "backLink": "Zurück zur Übersicht",

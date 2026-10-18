@@ -110,6 +110,19 @@ describe('ChildHome', () => {
     expect(screen.getByText('4 months old')).toBeInTheDocument();
   });
 
+  it("links the development card for the child's current week of life", async () => {
+    renderChildHome();
+
+    // Born 2025-09-01, viewed 2026-01-01: day 122 -> Lebenswoche 18. Loads the
+    // real (lazy) English content chunk rather than a fixture.
+    const card = await screen.findByRole('link', { name: /Week 18/ });
+    expect(card).toHaveAttribute(
+      'href',
+      `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/development`,
+    );
+    expect(card).toHaveTextContent('Development');
+  });
+
   // Both ends of each band, so an off-by-one boundary constant or a `<`
   // silently turned into a `<=` fails here instead of passing on mid-band times.
   it.each<[string, number, number, string]>([

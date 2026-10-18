@@ -31,6 +31,7 @@ import { HealthRecordOverview } from './pages/HealthRecordOverview';
 import { HealthRecordCreate } from './pages/HealthRecordCreate';
 import { HealthRecordEdit } from './pages/HealthRecordEdit';
 import { DailyTimeline } from './pages/DailyTimeline';
+import { DevelopmentDetail } from './pages/DevelopmentDetail';
 import { Export } from './pages/Export';
 import { InviteAccept } from './pages/InviteAccept';
 
@@ -123,6 +124,14 @@ function App() {
             <Route
               path="households/:householdId/children/:childId/health/:recordId/edit"
               element={<HealthRecordEdit />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/development"
+              element={<DevelopmentDetail />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/development/:stageKey"
+              element={<DevelopmentDetail />}
             />
             <Route
               path="households/:householdId/children/:childId/timeline"

@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Implemented: **Phases 0–6** (scaffolding, auth/multi-user incl. OIDC, tracking core, realtime sync + overview, offline/PWA, export/native wrapper/push, design system M1–M4) and **Phases 7.1–7.5** — 7.4 deliberately in *reduced* scope (no external HTML renderer, no per-domain CSV endpoints).
+Implemented: **Phases 0–6** (scaffolding, auth/multi-user incl. OIDC, tracking core, realtime sync + overview, offline/PWA, export/native wrapper/push, design system M1–M4), **Phases 7.1–7.5** — 7.4 deliberately in *reduced* scope (no external HTML renderer, no per-domain CSV endpoints) — and **7.7** (development calendar, a request-driven addition outside the PRD).
 
 **Open: Phase 7.6** (dedicated user-settings area + server-side persisted language choice; i18n infrastructure itself already exists — [ADR-0005](docs/adr/0005-i18n-infrastructure-brought-forward.md) — with a header language switch and `localStorage` persistence). Phase 8 is still only a brainstorm (`docs/roadmap/phase-8/brainstorm.md`, Alexa skill).
 
-Everything else outstanding is a **manual real-device/real-viewer check** or a documentation follow-up, tracked in [`docs/known-issues.md`](docs/known-issues.md): PWA install, Capacitor Android build + cookie/origin auth smoke test, real push delivery, growth-chart touch scrub, PDF report in a real viewer, mobile CLS/load-time, the German-only push texts, and the Phase-7.5 doc follow-ups (ADR-0002 addendum, ADR-0003 correction, PRD section-3 wording).
+Everything else outstanding is a **manual real-device/real-viewer check** or a documentation follow-up, tracked in [`docs/known-issues.md`](docs/known-issues.md): PWA install, Capacitor Android build + cookie/origin auth smoke test, real push delivery, growth-chart touch scrub, PDF report in a real viewer, mobile CLS/load-time, the German-only push texts, the development calendar's link check and medical review, and the Phase-7.5 doc follow-ups (ADR-0002 addendum, ADR-0003 correction, PRD section-3 wording).
 
 The long-form per-phase notes (what was built, why, and which alternatives were rejected) live in [`docs/implementation-notes.md`](docs/implementation-notes.md). **Read the relevant entry before changing a phase's code** — much of what looks like an oversight there is a recorded decision.
 
@@ -20,6 +20,7 @@ The long-form per-phase notes (what was built, why, and which alternatives were 
 | 7.3 | Medications & vaccinations — one `HealthRecord` table with a `kind` discriminator, reminders reusing the Phase 5 scheduler (daily cron), push deep-linking | `docs/roadmap/phase-7/` |
 | 7.4 | PDF report (`GET .../export/report.pdf`) beside the untouched raw export — renderer-neutral `ReportDocument` IR rendered by `@react-pdf/renderer`; growth chart shared via `packages/growth-chart-static/` | [ADR-0015](docs/adr/0015-pdf-report-generation.md) |
 | 7.5 | Roles `CAREGIVER`/`OBSERVER` beside `OWNER`/`CO_PARENT`; permission matrix + fail-closed `@RequireRole` on every writing route; frontend *hides* disallowed actions | `docs/roadmap/phase-7/phase-7-5-erweiterte-rollen.md` |
+| 7.7 | Development calendar — frontend-only, 52 weeks + months 13–36 per locale in lazy-loaded `development/content/{de,en}.ts` (deliberately **not** in the i18n JSON), one source registry, `ChildHome` card + detail screen | `docs/roadmap/phase-7/phase-7-7-entwicklungskalender.md` |
 
 ## Cross-cutting rules that later work keeps having to respect
 
