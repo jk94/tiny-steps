@@ -66,6 +66,10 @@ FROM node:24.18.0-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app/apps/backend
 
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Non-root user to run the app as.
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
@@ -81,6 +85,7 @@ COPY --from=build /app/apps/backend/node_modules /app/apps/backend/node_modules
 # have to travel with it. Its source is deliberately left behind.
 COPY --from=build /app/packages/growth-chart-static/package.json /app/packages/growth-chart-static/package.json
 COPY --from=build /app/packages/growth-chart-static/dist /app/packages/growth-chart-static/dist
+COPY --from=build /app/packages/growth-chart-static/node_modules /app/packages/growth-chart-static/node_modules
 COPY --from=build /app/apps/backend/dist ./dist
 COPY --from=build /app/apps/backend/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=build /app/apps/backend/prisma/migrations ./prisma/migrations
