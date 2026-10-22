@@ -17,7 +17,7 @@
     },
     "apps/backend": {
       "name": "@baby-tracker/backend",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "dependencies": {
         "@baby-tracker/growth-chart-static": "workspace:*",
         "@nestjs/common": "^11.0.1",
@@ -82,7 +82,7 @@
     },
     "apps/frontend": {
       "name": "@baby-tracker/frontend",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "dependencies": {
         "@baby-tracker/growth-chart-static": "workspace:*",
         "@capacitor/android": "^8.5.0",
@@ -138,7 +138,7 @@
     },
     "packages/growth-chart-static": {
       "name": "@baby-tracker/growth-chart-static",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "dependencies": {
         "@visx/axis": "4.0.0",
         "@visx/curve": "4.0.0",
