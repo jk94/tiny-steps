@@ -11,7 +11,7 @@
 # "Tooling notes" section for why.
 
 # ---- Build stage ------------------------------------------------------------
-FROM node:24.18.0-slim AS build
+FROM node:24.22.1-slim AS build
 
 # Grab the Bun binary from the official Bun image instead of curl-installing
 # it, so we don't need extra apt packages in this stage.
@@ -61,7 +61,7 @@ RUN mkdir -p apps/backend/dist/public \
     && cp -r apps/frontend/dist/. apps/backend/dist/public/
 
 # ---- Runtime stage -----------------------------------------------------------
-FROM node:24.18.0-slim AS runtime
+FROM node:24.22.1-slim AS runtime
 
 ENV NODE_ENV=production
 WORKDIR /app/apps/backend
