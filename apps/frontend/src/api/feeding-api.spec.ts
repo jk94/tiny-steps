@@ -42,6 +42,7 @@ const summary = {
 describe('feeding-api', () => {
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('createFeedingEvent POSTs the input to the feeding-events collection', async () => {
@@ -83,6 +84,33 @@ describe('feeding-api', () => {
 
     expect(mockedApiFetch).toHaveBeenCalledWith(`${BASE_PATH}/active-timer`);
     expect(result).toBeNull();
+  });
+
+  it('fetchActiveFeedingTimer resolves null (not undefined) for the empty body sent when no timer runs', async () => {
+    // The backend's `null` arrives as an empty body, which the real `apiFetch`
+    // maps to `undefined` — run it against a stubbed `fetch` so that mapping is
+    // exercised rather than assumed. React Query rejects `undefined` as data.
+    const actual = await vi.importActual<typeof httpClient>('./http-client');
+    mockedApiFetch.mockImplementationOnce(actual.apiFetch);
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(''),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchActiveFeedingTimer(HOUSEHOLD_ID, CHILD_ID);
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api${BASE_PATH}/active-timer`, expect.anything());
+    expect(result).toBeNull();
+  });
+
+  it('fetchActiveFeedingTimer passes a running timer through unchanged', async () => {
+    mockedApiFetch.mockResolvedValueOnce(summary);
+
+    const result = await fetchActiveFeedingTimer(HOUSEHOLD_ID, CHILD_ID);
+
+    expect(result).toEqual(summary);
   });
 
   it('updateFeedingEvent PATCHes the given input', async () => {
