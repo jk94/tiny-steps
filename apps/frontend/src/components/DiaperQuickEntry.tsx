@@ -11,6 +11,13 @@ import { Button } from './ui';
 export interface DiaperQuickEntryProps {
   householdId: string;
   childId: string;
+  /** Called after a successful create (the quick-add sheet closes on it). */
+  onCreated?: (input: CreateDiaperEventInput) => void;
+  /**
+   * Drops the "Quick entry" heading — for the quick-add sheet, which names
+   * each section itself.
+   */
+  hideTitle?: boolean;
 }
 
 /**
@@ -23,7 +30,12 @@ export interface DiaperQuickEntryProps {
  * A successful create invalidates the diaper-events list query so
  * `DiaperEventList` immediately reflects the new entry.
  */
-export function DiaperQuickEntry({ householdId, childId }: DiaperQuickEntryProps) {
+export function DiaperQuickEntry({
+  householdId,
+  childId,
+  onCreated,
+  hideTitle = false,
+}: DiaperQuickEntryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -31,10 +43,11 @@ export function DiaperQuickEntry({ householdId, childId }: DiaperQuickEntryProps
     // `user` is always non-null here — this component only renders behind `ProtectedRoute`.
     mutationFn: (input: CreateDiaperEventInput) =>
       createDiaperEventOptimistic(householdId, childId, user!.id, input),
-    onSuccess: async () => {
+    onSuccess: async (_data, input) => {
       await queryClient.invalidateQueries({
         queryKey: ['households', householdId, 'children', childId, 'diaper-events'],
       });
+      onCreated?.(input);
     },
   });
 
@@ -42,9 +55,11 @@ export function DiaperQuickEntry({ householdId, childId }: DiaperQuickEntryProps
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-        {t('diaper.quickEntry.title')}
-      </h2>
+      {!hideTitle && (
+        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+          {t('diaper.quickEntry.title')}
+        </h2>
+      )}
       <div className="grid grid-cols-3 gap-2">
         <Button
           type="button"

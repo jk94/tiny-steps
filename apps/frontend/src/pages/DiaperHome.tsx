@@ -10,6 +10,8 @@ import { Skeleton } from '../components/ui';
 import { useHouseholdRole } from '../household/useHouseholdRole';
 import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
+import { AreaPageHeader } from '../components/AreaPageHeader';
+import { CHILD_AREAS } from '../lib/childAreas';
 
 /**
  * Per-child quick-entry screen — the simplest of the three Home pages: no
@@ -62,17 +64,12 @@ export function DiaperHome() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div>
-        <Link
-          to={`/households/${householdId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('diaper.home.backLink')}
-        </Link>
-        <h1 className="mt-1 text-xl font-bold text-foreground">
-          {t('diaper.home.title', { name: child.name })}
-        </h1>
-      </div>
+      <AreaPageHeader
+        area={CHILD_AREAS.diaper}
+        backTo={`/households/${householdId}`}
+        backLabel={t('diaper.home.backLink')}
+        title={t('diaper.home.title', { name: child.name })}
+      />
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex flex-col gap-3 lg:w-home-sidebar lg:flex-none">

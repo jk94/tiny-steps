@@ -27,6 +27,7 @@ import { GrowthMeasurementEdit } from './pages/GrowthMeasurementEdit';
 import { MilestoneTimeline } from './pages/MilestoneTimeline';
 import { MilestoneCreate } from './pages/MilestoneCreate';
 import { MilestoneEdit } from './pages/MilestoneEdit';
+import { MilestoneDetail } from './pages/MilestoneDetail';
 import { HealthRecordOverview } from './pages/HealthRecordOverview';
 import { HealthRecordCreate } from './pages/HealthRecordCreate';
 import { HealthRecordEdit } from './pages/HealthRecordEdit';
@@ -108,6 +109,10 @@ function App() {
             <Route
               path="households/:householdId/children/:childId/milestones/new"
               element={<MilestoneCreate />}
+            />
+            <Route
+              path="households/:householdId/children/:childId/milestones/:milestoneId"
+              element={<MilestoneDetail />}
             />
             <Route
               path="households/:householdId/children/:childId/milestones/:milestoneId/edit"

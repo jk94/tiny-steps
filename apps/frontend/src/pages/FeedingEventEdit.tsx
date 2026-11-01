@@ -124,7 +124,7 @@ export function FeedingEventEdit() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('feeding.edit.title')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('feeding.edit.title')}</h1>
           <FeedingEventForm
             mode="edit"
             initialValues={{

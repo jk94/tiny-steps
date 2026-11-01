@@ -112,4 +112,16 @@ describe('buildReportTokensModule', () => {
     expect(module).toContain("'2xl':");
     expect(module).toContain('    4: 12,');
   });
+
+  it('refuses a value it could not emit verbatim, rather than producing broken code', () => {
+    const quoted = {
+      ...SOURCE,
+      typography: {
+        ...SOURCE.typography,
+        fontFamily: { ...SOURCE.typography.fontFamily, sans: "'Nunito Variable', sans-serif" },
+      },
+    } as ReportTokenSource;
+
+    expect(() => buildReportTokensModule(quoted, '/* header */')).toThrow(/no quotes/);
+  });
 });

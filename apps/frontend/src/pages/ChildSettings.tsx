@@ -137,7 +137,7 @@ export function ChildSettings() {
       >
         {t('settings.backLink')}
       </Link>
-      <h1 className="mb-4 text-xl font-bold text-foreground">{t('settings.title')}</h1>
+      <h1 className="mb-4 text-2xl font-black text-foreground">{t('settings.title')}</h1>
 
       <div className="flex flex-col gap-3">
         {/* Editing and deleting a child profile both need `FULL_WRITE_ROLES`

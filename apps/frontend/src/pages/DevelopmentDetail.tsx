@@ -129,7 +129,7 @@ export function DevelopmentDetail() {
           {stage.kind === 'month' &&
             ` · ${t('development.stage.monthAge', { count: stage.number - 1 })}`}
         </p>
-        <h1 className="text-xl font-bold text-foreground">{entry.title}</h1>
+        <h1 className="text-2xl font-black text-foreground">{entry.title}</h1>
         {isCurrent && (
           <Badge variant="success" size="sm" className="self-start">
             {t('development.detail.currentHint', { name: child.name })}

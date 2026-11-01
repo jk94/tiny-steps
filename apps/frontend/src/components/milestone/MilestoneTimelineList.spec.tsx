@@ -1,29 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { MilestoneTimelineList } from './MilestoneTimelineList';
 import type { MilestoneSummary } from '../../api/milestone-api';
-import * as milestoneApi from '../../api/milestone-api';
-import * as householdApi from '../../api/household-api';
 import type { HouseholdRole } from '../../lib/householdPermissions';
 import { queryClient } from '../../lib/query-client';
 
-vi.mock('../../api/milestone-api', async () => {
-  const actual = await vi.importActual<typeof milestoneApi>('../../api/milestone-api');
-  return { ...actual, deleteMilestone: vi.fn() };
-});
-vi.mock('../../api/household-api', async () => {
-  const actual = await vi.importActual<typeof householdApi>('../../api/household-api');
-  return { ...actual, listHouseholdMembers: vi.fn() };
-});
-
-const mockedMilestoneApi = vi.mocked(milestoneApi);
-const mockedHouseholdApi = vi.mocked(householdApi);
-
 const HOUSEHOLD_ID = 'h1';
 const CHILD_ID = 'c1';
+const BASE_PATH = `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones`;
 
 function makeMilestone(overrides: Partial<MilestoneSummary> = {}): MilestoneSummary {
   return {
@@ -44,14 +30,17 @@ function makeMilestone(overrides: Partial<MilestoneSummary> = {}): MilestoneSumm
   };
 }
 
-/**
- * Defaults to an `OWNER` viewing their own milestone (the fixture's `userId`),
- * which is the situation the pre-existing edit/delete tests assume.
- */
+function photos(count: number) {
+  return Array.from({ length: count }, (_unused, index) => ({
+    id: `p${index}`,
+    sortIndex: index,
+    mimeType: 'image/png',
+  }));
+}
+
 function renderList(
   milestones: MilestoneSummary[],
-  isLoading = false,
-  { role = 'OWNER' as HouseholdRole | undefined, currentUserId = 'u1' as string | undefined } = {},
+  { isLoading = false, role = 'OWNER' as HouseholdRole | undefined } = {},
 ) {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -62,7 +51,6 @@ function renderList(
           milestones={milestones}
           isLoading={isLoading}
           role={role}
-          currentUserId={currentUserId}
         />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -72,22 +60,40 @@ function renderList(
 describe('MilestoneTimelineList (M-11)', () => {
   beforeEach(() => {
     queryClient.clear();
-    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([
-      { userId: 'u1', email: 'parent@example.com', role: 'OWNER', joinedAt: '2025-01-01' },
-    ] as never);
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    queryClient.clear();
   });
 
-  it('renders date, age, category and the stored title', async () => {
+  it('renders the stored title, date, age and category on each tile', () => {
     renderList([makeMilestone()]);
 
     expect(screen.getByText('First steps')).toBeInTheDocument();
-    expect(screen.getByText('at 7 months')).toBeInTheDocument();
+    expect(screen.getByText(/at 7 months/)).toBeInTheDocument();
     expect(screen.getByText('Motor')).toBeInTheDocument();
-    expect(await screen.findByText('Recorded by parent@example.com')).toBeInTheDocument();
+  });
+
+  it('keeps the note off the tile — it belongs to the detail screen', () => {
+    renderList([makeMilestone({ note: 'At grandma’s, holding the sofa' })]);
+
+    expect(screen.queryByText('At grandma’s, holding the sofa')).not.toBeInTheDocument();
+  });
+
+  it('makes the whole tile a link to the milestone’s detail screen', () => {
+    renderList([makeMilestone({ id: 'm42' })]);
+
+    expect(screen.getByRole('link', { name: /First steps/ })).toHaveAttribute(
+      'href',
+      `${BASE_PATH}/m42`,
+    );
+  });
+
+  it('offers no edit or delete action on the tile itself', () => {
+    renderList([makeMilestone()]);
+
+    expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
   it('preserves the order the API returned rather than re-sorting', () => {
@@ -101,56 +107,34 @@ describe('MilestoneTimelineList (M-11)', () => {
     expect(titles[1]).toContain('Older');
   });
 
-  it('falls back to a neutral label instead of a raw user id', async () => {
-    mockedHouseholdApi.listHouseholdMembers.mockResolvedValue([] as never);
+  it('uses the first photo as the cover — and only that one', () => {
+    renderList([makeMilestone({ photos: photos(3) })]);
 
-    renderList([makeMilestone({ userId: 'someone-else' })]);
-
-    expect(await screen.findByText('Recorded by Unknown')).toBeInTheDocument();
-    expect(screen.queryByText(/someone-else/)).not.toBeInTheDocument();
+    const tile = screen.getByRole('link', { name: /First steps/ });
+    // Decorative (`alt=""`), so the cover has the `presentation` role.
+    const images = within(tile).getAllByRole('presentation');
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute('src', expect.stringContaining('/photos/p0'));
   });
 
-  it('shows the first three photos and a "+N" for the rest', () => {
-    renderList([
-      makeMilestone({
-        photos: Array.from({ length: 5 }, (_unused, index) => ({
-          id: `p${index}`,
-          sortIndex: index,
-          mimeType: 'image/png',
-        })),
-      }),
-    ]);
+  it('counts the photos on the cover when there is more than one', () => {
+    renderList([makeMilestone({ photos: photos(3) })]);
 
-    expect(screen.getAllByRole('presentation', { hidden: true })).toHaveLength(3);
-    expect(screen.getByText('+2')).toBeInTheDocument();
+    expect(screen.getByText('3 photos')).toBeInTheDocument();
   });
 
-  it('opens the full-size gallery from the thumbnail strip', async () => {
-    const user = userEvent.setup();
-    renderList([makeMilestone({ photos: [{ id: 'p0', sortIndex: 0, mimeType: 'image/png' }] })]);
+  it('shows no photo count for a single photo', () => {
+    renderList([makeMilestone({ photos: photos(1) })]);
 
-    await user.click(screen.getByRole('button', { name: 'View photos of “First steps”' }));
-
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('1 of 1')).toBeInTheDocument();
+    expect(screen.queryByText(/photos?$/)).not.toBeInTheDocument();
   });
 
-  it('asks for confirmation before deleting and surfaces a failure (M-15)', async () => {
-    const user = userEvent.setup();
-    mockedMilestoneApi.deleteMilestone.mockRejectedValue(new Error('offline'));
+  it('falls back to the category illustration when there is no photo', () => {
+    renderList([makeMilestone({ photos: [] })]);
 
-    renderList([makeMilestone()]);
-
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(await screen.findByText('Delete this milestone?')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('The milestone could not be deleted. Please try again.'),
-      ).toBeInTheDocument();
-    });
+    const tile = screen.getByRole('link', { name: /First steps/ });
+    expect(within(tile).queryByRole('presentation')).not.toBeInTheDocument();
+    expect(tile.querySelector('svg[viewBox="0 0 120 120"]')).not.toBeNull();
   });
 
   it('offers an empty state with a call to action', () => {
@@ -159,78 +143,23 @@ describe('MilestoneTimelineList (M-11)', () => {
     expect(screen.getByText('No milestones yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Record the first milestone' })).toHaveAttribute(
       'href',
-      `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones/new`,
+      `${BASE_PATH}/new`,
     );
   });
 
-  describe('role-dependent actions', () => {
-    const OWN_ID = 'u1';
-    const FOREIGN_ID = 'u2';
+  it('keeps the empty statement but drops the call to action for an OBSERVER', () => {
+    renderList([], { role: 'OBSERVER' });
 
-    it.each(['OWNER', 'CO_PARENT'] as const)(
-      'offers a %s both Edit and Delete on a milestone recorded by someone else',
-      (role) => {
-        renderList([makeMilestone({ userId: FOREIGN_ID })], false, {
-          role,
-          currentUserId: OWN_ID,
-        });
+    expect(screen.getByText('No milestones yet')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Record the first milestone' }),
+    ).not.toBeInTheDocument();
+  });
 
-        expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
-      },
-    );
+  it('shows tile-shaped skeletons while loading', () => {
+    renderList([], { isLoading: true });
 
-    it('lets a CAREGIVER edit their own milestone but never delete it', () => {
-      renderList([makeMilestone({ userId: OWN_ID })], false, {
-        role: 'CAREGIVER',
-        currentUserId: OWN_ID,
-      });
-
-      expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
-    });
-
-    it("offers a CAREGIVER neither action on someone else's milestone", () => {
-      renderList([makeMilestone({ userId: FOREIGN_ID })], false, {
-        role: 'CAREGIVER',
-        currentUserId: OWN_ID,
-      });
-
-      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
-    });
-
-    it.each([OWN_ID, FOREIGN_ID])(
-      'offers an OBSERVER no action at all, even on the milestone with userId %s',
-      (userId) => {
-        renderList([makeMilestone({ userId })], false, {
-          role: 'OBSERVER',
-          currentUserId: OWN_ID,
-        });
-
-        expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
-        // Remembering what was achieved stays available to every role.
-        expect(screen.getByText('First steps')).toBeInTheDocument();
-      },
-    );
-
-    it('gates each row on its own author, not on the list as a whole', () => {
-      renderList(
-        [
-          makeMilestone({ id: 'own', templateKey: null, userId: OWN_ID }),
-          makeMilestone({ id: 'foreign', userId: FOREIGN_ID }),
-        ],
-        false,
-        { role: 'CAREGIVER', currentUserId: OWN_ID },
-      );
-
-      const editLinks = screen.getAllByRole('link', { name: 'Edit' });
-      expect(editLinks).toHaveLength(1);
-      expect(editLinks[0]).toHaveAttribute(
-        'href',
-        `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/milestones/own/edit`,
-      );
-    });
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No milestones yet')).not.toBeInTheDocument();
   });
 });

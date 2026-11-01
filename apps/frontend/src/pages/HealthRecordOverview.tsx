@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { fetchChild } from '../api/child-api';
@@ -25,6 +26,8 @@ import {
   ENTRY_WRITE_ROLES,
   FULL_WRITE_ROLES,
 } from '../lib/householdPermissions';
+import { AreaPageHeader } from '../components/AreaPageHeader';
+import { CHILD_AREAS } from '../lib/childAreas';
 
 /** A planned entry whose due day has passed (MED-6/MED-12). */
 function isOverdue(record: HealthRecordSummary, today: string): boolean {
@@ -189,26 +192,26 @@ export function HealthRecordOverview() {
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <div>
-        <Link
-          to={`/households/${householdId}/children/${childId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('health.overview.backLink')}
-        </Link>
-        <h1 className="mt-1 text-xl font-bold text-foreground">
-          {t('health.overview.title', { name: child.name })}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t('health.overview.subtitle')}</p>
-      </div>
-
-      {/* Both sections below stay readable for every role — only the
-          invitation to record a new entry is gated. */}
-      {mayRecord && (
-        <Link to={`${basePath}/new`} className="text-sm font-medium text-primary hover:underline">
-          {t('health.overview.addLink')}
-        </Link>
-      )}
+      <AreaPageHeader
+        area={CHILD_AREAS.health}
+        backTo={`/households/${householdId}/children/${childId}`}
+        backLabel={t('health.overview.backLink')}
+        title={t('health.overview.title', { name: child.name })}
+        subtitle={t('health.overview.subtitle')}
+        // Both sections below stay readable for every role — only the
+        // invitation to record a new entry is gated.
+        action={
+          mayRecord ? (
+            <Link
+              to={`${basePath}/new`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t('health.overview.addLink')}
+            </Link>
+          ) : undefined
+        }
+      />
 
       {recordsQuery.error ? (
         <ErrorMessage message={t('health.overview.loadFailed')} />

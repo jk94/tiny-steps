@@ -4,6 +4,9 @@ import { developmentEntryFor } from '../../development/developmentContent';
 import { developmentStageAt } from '../../development/developmentStage';
 import { developmentStageLabel } from '../../development/developmentStageLabel';
 import { useDevelopmentContent } from '../../development/useDevelopmentContent';
+import { CHILD_AREAS } from '../../lib/childAreas';
+import { AreaCardHeading } from '../AreaCardHeading';
+import { DevelopmentIllustration } from '../illustrations';
 import { Badge, Card, Skeleton } from '../ui';
 
 export interface DevelopmentStageCardProps {
@@ -38,9 +41,7 @@ export function DevelopmentStageCard({
   const developmentPath = `/households/${householdId}/children/${childId}/development`;
 
   const heading = (
-    <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-      {t('development.card.title')}
-    </h2>
+    <AreaCardHeading area={CHILD_AREAS.development}>{t('development.card.title')}</AreaCardHeading>
   );
 
   if (stage === null) {
@@ -80,17 +81,20 @@ export function DevelopmentStageCard({
       to={developmentPath}
       className="group block rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
     >
-      <Card className="transition-colors group-hover:border-primary">
-        <Card.Body className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {heading}
-            <Badge size="sm">{developmentStageLabel(t, stage)}</Badge>
+      <Card className="relative bg-[linear-gradient(160deg,var(--color-card)_55%,color-mix(in_oklab,var(--color-development)_14%,var(--color-card)))] transition-colors group-hover:border-development">
+        <Card.Body className="flex gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {heading}
+              <Badge size="sm">{developmentStageLabel(t, stage)}</Badge>
+            </div>
+            <p className="text-lg font-extrabold text-foreground">{entry.title}</p>
+            <p className="text-sm text-muted-foreground">{entry.teaser}</p>
+            <span className="text-sm font-bold text-primary group-hover:underline">
+              {t('development.card.readMore')}
+            </span>
           </div>
-          <p className="font-medium text-foreground">{entry.title}</p>
-          <p className="text-sm text-muted-foreground">{entry.teaser}</p>
-          <span className="text-sm font-medium text-primary group-hover:underline">
-            {t('development.card.readMore')}
-          </span>
+          <DevelopmentIllustration className="h-20 w-20 self-end transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105 sm:h-24 sm:w-24" />
         </Card.Body>
       </Card>
     </Link>

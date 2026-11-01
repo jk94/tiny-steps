@@ -30,7 +30,16 @@
     "settingsLink": "Settings",
     "childNavLabel": "Child navigation",
     "openMenu": "Open menu",
-    "mobileMenuLabel": "Main menu"
+    "mobileMenuLabel": "Main menu",
+    "child": {
+      "overview": "Overview",
+      "timeline": "Timeline",
+      "more": "More",
+      "moreTitle": "All areas",
+      "sectionDaily": "Daily care",
+      "sectionGrowingUp": "Growing up"
+    },
+    "brandHome": "TinySteps – home"
   },
   "layout": {
     "logoutButton": "Log out",
@@ -39,11 +48,31 @@
       "disconnected": "Disconnected"
     }
   },
+  "quickAdd": {
+    "fabLabel": "Quick add",
+    "title": "Quick add",
+    "milestone": "Milestone",
+    "growth": "Measurement",
+    "timerRunning": {
+      "feeding": "A breastfeeding session is running.",
+      "sleep": "A sleep timer is running."
+    },
+    "openTimer": "Open timer",
+    "backfill": "Log with a specific time",
+    "toast": {
+      "feeding": "Feed logged",
+      "breastStarted": "Breastfeeding timer started",
+      "sleepStarted": "Sleep timer started",
+      "diaper": "Diaper logged"
+    },
+    "moreEntries": "More entries"
+  },
   "language": {
     "switchToGerman": "Switch to German",
     "switchToEnglish": "Switch to English"
   },
   "auth": {
+    "tagline": "Every tiny step counts.",
     "login": {
       "title": "Log in",
       "submitButton": "Log in",
@@ -187,7 +216,10 @@
       "greetingEvening": "Good evening 🌙",
       "ageMonths_one": "{{count}} month old",
       "ageMonths_other": "{{count}} months old",
-      "timelineLink": "Go to daily timeline"
+      "ageYears_one": "{{count}} year old",
+      "ageYears_other": "{{count}} years old",
+      "timelineLink": "Go to daily timeline",
+      "backToHousehold": "To household"
     },
     "list": {
       "title": "Children",
@@ -606,6 +638,11 @@
         "cancelButton": "Cancel"
       }
     },
+    "detail": {
+      "backLink": "All milestones",
+      "noteTitle": "Note",
+      "deleted": "Milestone deleted"
+    },
     "catalog": {
       "title": "What's next?",
       "intro": "Typical developmental steps for orientation — not a schedule. Every child moves at their own pace.",
@@ -619,6 +656,7 @@
       "createTitle": "Record a milestone",
       "editTitle": "Edit milestone",
       "backLink": "Back to milestones",
+      "backToDetail": "Back to milestone",
       "modeTemplate": "From a template",
       "modeFree": "Free entry",
       "templateLabel": "Template",

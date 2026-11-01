@@ -40,6 +40,113 @@
   --animate-slide-out-to-right: slide-out-to-right 300ms ease-in-out forwards;
 }
 
+/*
+ * Bottom sheet (FAB quick-add, "more" menu): same Presence/`animationend`
+ * constraint as the right-hand slide above.
+ */
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-bottom {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Content entering the page: a short upward drift plus fade. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tiles inside a freshly opened sheet: a small springy scale-up. */
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@theme {
+  --animate-slide-in-from-bottom: slide-in-from-bottom 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-slide-out-to-bottom: slide-out-to-bottom 220ms ease-in forwards;
+  --animate-fade-in: fade-in 200ms ease-out;
+  --animate-fade-out: fade-out 200ms ease-in forwards;
+  /* `both` keeps a staggered item invisible during its `animation-delay`. */
+  --animate-rise-in: rise-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop-in: pop-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/*
+ * View Transitions (see `src/lib/viewTransition.ts`). Only same-document
+ * transitions are used; a browser without the API simply navigates without
+ * one. Every element carrying a `view-transition-name` (the child tile and the
+ * child-home hero, a milestone tile and its detail cover) morphs between its
+ * old and new box — the "expanding tile" — while the rest of the page fades
+ * and rises in underneath.
+ */
+::view-transition-group(*) {
+  animation-duration: 460ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-old(root) {
+  animation: fade-out 180ms ease-in both;
+}
+
+::view-transition-new(root) {
+  animation: rise-in 380ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+}
+
+/* A page rendered for a view transition is already animated by it; its own
+   enter animation would play a second time inside (or right after) the
+   transition. `PageEnter` in `Layout` marks such a page for its whole mount. */
+[data-entered-via-view-transition] .animate-rise-in,
+[data-entered-via-view-transition].animate-rise-in {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /*
    * Motion safety: no slide at all — Presence explicitly treats a computed
@@ -50,7 +157,18 @@
    * through a `data-[state=…]:` variant, which compiles to an extra attribute
    * selector and therefore outranks any plain selector we could write here.
    */
-  [data-slot='sheet-content'] {
+  [data-slot='sheet-content'],
+  [data-slot='sheet-overlay'],
+  .animate-rise-in,
+  .animate-pop-in {
+    animation: none !important;
+  }
+
+  /* `viewTransition.ts` already skips the API under reduced motion; this is
+     the belt to that pair of braces. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
     animation: none !important;
   }
 }

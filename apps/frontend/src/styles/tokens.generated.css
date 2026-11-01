@@ -10,28 +10,29 @@
      "Referencing other variables with @theme inline" example, which uses
      this same distinct-name pattern. */
   --rt-color-background: #ffffff;
-  --rt-color-foreground: #1f2933;
+  --rt-color-canvas: #fbf7f2;
+  --rt-color-foreground: #2a2438;
   --rt-color-card: #ffffff;
-  --rt-color-card-foreground: #1f2933;
+  --rt-color-card-foreground: #2a2438;
   --rt-color-popover: #ffffff;
-  --rt-color-popover-foreground: #1f2933;
-  --rt-color-primary: #4f46e5;
+  --rt-color-popover-foreground: #2a2438;
+  --rt-color-primary: #6246ea;
   --rt-color-primary-foreground: #ffffff;
-  --rt-color-secondary: #f1f5f9;
-  --rt-color-secondary-foreground: #1f2933;
-  --rt-color-muted: #f1f5f9;
-  --rt-color-muted-foreground: #64748b;
-  --rt-color-accent: #f1f5f9;
-  --rt-color-accent-foreground: #1f2933;
+  --rt-color-secondary: #f2eefe;
+  --rt-color-secondary-foreground: #2a2438;
+  --rt-color-muted: #f5f1ec;
+  --rt-color-muted-foreground: #6b6478;
+  --rt-color-accent: #f2eefe;
+  --rt-color-accent-foreground: #2a2438;
   --rt-color-success: #16a34a;
   --rt-color-success-foreground: #052e16;
   --rt-color-warning: #d97706;
   --rt-color-warning-foreground: #451a03;
   --rt-color-destructive: #dc2626;
   --rt-color-destructive-foreground: #ffffff;
-  --rt-color-border: #e2e8f0;
-  --rt-color-input: #e2e8f0;
-  --rt-color-ring: #4f46e5;
+  --rt-color-border: #ebe4dc;
+  --rt-color-input: #e3dbd2;
+  --rt-color-ring: #6246ea;
   --rt-color-feeding: #f59e0b;
   --rt-color-feeding-foreground: #000000;
   --rt-color-feeding-breast: #ec4899;
@@ -62,6 +63,14 @@
   --rt-color-milestone-social-foreground: #000000;
   --rt-color-milestone-physical: #be123c;
   --rt-color-milestone-physical-foreground: #ffffff;
+  --rt-color-growth: #10b981;
+  --rt-color-growth-foreground: #022c22;
+  --rt-color-milestone: #ec4899;
+  --rt-color-milestone-foreground: #000000;
+  --rt-color-health: #f43f5e;
+  --rt-color-health-foreground: #000000;
+  --rt-color-development: #0ea5e9;
+  --rt-color-development-foreground: #000000;
 
   /* Breakpoints */
   --breakpoint-sm: 480px;
@@ -84,7 +93,7 @@
   --spacing-home-sidebar: 340px;
 
   /* Typography */
-  --font-family-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-family-sans: Nunito Variable, system-ui, Avenir, Helvetica, Arial, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-family-report: Inter;
   --font-size-xs: 0.75rem;
@@ -103,43 +112,45 @@
   --font-weight-bold: 700;
 
   /* Radii */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(42 36 56 / 0.06);
+  --shadow-md: 0 6px 16px -4px rgb(42 36 56 / 0.12), 0 2px 4px -2px rgb(42 36 56 / 0.06);
+  --shadow-lg: 0 16px 32px -8px rgb(42 36 56 / 0.2), 0 4px 8px -4px rgb(42 36 56 / 0.08);
 }
 
 /* System-preference dark mode (opt out per-subtree with [data-theme='light']). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --rt-color-background: #0f172a;
-    --rt-color-foreground: #e2e8f0;
-    --rt-color-card: #0f172a;
-    --rt-color-card-foreground: #e2e8f0;
-    --rt-color-popover: #0f172a;
-    --rt-color-popover-foreground: #e2e8f0;
-    --rt-color-primary: #818cf8;
-    --rt-color-primary-foreground: #0f172a;
-    --rt-color-secondary: #1e293b;
-    --rt-color-secondary-foreground: #e2e8f0;
-    --rt-color-muted: #1e293b;
-    --rt-color-muted-foreground: #94a3b8;
-    --rt-color-accent: #1e293b;
-    --rt-color-accent-foreground: #e2e8f0;
+    --rt-color-background: #16131f;
+    --rt-color-canvas: #100e17;
+    --rt-color-foreground: #ece9f5;
+    --rt-color-card: #1d1a2b;
+    --rt-color-card-foreground: #ece9f5;
+    --rt-color-popover: #1d1a2b;
+    --rt-color-popover-foreground: #ece9f5;
+    --rt-color-primary: #a99bff;
+    --rt-color-primary-foreground: #16112b;
+    --rt-color-secondary: #2a2541;
+    --rt-color-secondary-foreground: #ece9f5;
+    --rt-color-muted: #24203a;
+    --rt-color-muted-foreground: #a8a2bd;
+    --rt-color-accent: #2a2541;
+    --rt-color-accent-foreground: #ece9f5;
     --rt-color-success: #4ade80;
     --rt-color-success-foreground: #052e16;
     --rt-color-warning: #fbbf24;
     --rt-color-warning-foreground: #451a03;
     --rt-color-destructive: #f87171;
     --rt-color-destructive-foreground: #450a0a;
-    --rt-color-border: #334155;
-    --rt-color-input: #334155;
-    --rt-color-ring: #818cf8;
+    --rt-color-border: #312c47;
+    --rt-color-input: #3a3452;
+    --rt-color-ring: #a99bff;
     --rt-color-feeding: #fbbf24;
     --rt-color-feeding-foreground: #1f2933;
     --rt-color-feeding-breast: #f472b6;
@@ -170,34 +181,43 @@
     --rt-color-milestone-social-foreground: #1f2933;
     --rt-color-milestone-physical: #fda4af;
     --rt-color-milestone-physical-foreground: #1f2933;
+    --rt-color-growth: #34d399;
+    --rt-color-growth-foreground: #022c22;
+    --rt-color-milestone: #f472b6;
+    --rt-color-milestone-foreground: #1f2933;
+    --rt-color-health: #fb7185;
+    --rt-color-health-foreground: #1f2933;
+    --rt-color-development: #38bdf8;
+    --rt-color-development-foreground: #082f49;
   }
 }
 
 /* Explicit override hook (no theme-toggle UI in M1 — just the CSS mechanism). */
 :root[data-theme='dark'] {
-  --rt-color-background: #0f172a;
-  --rt-color-foreground: #e2e8f0;
-  --rt-color-card: #0f172a;
-  --rt-color-card-foreground: #e2e8f0;
-  --rt-color-popover: #0f172a;
-  --rt-color-popover-foreground: #e2e8f0;
-  --rt-color-primary: #818cf8;
-  --rt-color-primary-foreground: #0f172a;
-  --rt-color-secondary: #1e293b;
-  --rt-color-secondary-foreground: #e2e8f0;
-  --rt-color-muted: #1e293b;
-  --rt-color-muted-foreground: #94a3b8;
-  --rt-color-accent: #1e293b;
-  --rt-color-accent-foreground: #e2e8f0;
+  --rt-color-background: #16131f;
+  --rt-color-canvas: #100e17;
+  --rt-color-foreground: #ece9f5;
+  --rt-color-card: #1d1a2b;
+  --rt-color-card-foreground: #ece9f5;
+  --rt-color-popover: #1d1a2b;
+  --rt-color-popover-foreground: #ece9f5;
+  --rt-color-primary: #a99bff;
+  --rt-color-primary-foreground: #16112b;
+  --rt-color-secondary: #2a2541;
+  --rt-color-secondary-foreground: #ece9f5;
+  --rt-color-muted: #24203a;
+  --rt-color-muted-foreground: #a8a2bd;
+  --rt-color-accent: #2a2541;
+  --rt-color-accent-foreground: #ece9f5;
   --rt-color-success: #4ade80;
   --rt-color-success-foreground: #052e16;
   --rt-color-warning: #fbbf24;
   --rt-color-warning-foreground: #451a03;
   --rt-color-destructive: #f87171;
   --rt-color-destructive-foreground: #450a0a;
-  --rt-color-border: #334155;
-  --rt-color-input: #334155;
-  --rt-color-ring: #818cf8;
+  --rt-color-border: #312c47;
+  --rt-color-input: #3a3452;
+  --rt-color-ring: #a99bff;
   --rt-color-feeding: #fbbf24;
   --rt-color-feeding-foreground: #1f2933;
   --rt-color-feeding-breast: #f472b6;
@@ -228,11 +248,20 @@
   --rt-color-milestone-social-foreground: #1f2933;
   --rt-color-milestone-physical: #fda4af;
   --rt-color-milestone-physical-foreground: #1f2933;
+  --rt-color-growth: #34d399;
+  --rt-color-growth-foreground: #022c22;
+  --rt-color-milestone: #f472b6;
+  --rt-color-milestone-foreground: #1f2933;
+  --rt-color-health: #fb7185;
+  --rt-color-health-foreground: #1f2933;
+  --rt-color-development: #38bdf8;
+  --rt-color-development-foreground: #082f49;
 }
 
 @theme inline {
   /* Colors */
   --color-background: var(--rt-color-background);
+  --color-canvas: var(--rt-color-canvas);
   --color-foreground: var(--rt-color-foreground);
   --color-card: var(--rt-color-card);
   --color-card-foreground: var(--rt-color-card-foreground);
@@ -285,6 +314,14 @@
   --color-milestone-social-foreground: var(--rt-color-milestone-social-foreground);
   --color-milestone-physical: var(--rt-color-milestone-physical);
   --color-milestone-physical-foreground: var(--rt-color-milestone-physical-foreground);
+  --color-growth: var(--rt-color-growth);
+  --color-growth-foreground: var(--rt-color-growth-foreground);
+  --color-milestone: var(--rt-color-milestone);
+  --color-milestone-foreground: var(--rt-color-milestone-foreground);
+  --color-health: var(--rt-color-health);
+  --color-health-foreground: var(--rt-color-health-foreground);
+  --color-development: var(--rt-color-development);
+  --color-development-foreground: var(--rt-color-development-foreground);
   /* Breakpoints (literal — media queries cannot read a CSS variable) */
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
@@ -322,12 +359,13 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   /* Radii (literal — no runtime override exists to reference) */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
   --radius-full: 9999px;
   /* Shadows (literal — no runtime override exists to reference) */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(42 36 56 / 0.06);
+  --shadow-md: 0 6px 16px -4px rgb(42 36 56 / 0.12), 0 2px 4px -2px rgb(42 36 56 / 0.06);
+  --shadow-lg: 0 16px 32px -8px rgb(42 36 56 / 0.2), 0 4px 8px -4px rgb(42 36 56 / 0.08);
 }

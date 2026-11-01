@@ -25,6 +25,8 @@ import {
   growthMeasureVisuals,
   type GrowthMeasure,
 } from '../lib/growthMeasureVisuals';
+import { AreaPageHeader } from '../components/AreaPageHeader';
+import { CHILD_AREAS } from '../lib/childAreas';
 
 // visx + its d3 dependencies are only needed here, so they load as their own
 // async chunk rather than adding to the initial bundle — see ADR-0014.
@@ -133,18 +135,13 @@ export function GrowthHome() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div>
-        <Link
-          to={`/households/${householdId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('growth.home.backLink')}
-        </Link>
-        <h1 className="mt-1 text-xl font-bold text-foreground">
-          {t('growth.home.title', { name: child.name })}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t('growth.home.subtitle')}</p>
-      </div>
+      <AreaPageHeader
+        area={CHILD_AREAS.growth}
+        backTo={`/households/${householdId}`}
+        backLabel={t('growth.home.backLink')}
+        title={t('growth.home.title', { name: child.name })}
+        subtitle={t('growth.home.subtitle')}
+      />
 
       <Tabs
         defaultValue={GROWTH_MEASURES[0]}

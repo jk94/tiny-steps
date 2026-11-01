@@ -1,33 +1,23 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import {
-  ClipboardList,
-  Droplet,
-  Home,
-  LogOut,
-  Menu,
-  Milk,
-  Moon,
-  Settings,
-  Sparkles,
-  Stethoscope,
-  TrendingUp,
-} from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
+import { useHouseholdRole } from '../household/useHouseholdRole';
+import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
+import { isViewTransitionPending, resolvePendingViewTransition } from '../lib/viewTransition';
 import { useRealtimeConnection } from '../realtime/useRealtimeConnection';
 import { ConnectionStatusDot } from './ConnectionStatusDot';
 import { MandatoryNameDialog } from './MandatoryNameDialog';
+import { BrandMark } from './navigation/BrandMark';
+import { ChildAreasSheet } from './navigation/ChildAreasSheet';
+import { ChildBottomNav } from './navigation/ChildBottomNav';
+import { ChildSidebarNav } from './navigation/ChildSidebarNav';
+import { QuickAddFab } from './navigation/QuickAddFab';
+import { useChildNavigation } from './navigation/useChildNavigation';
 import { Avatar, Button, Sheet } from './ui';
 import { DeFlagIcon, GbFlagIcon } from './ui/icons/flags';
 import { cn } from '../lib/cn';
-
-interface ChildNavItem {
-  to: string;
-  label: string;
-  Icon: typeof Home;
-  isActive: boolean;
-}
 
 interface GlobalNavItem {
   to: string;
@@ -87,11 +77,29 @@ function LanguageButtons({
 }
 
 /**
+ * Wraps one page so it rises in on navigation — unless it was mounted for a
+ * view transition, which animates the change itself. Decided once per mount
+ * (lazy state), so a later re-render can't restart the animation.
+ */
+function PageEnter({ children }: { children: ReactNode }) {
+  const [enteredViaViewTransition] = useState(isViewTransitionPending);
+  return (
+    <div
+      className="animate-rise-in"
+      data-entered-via-view-transition={enteredViaViewTransition || undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
  * App shell shared by every route: a top bar (global nav, language switch,
  * connection status, the signed-in user, logout) plus a secondary nav layer
- * for per-child routes — a bottom tab bar on mobile, a left sidebar from `lg:`
- * up. That secondary layer only appears once `householdId`/`childId` are
- * both present in the URL; there's no global "current household/child"
+ * for per-child routes — a four-item bottom bar with a "more" sheet and a
+ * docked quick-add FAB on mobile, a grouped left sidebar (and a floating FAB)
+ * from `lg:` up. That secondary layer only appears once `householdId`/`childId`
+ * are both present in the URL; there's no global "current household/child"
  * concept, so household-only or household-less routes (household list,
  * login, …) fall back to just the top bar.
  *
@@ -100,6 +108,12 @@ function LanguageButtons({
  * indicator stays in the top bar on purpose — it's the one thing worth seeing
  * at a glance without opening a menu — and the sheet repeats it in expanded
  * form (dot + visible label) for anyone who does open it.
+ *
+ * The shell also completes view transitions (`lib/viewTransition.ts`): its
+ * layout effect fires once a new location has been committed, which is the
+ * moment the browser may take the "after" snapshot. The persistent chrome
+ * (header, bottom bar, FAB, sidebar) carries its own `view-transition-name`,
+ * so it stays put while the page content animates.
  */
 export function Layout() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
@@ -117,91 +131,35 @@ export function Layout() {
   const showSessionControls = !isLoading && isAuthenticated && !!user;
   const displayName = user?.name ?? user?.email ?? '';
 
-  const childNavItems: ChildNavItem[] = hasChildContext
-    ? [
-        {
-          to: `/households/${householdId}/children/${childId}`,
-          label: t('child.list.timelineLink'),
-          Icon: ClipboardList,
-          isActive:
-            location.pathname === `/households/${householdId}/children/${childId}` ||
-            location.pathname === `/households/${householdId}/children/${childId}/timeline`,
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/feeding`,
-          label: t('child.list.feedingLink'),
-          Icon: Milk,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/feeding`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/sleep`,
-          label: t('child.list.sleepLink'),
-          Icon: Moon,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/sleep`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/diaper`,
-          label: t('child.list.diaperLink'),
-          Icon: Droplet,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/diaper`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/growth`,
-          label: t('child.list.growthLink'),
-          Icon: TrendingUp,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/growth`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/milestones`,
-          label: t('child.list.milestonesLink'),
-          Icon: Sparkles,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/milestones`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/health`,
-          label: t('child.list.healthLink'),
-          // A generic Lucide icon like every other nav entry — the two
-          // hand-drawn health icons belong to the records themselves, where
-          // they distinguish medication from vaccination.
-          Icon: Stethoscope,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/health`,
-          ),
-        },
-        {
-          to: `/households/${householdId}/children/${childId}/settings`,
-          label: t('nav.settingsLink'),
-          Icon: Settings,
-          isActive: location.pathname.startsWith(
-            `/households/${householdId}/children/${childId}/settings`,
-          ),
-        },
-      ]
-    : [];
+  const navigation = useChildNavigation(householdId ?? '', childId ?? '', location.pathname);
+  const { role } = useHouseholdRole(hasChildContext ? householdId : undefined);
+  const showQuickAdd = hasChildContext && canWrite(role, ENTRY_WRITE_ROLES);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    resolvePendingViewTransition();
+  }, [location.key]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-              T
+    <div className="flex min-h-screen flex-col bg-canvas text-foreground">
+      <header
+        className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border/70 bg-background/85 px-4 py-2.5 backdrop-blur-md"
+        style={{ viewTransitionName: 'app-header' }}
+      >
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2.5" aria-label={t('nav.brandHome')}>
+            <BrandMark />
+            <span className="text-lg font-black tracking-tight text-foreground">
+              Tiny<span className="text-primary">Steps</span>
             </span>
-            <span className="text-sm font-bold text-foreground">TinySteps</span>
           </Link>
-          <nav className="hidden items-center gap-4 text-sm font-medium lg:flex">
+          <nav className="hidden items-center gap-1 text-sm font-semibold lg:flex">
             {globalNavItems.map(({ to, label }) => (
-              <Link key={to} to={to} className="text-foreground hover:text-primary">
+              <Link
+                key={to}
+                to={to}
+                className="rounded-md px-3 py-1.5 text-foreground hover:bg-muted hover:text-primary"
+              >
                 {label}
               </Link>
             ))}
@@ -315,50 +273,35 @@ export function Layout() {
       </header>
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        {hasChildContext && (
-          <aside className="hidden lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-1 lg:border-r lg:border-border lg:bg-background lg:p-4">
-            <nav aria-label={t('nav.childNavLabel')} className="flex flex-col gap-1">
-              {childNavItems.map(({ to, label, Icon, isActive }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted',
-                    isActive && 'bg-primary/10 text-primary hover:bg-primary/10',
-                  )}
-                >
-                  <Icon aria-hidden="true" className="h-4 w-4" />
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </aside>
-        )}
+        {hasChildContext && <ChildSidebarNav navigation={navigation} />}
 
-        <main className={cn('flex-1 p-4', hasChildContext && 'pb-20 lg:pb-4')}>
-          <Outlet />
+        <main
+          className={cn(
+            'min-w-0 flex-1 px-4 pt-4 pb-8 lg:px-8 lg:pt-6',
+            hasChildContext && 'pb-28 lg:pb-24',
+          )}
+        >
+          {/* Keyed by path so every navigation replays the short rise-in. */}
+          <PageEnter key={location.pathname}>
+            <Outlet />
+          </PageEnter>
         </main>
       </div>
 
       {hasChildContext && (
-        <nav
-          aria-label={t('nav.childNavLabel')}
-          className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-background lg:hidden"
-        >
-          {childNavItems.map(({ to, label, Icon, isActive }) => (
-            <Link
-              key={to}
-              to={to}
-              className={cn(
-                'flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-2 text-center text-xs font-semibold text-balance text-muted-foreground break-words',
-                isActive && 'text-primary',
-              )}
-            >
-              <Icon aria-hidden="true" className="h-5 w-5" />
-              <span className="w-full">{label}</span>
-            </Link>
-          ))}
-        </nav>
+        <>
+          <ChildBottomNav
+            navigation={navigation}
+            hasFab={showQuickAdd}
+            onOpenMore={() => setIsMoreOpen(true)}
+          />
+          <ChildAreasSheet
+            navigation={navigation}
+            isOpen={isMoreOpen}
+            onOpenChange={setIsMoreOpen}
+          />
+          {showQuickAdd && <QuickAddFab householdId={householdId!} childId={childId!} />}
+        </>
       )}
 
       {/* Safe to mount unconditionally here: `Layout` wraps every route, and

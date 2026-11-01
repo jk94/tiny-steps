@@ -30,7 +30,16 @@
     "settingsLink": "Einstellungen",
     "childNavLabel": "Kind-Navigation",
     "openMenu": "Menü öffnen",
-    "mobileMenuLabel": "Hauptmenü"
+    "mobileMenuLabel": "Hauptmenü",
+    "child": {
+      "overview": "Übersicht",
+      "timeline": "Verlauf",
+      "more": "Mehr",
+      "moreTitle": "Alle Bereiche",
+      "sectionDaily": "Alltag",
+      "sectionGrowingUp": "Großwerden"
+    },
+    "brandHome": "TinySteps – Startseite"
   },
   "layout": {
     "logoutButton": "Abmelden",
@@ -39,11 +48,31 @@
       "disconnected": "Getrennt"
     }
   },
+  "quickAdd": {
+    "fabLabel": "Schnell hinzufügen",
+    "title": "Schnell hinzufügen",
+    "milestone": "Meilenstein",
+    "growth": "Messung",
+    "timerRunning": {
+      "feeding": "Gerade läuft eine Stillmahlzeit.",
+      "sleep": "Gerade läuft ein Schlaf-Timer."
+    },
+    "openTimer": "Zum Timer",
+    "backfill": "Mit Uhrzeit nachtragen",
+    "toast": {
+      "feeding": "Mahlzeit eingetragen",
+      "breastStarted": "Still-Timer gestartet",
+      "sleepStarted": "Schlaf-Timer gestartet",
+      "diaper": "Windel eingetragen"
+    },
+    "moreEntries": "Weitere Einträge"
+  },
   "language": {
     "switchToGerman": "Auf Deutsch umschalten",
     "switchToEnglish": "Zu Englisch wechseln"
   },
   "auth": {
+    "tagline": "Jeder kleine Schritt zählt.",
     "login": {
       "title": "Anmelden",
       "submitButton": "Anmelden",
@@ -187,7 +216,10 @@
       "greetingEvening": "Guten Abend 🌙",
       "ageMonths_one": "{{count}} Monat alt",
       "ageMonths_other": "{{count}} Monate alt",
-      "timelineLink": "Zur Tagesübersicht"
+      "ageYears_one": "{{count}} Jahr alt",
+      "ageYears_other": "{{count}} Jahre alt",
+      "timelineLink": "Zur Tagesübersicht",
+      "backToHousehold": "Zum Haushalt"
     },
     "list": {
       "title": "Kinder",
@@ -606,6 +638,11 @@
         "cancelButton": "Abbrechen"
       }
     },
+    "detail": {
+      "backLink": "Alle Meilensteine",
+      "noteTitle": "Notiz",
+      "deleted": "Meilenstein gelöscht"
+    },
     "catalog": {
       "title": "Was kommt als Nächstes?",
       "intro": "Typische Entwicklungsschritte zur Einordnung — kein Zeitplan. Jedes Kind hat sein eigenes Tempo.",
@@ -619,6 +656,7 @@
       "createTitle": "Meilenstein eintragen",
       "editTitle": "Meilenstein bearbeiten",
       "backLink": "Zurück zu den Meilensteinen",
+      "backToDetail": "Zurück zum Meilenstein",
       "modeTemplate": "Aus Vorlage",
       "modeFree": "Freier Eintrag",
       "templateLabel": "Vorlage",

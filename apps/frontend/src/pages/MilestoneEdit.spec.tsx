@@ -233,9 +233,10 @@ describe('MilestoneEdit', () => {
     await waitFor(() => {
       expect(mockedMilestoneApi.uploadMilestonePhoto).toHaveBeenCalledTimes(1);
     });
-    // The retry fully succeeded, so it returns to the timeline (not the edit page).
+    // The retry fully succeeded, so it returns to the milestone's detail
+    // screen (where editing started), not the edit page.
     await waitFor(() => {
-      expect(screen.getByTestId('location').textContent).toBe(BASE_PATH);
+      expect(screen.getByTestId('location').textContent).toBe(`${BASE_PATH}/${MILESTONE_ID}`);
     });
   });
 

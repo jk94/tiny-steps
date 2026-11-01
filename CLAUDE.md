@@ -21,6 +21,7 @@ The long-form per-phase notes (what was built, why, and which alternatives were 
 | 7.4 | PDF report (`GET .../export/report.pdf`) beside the untouched raw export — renderer-neutral `ReportDocument` IR rendered by `@react-pdf/renderer`; growth chart shared via `packages/growth-chart-static/` | [ADR-0015](docs/adr/0015-pdf-report-generation.md) |
 | 7.5 | Roles `CAREGIVER`/`OBSERVER` beside `OWNER`/`CO_PARENT`; permission matrix + fail-closed `@RequireRole` on every writing route; frontend *hides* disallowed actions | `docs/roadmap/phase-7/phase-7-5-erweiterte-rollen.md` |
 | 7.7 | Development calendar — frontend-only, 52 weeks + months 13–36 per locale in lazy-loaded `development/content/{de,en}.ts` (deliberately **not** in the i18n JSON), one source registry, `ChildHome` card + detail screen | `docs/roadmap/phase-7/phase-7-7-entwicklungskalender.md` |
+| Redesign | Request-driven (2026-11-01): four-item mobile child nav + "more" sheet + quick-add FAB (2-tap budget kept), View Transitions via `lib/viewTransition.ts` (BrowserRouter-compatible), milestone album + `MilestoneDetail` route, warmer tokens, bundled Nunito, SVG illustration set in `components/illustrations/` | [ADR-0016](docs/adr/0016-playful-visual-language-navigation-and-motion.md) |
 
 ## Cross-cutting rules that later work keeps having to respect
 
@@ -29,6 +30,7 @@ The long-form per-phase notes (what was built, why, and which alternatives were 
 - **Export columns are append-only.** Every domain adds its columns strictly at the end of the flat `RawExportRow`/`CSV_COLUMNS` with a `recordKind` discriminator, so positional consumers keep working. The per-domain CSV endpoints from the phase-7 plan were deliberately *not* built; the per-domain presentation is the PDF report.
 - **Never hand-edit a `*.generated.*` file.** Design tokens flow `design-system/tokens/*.json` → `bun run design-tokens:build` → four targets (frontend CSS, `docs/design-system/tokens.md`, `eventTypeTokens.generated.ts`, and the backend report tokens). Rerun it after any token edit; see `docs/design-system/reconciliation-process.md`.
 - Calendar-day fields (`birthDate`, `measuredAt`, `achievedAt`, `dueAt`) are bare `YYYY-MM-DD` at UTC midnight and use `@IsDateOnly()`; comparisons tolerate a max UTC offset. Timestamps (`occurredAt`, `administeredAt`) are real instants.
+- **Per-child areas are registered once in `apps/frontend/src/lib/childAreas.ts`** (route segment, label, icon, illustration, tint classes); the bottom bar, "more" sheet, sidebar, quick-add sheet and area headers all read it. A new area needs an entry there and an illustration. Quick-add must keep a standard event at **2 taps** (FAB → type).
 - **Storybook is scoped to `components/ui/**` only** — rebuild it only when a primitive actually changes.
 - **Jest cannot load `@react-pdf/renderer` natively** (ESM-only chain, `import.meta.url` in `yoga-layout`) — both Jest configs map it to `apps/backend/test-support/react-pdf-renderer.cjs`. Don't "clean up" that shim.
 

@@ -22,6 +22,18 @@
 body {
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--rt-color-background);
+  /* The warm `canvas` tone, not `background`: cards, the header and sheets sit
+     on `background`/`card` (white in light mode) and need a page tone to lift
+     off. `background` itself stays white because the PDF report prints on it. */
+  background-color: var(--rt-color-canvas);
   color: var(--rt-color-foreground);
+  font-family: var(--font-family-sans);
+}
+
+h1,
+h2,
+h3 {
+  /* Nunito's heavier cuts carry the friendly, rounded look the headings are
+     after; letter-spacing pulls the wide display weights back together. */
+  letter-spacing: -0.01em;
 }

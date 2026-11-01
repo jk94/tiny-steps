@@ -1,15 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { fetchChild } from '../api/child-api';
 import { listMilestones, milestonesQueryKey } from '../api/milestone-api';
-import { useAuth } from '../auth/useAuth';
 import { mapChildError } from '../child/mapChildError';
 import { useHouseholdRole } from '../household/useHouseholdRole';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { AreaPageHeader } from '../components/AreaPageHeader';
 import { MilestoneCatalogView } from '../components/milestone/MilestoneCatalogView';
 import { MilestoneTimelineList } from '../components/milestone/MilestoneTimelineList';
 import { Skeleton, Tabs } from '../components/ui';
+import { CHILD_AREAS } from '../lib/childAreas';
 import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 
 /**
@@ -27,7 +29,6 @@ import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 export function MilestoneTimeline() {
   const { t } = useTranslation();
   const { householdId, childId } = useParams<{ householdId: string; childId: string }>();
-  const { user } = useAuth();
   const { role } = useHouseholdRole(householdId);
 
   const childQuery = useQuery({
@@ -63,29 +64,26 @@ export function MilestoneTimeline() {
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <div>
-        <Link
-          to={`/households/${householdId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('milestone.timeline.backLink')}
-        </Link>
-        <h1 className="mt-1 text-xl font-bold text-foreground">
-          {t('milestone.timeline.title', { name: child.name })}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t('milestone.timeline.subtitle')}</p>
-      </div>
-
-      {/* The timeline and the catalog below stay browsable for every role —
-          only the invitation to record a milestone is gated. */}
-      {canWrite(role, ENTRY_WRITE_ROLES) && (
-        <Link
-          to={`/households/${householdId}/children/${childId}/milestones/new`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('milestone.timeline.addLink')}
-        </Link>
-      )}
+      <AreaPageHeader
+        area={CHILD_AREAS.milestones}
+        backTo={`/households/${householdId}`}
+        backLabel={t('milestone.timeline.backLink')}
+        title={t('milestone.timeline.title', { name: child.name })}
+        subtitle={t('milestone.timeline.subtitle')}
+        // The timeline and the catalog below stay browsable for every role —
+        // only the invitation to record a milestone is gated.
+        action={
+          canWrite(role, ENTRY_WRITE_ROLES) ? (
+            <Link
+              to={`/households/${householdId}/children/${childId}/milestones/new`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t('milestone.timeline.addLink')}
+            </Link>
+          ) : undefined
+        }
+      />
 
       <Tabs defaultValue="timeline">
         <Tabs.List>
@@ -103,7 +101,6 @@ export function MilestoneTimeline() {
               milestones={milestones}
               isLoading={milestonesQuery.isLoading}
               role={role}
-              currentUserId={user?.id}
             />
           )}
         </Tabs.Panel>

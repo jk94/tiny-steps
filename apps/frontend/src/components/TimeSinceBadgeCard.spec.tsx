@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import type { EventType } from '../api/event-api';
 import { TimeSinceBadgeCard } from './TimeSinceBadgeCard';
 
@@ -46,5 +47,28 @@ describe('TimeSinceBadgeCard', () => {
     });
 
     expect(screen.getByText('35 min ago')).toBeInTheDocument();
+  });
+
+  it('becomes a link to its event type’s screen when given a destination', () => {
+    render(
+      <MemoryRouter>
+        <TimeSinceBadgeCard
+          eventType="DIAPER"
+          lastEventAt="2026-01-01T10:40:00.000Z"
+          to="/households/h1/children/c1/diaper"
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: /Last diaper change/ })).toHaveAttribute(
+      'href',
+      '/households/h1/children/c1/diaper',
+    );
+  });
+
+  it('stays a plain tile without a destination', () => {
+    render(<TimeSinceBadgeCard eventType="SLEEP" lastEventAt={null} />);
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });

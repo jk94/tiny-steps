@@ -105,4 +105,30 @@ describe('Sheet', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  describe('bottom side', () => {
+    it('anchors the panel to the bottom edge and slides it from there', () => {
+      renderSheet(true, { side: 'bottom' });
+
+      const panel = screen.getByRole('dialog');
+      expect(panel).toHaveAttribute('data-side', 'bottom');
+      expect(panel.className).toContain('bottom-0');
+      expect(panel.className).toContain('inset-x-0');
+      expect(panel.className).toContain('data-[state=open]:animate-slide-in-from-bottom');
+      expect(panel.className).toContain('data-[state=closed]:animate-slide-out-to-bottom');
+    });
+  });
+
+  describe('title', () => {
+    it('renders a visible heading that also names the dialog', () => {
+      render(
+        <Sheet isOpen onOpenChange={vi.fn()} side="bottom" title="Quick add">
+          <p>Body</p>
+        </Sheet>,
+      );
+
+      expect(screen.getByRole('heading', { name: 'Quick add' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toHaveAccessibleName('Quick add');
+    });
+  });
 });

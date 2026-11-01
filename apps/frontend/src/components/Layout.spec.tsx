@@ -7,12 +7,20 @@ import { Layout } from './Layout';
 import * as useAuthModule from '../auth/useAuth';
 import { queryClient } from '../lib/query-client';
 import * as useRealtimeConnectionModule from '../realtime/useRealtimeConnection';
+import * as useHouseholdRoleModule from '../household/useHouseholdRole';
+import type { HouseholdRole } from '../lib/householdPermissions';
 
 vi.mock('../auth/useAuth');
 vi.mock('../realtime/useRealtimeConnection');
+vi.mock('../household/useHouseholdRole');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 const mockedUseRealtimeConnection = vi.mocked(useRealtimeConnectionModule.useRealtimeConnection);
+const mockedUseHouseholdRole = vi.mocked(useHouseholdRoleModule.useHouseholdRole);
+
+function mockRole(role: HouseholdRole | undefined) {
+  mockedUseHouseholdRole.mockReturnValue({ role, household: undefined, isLoading: false });
+}
 
 type AuthOverrides = Partial<ReturnType<typeof useAuthModule.useAuth>>;
 
@@ -80,6 +88,7 @@ describe('Layout', () => {
   beforeEach(() => {
     queryClient.clear();
     mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
+    mockRole(undefined);
   });
 
   afterEach(() => {
@@ -381,6 +390,104 @@ describe('Layout child navigation', () => {
   beforeEach(() => {
     mockAuthenticated();
     mockedUseRealtimeConnection.mockReturnValue({ socket: null, isConnected: false });
+    mockRole('OWNER');
+  });
+
+  function bottomBar() {
+    // Both the sidebar and the bottom bar are "Child navigation"; the bottom
+    // bar is the one holding the "More" button.
+    return screen
+      .getAllByRole('navigation', { name: 'Child navigation' })
+      .find((nav) => within(nav).queryByRole('button', { name: 'More' }))!;
+  }
+
+  it('keeps the mobile bottom bar to overview, timeline, milestones and "more"', () => {
+    renderLayoutAt('/households/h1/children/c1');
+
+    const bar = bottomBar();
+    expect(
+      within(bar)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Overview', 'Timeline', 'Milestones']);
+    expect(within(bar).getByRole('button', { name: 'More' })).toBeInTheDocument();
+    expect(within(bar).queryByRole('link', { name: 'Feeding' })).not.toBeInTheDocument();
+  });
+
+  it('marks the current bottom-bar destination with aria-current', () => {
+    renderLayoutAt('/households/h1/children/c1/timeline');
+
+    expect(within(bottomBar()).getByRole('link', { name: 'Timeline' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('highlights "more" while on an area that lives behind it', () => {
+    renderLayoutAt('/households/h1/children/c1/feeding/new');
+
+    expect(within(bottomBar()).getByRole('button', { name: 'More' }).className).toContain(
+      'text-primary',
+    );
+  });
+
+  it('opens a sheet with every other area and the settings from "more"', async () => {
+    const user = userEvent.setup();
+    renderLayoutAt('/households/h1/children/c1');
+
+    await user.click(within(bottomBar()).getByRole('button', { name: 'More' }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'All areas' });
+    for (const [label, path] of [
+      ['Feeding', 'feeding'],
+      ['Sleep', 'sleep'],
+      ['Diaper', 'diaper'],
+      ['Growth', 'growth'],
+      ['Medical', 'health'],
+      ['Development', 'development'],
+      ['Settings', 'settings'],
+    ]) {
+      expect(within(sheet).getByRole('link', { name: label })).toHaveAttribute(
+        'href',
+        `/households/h1/children/c1/${path}`,
+      );
+    }
+  });
+
+  it('closes the "more" sheet when one of its areas is followed', async () => {
+    const user = userEvent.setup();
+    renderLayoutAt('/households/h1/children/c1');
+
+    await user.click(within(bottomBar()).getByRole('button', { name: 'More' }));
+    const sheet = await screen.findByRole('dialog', { name: 'All areas' });
+    await user.click(within(sheet).getByRole('link', { name: 'Sleep' }));
+
+    expect(screen.queryByRole('dialog', { name: 'All areas' })).not.toBeInTheDocument();
+  });
+
+  it.each(['OWNER', 'CO_PARENT', 'CAREGIVER'] as const)(
+    'offers the quick-add button to a %s',
+    (role) => {
+      mockRole(role);
+      renderLayoutAt('/households/h1/children/c1');
+
+      expect(screen.getByRole('button', { name: 'Quick add' })).toBeInTheDocument();
+    },
+  );
+
+  it('hides the quick-add button from an OBSERVER, who may not log entries', () => {
+    mockRole('OBSERVER');
+    renderLayoutAt('/households/h1/children/c1');
+
+    expect(screen.queryByRole('button', { name: 'Quick add' })).not.toBeInTheDocument();
+    // Without the docked FAB the bar needs no empty middle slot either.
+    expect(bottomBar().querySelector('.grid-cols-4')).not.toBeNull();
+  });
+
+  it('shows no quick-add button outside a child context', () => {
+    renderLayout();
+
+    expect(screen.queryByRole('button', { name: 'Quick add' })).not.toBeInTheDocument();
   });
 
   it('offers a growth link inside a child context', () => {

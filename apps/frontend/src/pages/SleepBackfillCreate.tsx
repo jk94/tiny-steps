@@ -35,7 +35,7 @@ export function SleepBackfillCreate() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('sleep.backfill.title')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('sleep.backfill.title')}</h1>
           <SleepEventForm mode="create" onSubmit={handleSubmit} />
         </Card.Body>
       </Card>

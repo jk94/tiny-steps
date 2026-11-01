@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageInDays, ageInMonths } from './childAge';
+import { ageInDays, ageInMonths, formatChildAge } from './childAge';
 
 /** Local-time `now` values, so these assertions hold in any test-runner timezone. */
 function localDate(year: number, month: number, day: number): Date {
@@ -82,5 +82,18 @@ describe('ageInDays', () => {
   it('floors at 0 for a future or unparseable birth date', () => {
     expect(ageInDays('2026-03-14', localDate(2026, 3, 1))).toBe(0);
     expect(ageInDays('not a date', localDate(2026, 3, 1))).toBe(0);
+  });
+});
+
+describe('formatChildAge', () => {
+  const t = (key: string, options: { count: number }) => `${key}:${options.count}`;
+
+  it('counts months up to the second birthday', () => {
+    expect(formatChildAge(t, '2024-03-14', localDate(2026, 3, 13))).toBe('child.home.ageMonths:23');
+  });
+
+  it('switches to whole years from the second birthday on', () => {
+    expect(formatChildAge(t, '2024-03-14', localDate(2026, 3, 14))).toBe('child.home.ageYears:2');
+    expect(formatChildAge(t, '2022-01-01', localDate(2026, 3, 14))).toBe('child.home.ageYears:4');
   });
 });

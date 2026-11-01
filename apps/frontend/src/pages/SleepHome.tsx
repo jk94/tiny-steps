@@ -14,6 +14,8 @@ import { useHouseholdRole } from '../household/useHouseholdRole';
 import { canWrite, ENTRY_WRITE_ROLES } from '../lib/householdPermissions';
 import { usePendingLocalEvents } from '../offline/usePendingLocalEvents';
 import { useHouseholdRoom } from '../realtime/useHouseholdRoom';
+import { AreaPageHeader } from '../components/AreaPageHeader';
+import { CHILD_AREAS } from '../lib/childAreas';
 
 /**
  * Per-child quick-entry/timer start screen. On mount, fetches the active
@@ -83,17 +85,12 @@ export function SleepHome() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div>
-        <Link
-          to={`/households/${householdId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('sleep.home.backLink')}
-        </Link>
-        <h1 className="mt-1 text-xl font-bold text-foreground">
-          {t('sleep.home.title', { name: child.name })}
-        </h1>
-      </div>
+      <AreaPageHeader
+        area={CHILD_AREAS.sleep}
+        backTo={`/households/${householdId}`}
+        backLabel={t('sleep.home.backLink')}
+        title={t('sleep.home.title', { name: child.name })}
+      />
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex flex-col gap-3 lg:w-home-sidebar lg:flex-none">

@@ -124,6 +124,12 @@ function formatKey(key: string): string {
 
 function serialize(value: unknown, indent: string): string {
   if (typeof value === 'string') {
+    // Emitted verbatim inside single quotes; escaping would make Prettier
+    // re-quote the literal and fail `format:check`, so refuse instead (e.g. a
+    // quoted CSS font-family name — leave multi-word names unquoted).
+    if (value.includes("'") || value.includes('\\')) {
+      throw new Error(`Cannot emit token value ${JSON.stringify(value)}: no quotes or backslashes`);
+    }
     return `'${value}'`;
   }
   if (typeof value === 'number') {
