@@ -20,6 +20,16 @@ describe('OidcTransactionCookieService', () => {
     ...overrides,
   });
 
+  it('round-trips an optional returnTo path', async () => {
+    const txn = { ...buildTxn(), returnTo: '/alexa/link?state=s' };
+    expect(await service.decode(await service.encode(txn))).toEqual(txn);
+  });
+
+  it('drops a returnTo that is not a same-origin path', async () => {
+    const txn = { ...buildTxn(), returnTo: 'https://evil.example/' };
+    expect(await service.decode(await service.encode(txn))).toEqual(buildTxn());
+  });
+
   it('round-trips encode -> decode, returning the original payload', async () => {
     const txn = buildTxn();
 

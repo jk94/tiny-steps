@@ -65,3 +65,26 @@ auth:
 # push:
 #   firebase:
 #     serviceAccountPath: "./firebase-service-account.json"
+
+# Alexa skill (OPTIONAL, Phase 8). Omit this whole section to keep the Alexa
+# integration off — every /api/alexa/** route then answers 404. Each instance
+# runs its own private skill; see alexa/README.md for the full setup and
+# docs/adr/0017-alexa-skill-account-linking-and-in-process-endpoint.md for the
+# design. Treat clientSecret like the OIDC secrets above (this file is
+# git-ignored once copied to config.yml).
+# alexa:
+#   # Skill ID from the Alexa developer console.
+#   skillId: "amzn1.ask.skill.00000000-0000-0000-0000-000000000000"
+#   # Must match "Your Client ID"/"Your Secret" under the skill's Account Linking.
+#   clientId: "tinysteps-alexa"
+#   clientSecret: "REPLACE_ME_with_at_least_32_random_characters"
+#   # The "Alexa Redirect URLs" shown under Account Linking, exactly as listed.
+#   redirectUris:
+#     - "https://pitangui.amazon.com/api/skill/link/MXXXXXXXXXXXXX"
+#     - "https://layla.amazon.com/api/skill/link/MXXXXXXXXXXXXX"
+#     - "https://alexa.amazon.co.jp/api/skill/link/MXXXXXXXXXXXXX"
+#   # Optional per-language overrides of what Alexa says. Keys/placeholders:
+#   # apps/backend/src/alexa/skill/alexa-messages.ts — unknown ones fail startup.
+#   responses:
+#     de:
+#       goodbye: "Tschüss!"

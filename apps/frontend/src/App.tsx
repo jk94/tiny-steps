@@ -35,6 +35,7 @@ import { DailyTimeline } from './pages/DailyTimeline';
 import { DevelopmentDetail } from './pages/DevelopmentDetail';
 import { Export } from './pages/Export';
 import { InviteAccept } from './pages/InviteAccept';
+import { AlexaLink } from './pages/AlexaLink';
 
 function App() {
   return (
@@ -52,6 +53,10 @@ function App() {
             <Route index element={<HouseholdList />} />
             {/* Global, not household-scoped — like the household list. */}
             <Route path="profile" element={<Profile />} />
+            {/* Alexa account-linking consent page (Phase 8, ADR-0017): the
+              skill's "Web Authorization URI". Protected, so an anonymous
+              visitor logs in first and is brought back here. */}
+            <Route path="alexa/link" element={<AlexaLink />} />
             <Route path="households" element={<HouseholdList />} />
             <Route path="households/new" element={<HouseholdCreate />} />
             <Route path="households/:householdId" element={<HouseholdDetail />} />

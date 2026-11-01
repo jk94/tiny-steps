@@ -40,5 +40,8 @@ import { FeedingService } from './feeding.service';
   // the controller using it, not transitively through an imported module's
   // own provider graph — same pattern as `ChildModule`.
   providers: [FeedingService, HouseholdMembershipGuard],
+  // Exported for the Alexa skill (Phase 8), which records by voice through
+  // the very same service — same rules, same realtime broadcast.
+  exports: [FeedingService],
 })
 export class FeedingModule {}

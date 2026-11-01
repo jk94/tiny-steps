@@ -47,6 +47,8 @@ model User {
   oidcIdentities       OidcIdentity[]
   pushSubscriptions    PushSubscription[]
   notificationSettings NotificationSettings[]
+  alexaAccountLinks    AlexaAccountLink[]
+  alexaAuthCodes       AlexaAuthorizationCode[]
 }
 
 model OidcIdentity {
@@ -154,6 +156,7 @@ model Child {
   milestones           Milestone[]
   healthRecords        HealthRecord[]
   notificationSettings NotificationSettings[]
+  alexaDefaultFor      AlexaAccountLink[]
 }
 
 /// A body-measurement record (weight / length or height / head circumference)
@@ -486,4 +489,77 @@ model NotificationSettings {
 
   // One settings row per (user, child) pair.
   @@unique([userId, childId])
+}
+
+/// An Amazon account linked to a user through Alexa account linking (Phase 8,
+/// ADR-0017). One row per successful OAuth authorization-code exchange; a user
+/// may hold several (e.g. a personal and a shared Amazon account).
+///
+/// Revocation is a soft delete (`revokedAt`) so the access-token lookup can
+/// tell "unlinked in the app" apart from "never existed" in logs; revoked rows
+/// never authenticate anything again.
+model AlexaAccountLink {
+  id               String    @id @default(cuid())
+  userId           String
+  // SHA-256 of the long-lived OAuth refresh token handed to Alexa — never the
+  // token itself (same pattern as `Invite.tokenHash`). Deliberately not
+  // rotated on refresh: Alexa is a confidential client, see ADR-0017.
+  refreshTokenHash String    @unique
+  // The child a voice command refers to when it names none (ALX-9). Null means
+  // "resolve automatically" (only child / ask back). Re-checked against the
+  // user's memberships on every request, so a stale value after leaving a
+  // household is ignored rather than trusted.
+  defaultChildId   String?
+  createdAt        DateTime  @default(now())
+  // Bumped (throttled) whenever Alexa presents one of this link's access
+  // tokens; shown in the app's link list.
+  lastUsedAt       DateTime?
+  revokedAt        DateTime?
+
+  // Cascade: a link is meaningless without its user.
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // SetNull: deleting a child must neither be blocked by nor delete the link.
+  defaultChild Child?             @relation(fields: [defaultChildId], references: [id], onDelete: SetNull)
+  accessTokens AlexaAccessToken[]
+
+  @@index([userId])
+}
+
+/// A short-lived (1 h) bearer token Alexa presents with every skill request.
+/// Stored as a SHA-256 hash only. Several may be valid per link at once, so a
+/// refresh never invalidates a request that is already in flight.
+model AlexaAccessToken {
+  id        String   @id @default(cuid())
+  linkId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  link AlexaAccountLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId, expiresAt])
+}
+
+/// A single-use OAuth authorization code (5 min) issued when a user approves
+/// the link on the consent page. `linkId` is filled once the code was
+/// exchanged, so presenting it a second time can revoke the link it produced
+/// (RFC 6749 section 4.1.2).
+model AlexaAuthorizationCode {
+  id                  String    @id @default(cuid())
+  codeHash            String    @unique
+  userId              String
+  // Must match the token request's `redirect_uri` byte for byte.
+  redirectUri         String
+  // Optional PKCE challenge (`S256` only).
+  codeChallenge       String?
+  codeChallengeMethod String?
+  // The default child picked on the consent page. A plain column, not a FK:
+  // the child is re-checked when the link is created from this code.
+  defaultChildId      String?
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  linkId              String?
+  createdAt           DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -1,4 +1,37 @@
 import * as Joi from 'joi';
+import {
+  ALEXA_LOCALES,
+  ALEXA_MESSAGE_KEYS,
+  isAlexaMessageKey,
+  unknownPlaceholdersInOverride,
+  type AlexaLocale,
+} from '../alexa/skill/alexa-messages';
+
+/**
+ * Per-locale response overrides for the Alexa skill (ALX-13). Keys must be
+ * known message keys, and an override may only use placeholders the built-in
+ * template provides — otherwise Alexa would read out a literal `{typo}`.
+ */
+const alexaResponseOverrides = (locale: AlexaLocale) =>
+  Joi.object()
+    .pattern(Joi.string().valid(...ALEXA_MESSAGE_KEYS), Joi.string().trim().min(1))
+    .custom((value: Record<string, string>, helpers) => {
+      for (const [key, template] of Object.entries(value)) {
+        if (!isAlexaMessageKey(key)) {
+          continue;
+        }
+        const unknown = unknownPlaceholdersInOverride(locale, key, template);
+        if (unknown.length > 0) {
+          // Passed as template *values*: a literal `{name}` inside the message
+          // text would be parsed by Joi as a template reference and vanish.
+          return helpers.message(
+            { custom: 'alexa.responses.{#locale}.{#key} uses unknown placeholder(s): {#names}' },
+            { locale, key, names: unknown.map((name) => `{${name}}`).join(', ') },
+          );
+        }
+      }
+      return value;
+    });
 
 /**
  * Validates the shape of `config.yml` (see `config.example.yml` at the repo
@@ -54,5 +87,26 @@ export const configValidationSchema = Joi.object({
     firebase: Joi.object({
       serviceAccountPath: Joi.string().required(),
     }).required(),
+  }).optional(),
+
+  // Optional Alexa skill section (Phase 8, ADR-0017). When omitted, the
+  // integration is disabled. See `src/config/alexa.config.ts` for the fields.
+  alexa: Joi.object({
+    skillId: Joi.string()
+      .pattern(/^amzn1\.ask\.skill\.[A-Za-z0-9-]+$/)
+      .required(),
+    clientId: Joi.string().trim().min(1).required(),
+    // A shared secret Amazon presents at the token endpoint. Long and random
+    // by requirement — it is the only thing standing between a leaked refresh
+    // token and a working one (ADR-0017).
+    clientSecret: Joi.string().min(32).required(),
+    redirectUris: Joi.array()
+      .items(Joi.string().uri({ scheme: ['https'] }))
+      .min(1)
+      .unique()
+      .required(),
+    responses: Joi.object(
+      Object.fromEntries(ALEXA_LOCALES.map((locale) => [locale, alexaResponseOverrides(locale)])),
+    ).default({}),
   }).optional(),
 });

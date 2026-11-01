@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
+import { AlexaSettingsCard } from '../components/AlexaSettingsCard';
 import { NameForm } from '../components/NameForm';
 import { Card } from '../components/ui';
 
@@ -45,6 +46,8 @@ export function Profile() {
           </NameForm>
         </Card.Body>
       </Card>
+      {/* Renders nothing unless this instance has Alexa configured (Phase 8). */}
+      <AlexaSettingsCard className="mt-4" />
     </section>
   );
 }

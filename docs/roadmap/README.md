@@ -14,6 +14,7 @@ Diese Roadmap unterteilt das [PRD](../../Baby%20Tracking%20App%20PRD.md) in nach
 | [5](phase-5-export-wrapper-push.md) | Export, Nativer Wrapper & Push-Benachrichtigungen | MVP | Fast abgeschlossen³ |
 | [6](phase-6-design-system-ux.md) | Design-System & moderne User Experience | Post-MVP | Fast abgeschlossen⁴ |
 | [7](phase-7-v2-erweiterungen.md) | Version 2.0 – Erweiterungen | Post-MVP | Offen, in [sechs Teilphasen](phase-7/README.md) zerlegt⁵ |
+| [8](phase-8/README.md) | Alexa-Integration (Sprachsteuerung) | Vision (PRD 4.3) | Umgesetzt bis auf die Prüfung mit echter Alexa-Hardware⁶ |
 
 ¹ Alle Aufgaben umgesetzt bis auf den manuellen UX-Review der 3-Sekunden/2-Taps-Vorgabe (siehe „UX-Validierung" in [Phase 2](phase-2-tracking-kernfunktionen.md)) — durch Tap-Zahl-Tests plausibilisiert, aber kein Ersatz für den echten manuellen Review.
 
@@ -25,12 +26,15 @@ Diese Roadmap unterteilt das [PRD](../../Baby%20Tracking%20App%20PRD.md) in nach
 
 ⁵ Phase 7 bündelte ursprünglich sechs thematisch unabhängige Blöcke in einer Sammelphase. Da diese unterschiedliche Schichten betreffen, unterschiedlich groß sind und teilweise voneinander abhängen, ist sie in eigenständig lieferbare Teilphasen 7.1–7.6 zerlegt — je mit ausformulierten Anforderungen, Datenmodell-/API-/UI-Vorgaben und eigener Definition of Done. Übersicht, Reihenfolge und die bereichsübergreifenden Festlegungen: [`phase-7/README.md`](phase-7/README.md).
 
+⁶ Aus einem [Brainstorm](phase-8/brainstorm.md) abgeleitet und in [`phase-8/README.md`](phase-8/README.md) mit Anforderungen ALX-1 bis ALX-15 ausformuliert; Architekturentscheidung in [ADR-0017](../adr/0017-alexa-skill-account-linking-and-in-process-endpoint.md). Optional pro Instanz (eigener privater Skill, öffentliche HTTPS-Adresse nötig). Offen ist nur die manuelle Prüfung mit echtem Echo-Gerät und echter Alexa-App, erfasst in [`docs/known-issues.md`](../known-issues.md).
+
 Phasen 0–5 bilden zusammen den MVP (Abschnitt 4.1 und 6 des PRD). Phase 6 (Design-System & UX) ist eine
 zusätzliche, nicht direkt aus dem PRD abgeleitete Phase, die die bislang funktional, aber visuell rein
 technisch gehaltene MVP-UI auf ein einheitliches, modernes Design-Niveau hebt, bevor der Funktionsumfang
 in Phase 7 weiter wächst. Phase 7 entspricht Abschnitt 4.2 des PRD. Die Vision-Punkte aus Abschnitt 4.3
 (Smartwatch, Smart-Home-Integration, KI-Musteranalyse) sind bewusst nicht verplant, da sie noch keine
-konkreten Anforderungen haben.
+konkreten Anforderungen haben — mit einer Ausnahme: die Sprachsteuerung per Alexa (Phase 8) wurde auf
+Anfrage mit konkreten Anforderungen vorgezogen.
 
 ## Reihenfolge & Abhängigkeiten
 
@@ -45,6 +49,7 @@ Phase 0 (Setup)
                                └─> Phase 5 (Export, Wrapper & Push)
                                       └─> Phase 6 (Design-System & UX)
                                              └─> Phase 7 (V2-Erweiterungen)
+                                                    └─> Phase 8 (Alexa-Integration)
 ```
 
 Phase 4 (Offline-First) und Phase 5 (nativer Wrapper) könnten je nach Team-Kapazität teilweise parallelisiert werden, da sie unterschiedliche Schichten betreffen (Frontend-Datenhaltung vs. Wrapper/Push). Phase 3 (Echtzeit-Sync) sollte jedoch vor Phase 4 stehen, da das Offline-Sync-Konzept auf dem bestehenden Sync-Mechanismus aufsetzt. Phase 6 folgt bewusst erst nach dem vollständigen MVP (Phasen 0–5), da sie alle bis dahin entstandenen Screens einheitlich überarbeitet; innerhalb von Phase 6 selbst gibt es jedoch erhebliches Parallelisierungspotenzial (siehe Meilenstein-Struktur in [Phase 6](phase-6-design-system-ux.md)). Auch Phase 7 ist in weiten Teilen parallelisierbar: Wachstum, Meilensteine und Medikamente/Impfungen sind untereinander unabhängig, während der PDF-Bericht fachlich auf allen dreien aufsetzt und die erweiterten Rollen bewusst zuletzt kommen (siehe [Phase-7-Übersicht](phase-7/README.md)).

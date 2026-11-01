@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, type Location } from 'react-router';
 import { AuthForm } from '../components/AuthForm';
 import { OidcProviderButtons } from '../components/OidcProviderButtons';
+import { toReturnToPath } from '../auth/returnToPath';
 import { AuthShell } from '../components/AuthShell';
 import { useAuth } from '../auth/useAuth';
 
@@ -23,7 +24,7 @@ export function Register() {
 
   return (
     <AuthShell title={t('auth.register.title')}>
-      <OidcProviderButtons />
+      <OidcProviderButtons returnTo={toReturnToPath(from)} />
       <AuthForm mode="register" onSubmit={handleSubmit} />
     </AuthShell>
   );

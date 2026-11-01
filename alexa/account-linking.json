@@ -1,0 +1,14 @@
+{
+  "accountLinkingRequest": {
+    "type": "AUTH_CODE",
+    "authorizationUrl": "https://tinysteps.example.com/alexa/link",
+    "accessTokenUrl": "https://tinysteps.example.com/api/alexa/oauth/token",
+    "clientId": "REPLACE_WITH_alexa.clientId",
+    "clientSecret": "REPLACE_WITH_alexa.clientSecret",
+    "accessTokenScheme": "HTTP_BASIC",
+    "scopes": ["tracking"],
+    "domains": [],
+    "defaultTokenExpirationInSeconds": 3600,
+    "skipOnEnablement": false
+  }
+}

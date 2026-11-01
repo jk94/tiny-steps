@@ -208,6 +208,38 @@ export class EventService {
     };
   }
 
+  /**
+   * The most recent event of one type (by `occurredAt`), or `null` — what
+   * "when was the baby last fed?" asks (Phase 8, ALX-3). Mapped through the
+   * same per-type mappers as `listDaily`, so durations and detail fields are
+   * identical to what the app shows.
+   */
+  async findLatest(
+    householdId: string,
+    childId: string,
+    type: EventType,
+  ): Promise<TimelineEventSummary | null> {
+    await this.findChildOrThrow(householdId, childId);
+
+    const event = await this.prisma.event.findFirst({
+      where: { childId, type },
+      orderBy: { occurredAt: 'desc' },
+      include: { feedingDetail: true, diaperDetail: true },
+    });
+    if (!event) {
+      return null;
+    }
+
+    switch (type) {
+      case EventType.FEEDING:
+        return toFeedingEventSummary(event);
+      case EventType.SLEEP:
+        return toSleepEventSummary(event);
+      case EventType.DIAPER:
+        return toDiaperEventSummary(event);
+    }
+  }
+
   private async findChildOrThrow(householdId: string, childId: string): Promise<Child> {
     const child = await this.prisma.child.findUnique({
       where: { id: childId, householdId },

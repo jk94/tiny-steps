@@ -135,3 +135,83 @@ describe('configValidationSchema (push)', () => {
     expect(error).toBeDefined();
   });
 });
+
+describe('configValidationSchema (alexa)', () => {
+  const withOidc = { ...baseConfig, auth: { ...baseConfig.auth, oidc: {} } };
+  const validAlexa = {
+    skillId: 'amzn1.ask.skill.0a1b2c3d-0000-4000-8000-123456789abc',
+    clientId: 'tinysteps-alexa',
+    clientSecret: 'x'.repeat(32),
+    redirectUris: [
+      'https://pitangui.amazon.com/api/skill/link/M2AAAAAAAAAAAA',
+      'https://layla.amazon.com/api/skill/link/M2AAAAAAAAAAAA',
+    ],
+  };
+
+  it('accepts a config without an alexa section (integration disabled)', () => {
+    const { error, value } = configValidationSchema.validate(withOidc);
+    expect(error).toBeUndefined();
+    expect(value.alexa).toBeUndefined();
+  });
+
+  it('accepts a valid alexa section and defaults responses to none', () => {
+    const { error, value } = configValidationSchema.validate({ ...withOidc, alexa: validAlexa });
+    expect(error).toBeUndefined();
+    expect(value.alexa).toEqual({ ...validAlexa, responses: {} });
+  });
+
+  it.each([
+    ['a skill ID that is not an Alexa skill ID', { skillId: 'my-skill' }],
+    ['a short client secret', { clientSecret: 'too-short' }],
+    ['an http redirect URI', { redirectUris: ['http://pitangui.amazon.com/api/skill/link/X'] }],
+    ['no redirect URIs', { redirectUris: [] }],
+    [
+      'duplicate redirect URIs',
+      { redirectUris: [validAlexa.redirectUris[0], validAlexa.redirectUris[0]] },
+    ],
+  ])('rejects %s', (_label, override) => {
+    const { error } = configValidationSchema.validate({
+      ...withOidc,
+      alexa: { ...validAlexa, ...override },
+    });
+    expect(error).toBeDefined();
+  });
+
+  it('accepts response overrides using known keys and placeholders', () => {
+    const { error } = configValidationSchema.validate({
+      ...withOidc,
+      alexa: {
+        ...validAlexa,
+        responses: {
+          de: { solidLogged: 'Brei für {childName} notiert.' },
+          en: { goodbye: 'Bye!' },
+        },
+      },
+    });
+    expect(error).toBeUndefined();
+  });
+
+  it('rejects an override for an unknown message key', () => {
+    const { error } = configValidationSchema.validate({
+      ...withOidc,
+      alexa: { ...validAlexa, responses: { de: { notAMessage: 'x' } } },
+    });
+    expect(error?.message).toContain('notAMessage');
+  });
+
+  it('rejects an override using a placeholder the template does not provide', () => {
+    const { error } = configValidationSchema.validate({
+      ...withOidc,
+      alexa: { ...validAlexa, responses: { en: { solidLogged: 'Logged for {babyName}.' } } },
+    });
+    expect(error?.message).toContain('{babyName}');
+  });
+
+  it('rejects overrides for a language the skill does not speak', () => {
+    const { error } = configValidationSchema.validate({
+      ...withOidc,
+      alexa: { ...validAlexa, responses: { fr: { goodbye: 'Au revoir' } } },
+    });
+    expect(error).toBeDefined();
+  });
+});

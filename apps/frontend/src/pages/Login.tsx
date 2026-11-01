@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useSearchParams, type Location } from 'react-
 import { AuthForm } from '../components/AuthForm';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { OidcProviderButtons } from '../components/OidcProviderButtons';
+import { toReturnToPath } from '../auth/returnToPath';
 import { AuthShell } from '../components/AuthShell';
 import { useAuth } from '../auth/useAuth';
 import { mapOidcError, type OidcErrorKey } from '../auth/mapOidcError';
@@ -40,7 +41,7 @@ export function Login() {
   return (
     <AuthShell title={t('auth.login.title')}>
       {oidcErrorKey && <ErrorMessage message={t(oidcErrorKey)} />}
-      <OidcProviderButtons />
+      <OidcProviderButtons returnTo={toReturnToPath(from)} />
       <AuthForm mode="login" onSubmit={handleSubmit} />
     </AuthShell>
   );

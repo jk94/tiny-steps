@@ -6,7 +6,9 @@ import { AppModule } from './app.module';
 import type { AppConfig } from './config/configuration';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // `rawBody: true` keeps the exact request bytes next to the parsed JSON —
+  // the Alexa skill endpoint verifies Amazon's signature over them (ADR-0017).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // API routes live under /api so the SPA (served by ServeStaticModule, see
   // app.module.ts) can own every other path, including "/". `/health` stays

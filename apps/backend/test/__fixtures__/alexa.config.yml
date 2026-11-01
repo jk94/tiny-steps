@@ -1,0 +1,20 @@
+# e2e config with the optional Alexa section enabled (alexa.e2e-spec.ts).
+server:
+  port: 3000
+database:
+  provider: sqlite
+auth:
+  local:
+    enabled: true
+  oidc:
+    providers: []
+alexa:
+  skillId: 'amzn1.ask.skill.e2e-test-skill'
+  clientId: 'tinysteps-alexa-e2e'
+  clientSecret: 'e2e-client-secret-0123456789abcdefghij'
+  redirectUris:
+    - 'https://pitangui.amazon.com/api/skill/link/ME2ETEST'
+    - 'https://layla.amazon.com/api/skill/link/ME2ETEST'
+  responses:
+    de:
+      goodbye: 'Tschüss aus dem e2e-Test!'

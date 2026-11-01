@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
   Param,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import {
 } from './oidc-transaction-cookie.service';
 import { OidcProviderRegistry, PublicOidcProvider } from './oidc-provider-registry.service';
 import { OidcMappingError, OidcService } from './oidc.service';
+import { sanitizeReturnTo } from './return-to';
 
 /** Every failure mode the frontend's (not-yet-built) `/login` page can distinguish via `?oidc_error=`. */
 type OidcErrorCode =
@@ -52,8 +54,18 @@ export class OidcController {
     return { providers: this.registry.list() };
   }
 
+  /**
+   * `returnTo` (optional) is where the SPA wants to land after a successful
+   * login — e.g. the Alexa consent page (Phase 8). It is carried inside the
+   * signed `oidc_txn` cookie, never trusted from the callback URL, and only
+   * same-origin app paths survive `sanitizeReturnTo`.
+   */
   @Get(':providerId/login')
-  async login(@Param('providerId') providerId: string, @Res() res: Response): Promise<void> {
+  async login(
+    @Param('providerId') providerId: string,
+    @Res() res: Response,
+    @Query('returnTo') returnTo?: unknown,
+  ): Promise<void> {
     const result = await this.oidcService.buildLoginRedirect(providerId);
     if (!result) {
       // Unknown provider — 404, consistent with this app's existing
@@ -61,7 +73,10 @@ export class OidcController {
       throw new NotFoundException();
     }
 
-    const txnCookieValue = await this.txnCookieService.encode(result.txn);
+    const safeReturnTo = sanitizeReturnTo(returnTo);
+    const txnCookieValue = await this.txnCookieService.encode(
+      safeReturnTo ? { ...result.txn, returnTo: safeReturnTo } : result.txn,
+    );
     res.cookie(OIDC_TXN_COOKIE_NAME, txnCookieValue, oidcTxnCookieOptions);
     res.redirect(HttpStatus.FOUND, result.authorizationUrl);
   }
@@ -114,7 +129,7 @@ export class OidcController {
       }
 
       this.authCookieService.setAuthCookies(res, result.tokens);
-      res.redirect(HttpStatus.FOUND, '/');
+      res.redirect(HttpStatus.FOUND, txn.returnTo ?? '/');
     } catch (error) {
       if (error instanceof OidcMappingError) {
         return this.redirectWithError(res, error.code);

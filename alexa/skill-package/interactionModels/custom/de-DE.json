@@ -1,0 +1,896 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "tiny steps",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "LogFeedingIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "feedingType",
+              "type": "FEEDING_TYPE",
+              "samples": ["{feedingType}", "es war {feedingType}", "{feedingType} bitte"]
+            },
+            {
+              "name": "side",
+              "type": "BREAST_SIDE",
+              "samples": ["{side}", "auf der {side}"]
+            },
+            {
+              "name": "amount",
+              "type": "AMAZON.NUMBER",
+              "samples": [
+                "{amount}",
+                "{amount} Milliliter",
+                "{amount} Millilitern",
+                "es waren {amount} Milliliter"
+              ]
+            },
+            {
+              "name": "duration",
+              "type": "AMAZON.DURATION",
+              "samples": ["{duration}", "{duration} lang", "in {duration}"]
+            }
+          ],
+          "samples": [
+            "{feedingType}",
+            "{feedingType} eintragen",
+            "{feedingType} für {child}",
+            "{feedingType} für {child} eintragen",
+            "{child} hat {feedingType} bekommen",
+            "{child} hatte {feedingType}",
+            "{child} hat eine {feedingType} bekommen",
+            "{feedingType} mit {amount} Milliliter",
+            "{feedingType} mit {amount} Millilitern",
+            "{feedingType} mit {amount} Milliliter für {child}",
+            "{child} hat {amount} Milliliter getrunken",
+            "{child} hat eine {feedingType} mit {amount} Milliliter bekommen",
+            "{amount} Milliliter {feedingType}",
+            "{amount} Milliliter für {child}",
+            "Fütterung eintragen",
+            "Fütterung für {child}",
+            "{child} wurde gefüttert",
+            "{child} hat gegessen",
+            "{child} hat getrunken",
+            "{child} wurde {side} gestillt",
+            "{child} trinkt {side}",
+            "{child} wurde {duration} {side} gestillt",
+            "{child} wurde {duration} gestillt",
+            "{duration} {feedingType} {side}",
+            "{duration} {feedingType} {side} für {child}",
+            "{feedingType} {side}",
+            "{feedingType} {side} starten",
+            "{feedingType} {side} für {child}",
+            "starte {feedingType} {side}",
+            "starte {feedingType} {side} für {child}",
+            "{feedingType} {side} eintragen"
+          ]
+        },
+        {
+          "name": "StopFeedingIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            }
+          ],
+          "samples": [
+            "Stillen beendet",
+            "Stillen beenden",
+            "Stillen stoppen",
+            "Stillen ist fertig",
+            "fertig gestillt",
+            "beende das Stillen",
+            "beende das Stillen für {child}",
+            "Stillen für {child} beenden",
+            "Stilltimer stoppen",
+            "{child} hat fertig getrunken",
+            "{child} ist fertig mit Trinken",
+            "{child} trinkt nicht mehr"
+          ]
+        },
+        {
+          "name": "LogDiaperIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "diaperType",
+              "type": "DIAPER_TYPE",
+              "samples": ["{diaperType}", "sie war {diaperType}", "die Windel war {diaperType}"]
+            }
+          ],
+          "samples": [
+            "Windel {diaperType}",
+            "{diaperType} Windel",
+            "{diaperType} Windel für {child}",
+            "{child} hatte eine {diaperType} Windel",
+            "{child} hat eine {diaperType} Windel",
+            "{child} war {diaperType}",
+            "{child} hatte {diaperType}",
+            "{child} hat {diaperType} gemacht",
+            "die Windel war {diaperType}",
+            "Windel gewechselt",
+            "Windel wechseln eintragen",
+            "Windelwechsel eintragen",
+            "Windelwechsel für {child}",
+            "{child} wurde gewickelt",
+            "{child} ist gewickelt",
+            "{child} frisch gewickelt",
+            "{child} wurde {diaperType} gewickelt"
+          ]
+        },
+        {
+          "name": "StartSleepIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            }
+          ],
+          "samples": [
+            "{child} schläft",
+            "{child} schläft jetzt",
+            "{child} ist eingeschlafen",
+            "{child} schläft ein",
+            "Schlaf starten",
+            "Schlaf für {child} starten",
+            "starte den Schlaf",
+            "starte den Schlaf für {child}",
+            "{child} macht ein Nickerchen",
+            "{child} macht Mittagsschlaf",
+            "{child} ist im Bett",
+            "{child} liegt im Bett",
+            "Schlafenszeit für {child}",
+            "Schlaf eintragen"
+          ]
+        },
+        {
+          "name": "StopSleepIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            }
+          ],
+          "samples": [
+            "{child} ist wach",
+            "{child} ist aufgewacht",
+            "{child} ist wieder wach",
+            "{child} ist aufgestanden",
+            "Schlaf beenden",
+            "Schlaf stoppen",
+            "Schlaf für {child} beenden",
+            "beende den Schlaf",
+            "beende den Schlaf für {child}",
+            "aufgewacht"
+          ]
+        },
+        {
+          "name": "LogSleepIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "duration",
+              "type": "AMAZON.DURATION",
+              "samples": ["{duration}", "{duration} lang", "in {duration}"]
+            }
+          ],
+          "samples": [
+            "{child} hat {duration} geschlafen",
+            "{duration} Schlaf eintragen",
+            "{duration} Schlaf für {child}",
+            "{child} hat ein Nickerchen von {duration} gemacht",
+            "Schlaf von {duration} eintragen",
+            "Schlaf von {duration} für {child} eintragen",
+            "{child} hat {duration} Mittagsschlaf gemacht"
+          ]
+        },
+        {
+          "name": "LastActivityIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "activity",
+              "type": "ACTIVITY_TYPE"
+            }
+          ],
+          "samples": [
+            "wann wurde {child} zuletzt {activity}",
+            "wann wurde zuletzt {activity}",
+            "wann hat {child} zuletzt {activity}",
+            "wann hat {child} das letzte Mal {activity}",
+            "wann wurde {child} das letzte Mal {activity}",
+            "wann war die letzte {activity}",
+            "wann war die letzte {activity} von {child}",
+            "letzte {activity}",
+            "letzte {activity} von {child}",
+            "wann gab es die letzte {activity}",
+            "wie lange ist die letzte {activity} her",
+            "wann ist {child} {activity}",
+            "wann war {child} zuletzt {activity}",
+            "wie lange schläft {child} schon",
+            "seit wann schläft {child}",
+            "status",
+            "status von {child}",
+            "was gibt es neues bei {child}"
+          ]
+        },
+        {
+          "name": "DailySummaryIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "date",
+              "type": "AMAZON.DATE"
+            }
+          ],
+          "samples": [
+            "Zusammenfassung",
+            "Zusammenfassung für {child}",
+            "Zusammenfassung von {date}",
+            "Zusammenfassung für {date}",
+            "Zusammenfassung von {child} für {date}",
+            "Tageszusammenfassung",
+            "Tageszusammenfassung für {child}",
+            "Tagesbericht",
+            "Tagesbericht für {child}",
+            "wie war der Tag",
+            "wie war der Tag von {child}",
+            "wie war {date}",
+            "wie war {date} für {child}",
+            "was hat {child} {date} gemacht",
+            "was hat {child} heute gemacht"
+          ]
+        },
+        {
+          "name": "SetFeedingReminderIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "duration",
+              "type": "AMAZON.DURATION",
+              "samples": ["{duration}", "{duration} lang", "in {duration}"]
+            }
+          ],
+          "samples": [
+            "erinnere mich in {duration} ans Füttern",
+            "erinnere mich in {duration} an die nächste Fütterung",
+            "erinnere mich in {duration} daran {child} zu füttern",
+            "erinnere mich in {duration} {child} zu füttern",
+            "erinnere mich ans Füttern",
+            "erinnere mich an die nächste Fütterung",
+            "erinnere mich daran {child} zu füttern",
+            "Fütterungserinnerung",
+            "Fütterungserinnerung in {duration}",
+            "Fütterungserinnerung für {child}",
+            "stelle eine Fütterungserinnerung",
+            "stelle eine Fütterungserinnerung in {duration}"
+          ]
+        },
+        {
+          "name": "SetMedicationReminderIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            },
+            {
+              "name": "time",
+              "type": "AMAZON.TIME",
+              "samples": ["{time}", "um {time}"]
+            },
+            {
+              "name": "medication",
+              "type": "MEDICATION_NAME"
+            },
+            {
+              "name": "recurrence",
+              "type": "REMINDER_RECURRENCE"
+            }
+          ],
+          "samples": [
+            "erinnere mich um {time} an {medication}",
+            "erinnere mich um {time} an das {medication}",
+            "erinnere mich um {time} an den {medication}",
+            "erinnere mich um {time} an die {medication}",
+            "erinnere mich {recurrence} um {time} an {medication}",
+            "erinnere mich {recurrence} um {time} an das {medication}",
+            "erinnere mich {recurrence} um {time} an den {medication}",
+            "erinnere mich {recurrence} um {time} an die {medication}",
+            "erinnere mich um {time} an {medication} für {child}",
+            "erinnere mich {recurrence} um {time} an {medication} für {child}",
+            "erinnere mich an {medication}",
+            "erinnere mich an das Medikament",
+            "erinnere mich um {time} an das Medikament",
+            "erinnere mich um {time} an das Medikament für {child}",
+            "erinnere mich {recurrence} um {time} an das Medikament",
+            "Medikamentenerinnerung",
+            "Medikamentenerinnerung um {time}",
+            "Medikamentenerinnerung für {child}",
+            "Erinnerung für {medication} um {time}"
+          ]
+        },
+        {
+          "name": "UpcomingHealthRecordsIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            }
+          ],
+          "samples": [
+            "welche Medikamente stehen an",
+            "welche Impfungen stehen an",
+            "welche Medikamente stehen für {child} an",
+            "welche Impfungen stehen für {child} an",
+            "was steht an",
+            "was steht für {child} an",
+            "welche Medikamente sind geplant",
+            "geplante Medikamente",
+            "geplante Impfungen",
+            "wann ist die nächste Impfung",
+            "wann ist die nächste Impfung von {child}",
+            "was ist für {child} geplant"
+          ]
+        },
+        {
+          "name": "SetDefaultChildIntent",
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "samples": ["{child}", "für {child}", "es geht um {child}"]
+            }
+          ],
+          "samples": [
+            "setze {child} als Standardkind",
+            "{child} als Standardkind",
+            "Standardkind ist {child}",
+            "Standardkind festlegen",
+            "Standardkind ändern",
+            "mache {child} zum Standardkind",
+            "wechsle zu {child}",
+            "ab jetzt geht es um {child}"
+          ]
+        }
+      ],
+      "types": [
+        {
+          "name": "FEEDING_TYPE",
+          "values": [
+            {
+              "id": "BOTTLE",
+              "name": {
+                "value": "Flasche",
+                "synonyms": [
+                  "Fläschchen",
+                  "Milchflasche",
+                  "Flaschenmahlzeit",
+                  "Pre Milch",
+                  "Milch",
+                  "Fläschen"
+                ]
+              }
+            },
+            {
+              "id": "BREAST",
+              "name": {
+                "value": "Stillen",
+                "synonyms": ["Brust", "gestillt", "Stillmahlzeit", "Stillzeit", "an der Brust"]
+              }
+            },
+            {
+              "id": "SOLID",
+              "name": {
+                "value": "Beikost",
+                "synonyms": [
+                  "Brei",
+                  "Babybrei",
+                  "Gläschen",
+                  "Essen",
+                  "feste Nahrung",
+                  "Mittagsbrei",
+                  "Abendbrei"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BREAST_SIDE",
+          "values": [
+            {
+              "id": "LEFT",
+              "name": {
+                "value": "links",
+                "synonyms": ["linke Seite", "linken Seite", "linke Brust", "linker Seite"]
+              }
+            },
+            {
+              "id": "RIGHT",
+              "name": {
+                "value": "rechts",
+                "synonyms": ["rechte Seite", "rechten Seite", "rechte Brust", "rechter Seite"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DIAPER_TYPE",
+          "values": [
+            {
+              "id": "PEE",
+              "name": {
+                "value": "nass",
+                "synonyms": ["nasse", "nur nass", "Pipi", "Urin", "feucht", "pinkeln", "Pippi"]
+              }
+            },
+            {
+              "id": "STOOL",
+              "name": {
+                "value": "voll",
+                "synonyms": [
+                  "volle",
+                  "Stuhl",
+                  "Stuhlgang",
+                  "Kacka",
+                  "Kaka",
+                  "groß",
+                  "dreckig",
+                  "Stinker"
+                ]
+              }
+            },
+            {
+              "id": "BOTH",
+              "name": {
+                "value": "beides",
+                "synonyms": [
+                  "nass und voll",
+                  "voll und nass",
+                  "beide",
+                  "nass und Stuhl",
+                  "Pipi und Kacka"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ACTIVITY_TYPE",
+          "values": [
+            {
+              "id": "FEEDING",
+              "name": {
+                "value": "gefüttert",
+                "synonyms": [
+                  "Fütterung",
+                  "gegessen",
+                  "getrunken",
+                  "gestillt",
+                  "Flasche",
+                  "Mahlzeit",
+                  "Essen"
+                ]
+              }
+            },
+            {
+              "id": "DIAPER",
+              "name": {
+                "value": "gewickelt",
+                "synonyms": ["Windel", "Windelwechsel", "gewechselt", "neue Windel"]
+              }
+            },
+            {
+              "id": "SLEEP",
+              "name": {
+                "value": "geschlafen",
+                "synonyms": [
+                  "Schlaf",
+                  "Nickerchen",
+                  "Mittagsschlaf",
+                  "aufgewacht",
+                  "eingeschlafen",
+                  "wach"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "MEDICATION_NAME",
+          "values": [
+            {
+              "id": "VITAMIN_D",
+              "name": {
+                "value": "Vitamin D",
+                "synonyms": ["Vitamin D Tablette", "Vigantol", "Vigantoletten", "D Fluoretten"]
+              }
+            },
+            {
+              "id": "FLUORIDE",
+              "name": {
+                "value": "Fluorid",
+                "synonyms": ["Fluor", "Fluoridtablette", "Zymafluor"]
+              }
+            },
+            {
+              "id": "ANTIPYRETIC",
+              "name": {
+                "value": "Fiebersaft",
+                "synonyms": [
+                  "Paracetamol",
+                  "Ibuprofen",
+                  "Nurofen",
+                  "Fieberzäpfchen",
+                  "Zäpfchen",
+                  "Ben-u-ron"
+                ]
+              }
+            },
+            {
+              "id": "NOSE_DROPS",
+              "name": {
+                "value": "Nasentropfen",
+                "synonyms": ["Nasenspray", "Meerwasserspray"]
+              }
+            },
+            {
+              "id": "ANTIBIOTIC",
+              "name": {
+                "value": "Antibiotikum",
+                "synonyms": ["Antibiotika", "Penicillin", "Amoxicillin"]
+              }
+            },
+            {
+              "id": "IRON",
+              "name": {
+                "value": "Eisentropfen",
+                "synonyms": ["Eisen", "Eisenpräparat"]
+              }
+            },
+            {
+              "id": "PROBIOTIC",
+              "name": {
+                "value": "Probiotikum",
+                "synonyms": ["Bifidobakterien", "Darmbakterien"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REMINDER_RECURRENCE",
+          "values": [
+            {
+              "id": "DAILY",
+              "name": {
+                "value": "jeden Tag",
+                "synonyms": ["täglich", "jeden Morgen", "jeden Abend", "jede Nacht", "jeden Mittag"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "LogFeedingIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "feedingType",
+              "type": "FEEDING_TYPE",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "side",
+              "type": "BREAST_SIDE",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "amount",
+              "type": "AMAZON.NUMBER",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "duration",
+              "type": "AMAZON.DURATION",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "StopFeedingIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "LogDiaperIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "diaperType",
+              "type": "DIAPER_TYPE",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "StartSleepIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "StopSleepIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "LogSleepIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "duration",
+              "type": "AMAZON.DURATION",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "LastActivityIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "activity",
+              "type": "ACTIVITY_TYPE",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "DailySummaryIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "date",
+              "type": "AMAZON.DATE",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "SetFeedingReminderIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "duration",
+              "type": "AMAZON.DURATION",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "SetMedicationReminderIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "time",
+              "type": "AMAZON.TIME",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "medication",
+              "type": "MEDICATION_NAME",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "recurrence",
+              "type": "REMINDER_RECURRENCE",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "UpcomingHealthRecordsIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        },
+        {
+          "name": "SetDefaultChildIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "child",
+              "type": "AMAZON.FirstName",
+              "elicitationRequired": false,
+              "confirmationRequired": false,
+              "prompts": {}
+            }
+          ]
+        }
+      ],
+      "delegationStrategy": "SKILL_RESPONSE"
+    },
+    "prompts": []
+  }
+}

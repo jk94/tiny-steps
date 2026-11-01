@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AlexaModule } from './alexa/alexa.module';
 import { AuthModule } from './auth/auth.module';
 import { HouseholdModule } from './household/household.module';
 import { ChildModule } from './child/child.module';
@@ -55,6 +56,7 @@ import loadConfiguration from './config/configuration';
     HealthRecordModule,
     PushModule,
     NotificationModule,
+    AlexaModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
