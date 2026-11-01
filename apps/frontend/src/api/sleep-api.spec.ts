@@ -38,6 +38,7 @@ const summary = {
 describe('sleep-api', () => {
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('createSleepEvent POSTs the input to the sleep-events collection', async () => {
@@ -76,6 +77,33 @@ describe('sleep-api', () => {
 
     expect(mockedApiFetch).toHaveBeenCalledWith(`${BASE_PATH}/active-timer`);
     expect(result).toBeNull();
+  });
+
+  it('fetchActiveSleepTimer resolves null (not undefined) for the empty body sent when no timer runs', async () => {
+    // The backend's `null` arrives as an empty body, which the real `apiFetch`
+    // maps to `undefined` — run it against a stubbed `fetch` so that mapping is
+    // exercised rather than assumed. React Query rejects `undefined` as data.
+    const actual = await vi.importActual<typeof httpClient>('./http-client');
+    mockedApiFetch.mockImplementationOnce(actual.apiFetch);
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(''),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchActiveSleepTimer(HOUSEHOLD_ID, CHILD_ID);
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api${BASE_PATH}/active-timer`, expect.anything());
+    expect(result).toBeNull();
+  });
+
+  it('fetchActiveSleepTimer passes a running timer through unchanged', async () => {
+    mockedApiFetch.mockResolvedValueOnce(summary);
+
+    const result = await fetchActiveSleepTimer(HOUSEHOLD_ID, CHILD_ID);
+
+    expect(result).toEqual(summary);
   });
 
   it('updateSleepEvent PATCHes the given input', async () => {
