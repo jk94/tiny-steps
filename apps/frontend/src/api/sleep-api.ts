@@ -72,12 +72,21 @@ export function fetchSleepEvent(
   return apiFetch<SleepEventSummary>(`${sleepEventsPath(householdId, childId)}/${eventId}`);
 }
 
-export function fetchActiveSleepTimer(
+/**
+ * Resolves `null` when no timer is running. The backend returns `null` for that
+ * case, which Nest serialises as an *empty* body — and `apiFetch` maps an empty
+ * body to `undefined` (deliberately, for 204-style responses). React Query
+ * rejects `undefined` as query data, so normalise it here rather than in
+ * `apiFetch`.
+ */
+export async function fetchActiveSleepTimer(
   householdId: string,
   childId: string,
 ): Promise<SleepEventSummary | null> {
-  return apiFetch<SleepEventSummary | null>(
-    `${sleepEventsPath(householdId, childId)}/active-timer`,
+  return (
+    (await apiFetch<SleepEventSummary | null | undefined>(
+      `${sleepEventsPath(householdId, childId)}/active-timer`,
+    )) ?? null
   );
 }
 

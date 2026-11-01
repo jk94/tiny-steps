@@ -92,12 +92,21 @@ export function fetchFeedingEvent(
   return apiFetch<FeedingEventSummary>(`${feedingEventsPath(householdId, childId)}/${eventId}`);
 }
 
-export function fetchActiveFeedingTimer(
+/**
+ * Resolves `null` when no timer is running. The backend returns `null` for that
+ * case, which Nest serialises as an *empty* body — and `apiFetch` maps an empty
+ * body to `undefined` (deliberately, for 204-style responses). React Query
+ * rejects `undefined` as query data, so normalise it here rather than in
+ * `apiFetch`.
+ */
+export async function fetchActiveFeedingTimer(
   householdId: string,
   childId: string,
 ): Promise<FeedingEventSummary | null> {
-  return apiFetch<FeedingEventSummary | null>(
-    `${feedingEventsPath(householdId, childId)}/active-timer`,
+  return (
+    (await apiFetch<FeedingEventSummary | null | undefined>(
+      `${feedingEventsPath(householdId, childId)}/active-timer`,
+    )) ?? null
   );
 }
 
