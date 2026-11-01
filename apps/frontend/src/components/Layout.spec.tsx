@@ -181,13 +181,32 @@ describe('Layout', () => {
     expect(headerLogoutButton()).toBeInTheDocument();
   });
 
-  it('renders the global nav links', () => {
-    mockUnauthenticated();
+  it('renders the global nav links for a signed-in user', () => {
+    mockAuthenticated();
 
     renderLayout();
 
     expect(screen.getByRole('link', { name: 'Households' })).toHaveAttribute('href', '/households');
     expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile');
+  });
+
+  // Both destinations sit behind ProtectedRoute; for a guest they would only
+  // bounce back to the login screen.
+  it('renders no global nav links for a guest', () => {
+    mockUnauthenticated();
+
+    renderLayout();
+
+    expect(screen.queryByRole('link', { name: 'Households' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Profile' })).not.toBeInTheDocument();
+  });
+
+  it('hides the global nav links while the session is still being restored', () => {
+    mockAuthenticated({ isLoading: true });
+
+    renderLayout();
+
+    expect(screen.queryByRole('link', { name: 'Households' })).not.toBeInTheDocument();
   });
 
   describe('mobile menu sheet', () => {
@@ -216,6 +235,19 @@ describe('Layout', () => {
       );
       expect(within(sheet).getByRole('button', { name: 'Switch to German' })).toBeInTheDocument();
       expect(within(sheet).getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    });
+
+    it('offers a guest only the language switch, no nav links', async () => {
+      mockUnauthenticated();
+
+      const user = userEvent.setup();
+      renderLayout();
+
+      await user.click(screen.getByRole('button', { name: 'Open menu' }));
+
+      const sheet = screen.getByRole('dialog', { name: 'Main menu' });
+      expect(within(sheet).queryByRole('link')).not.toBeInTheDocument();
+      expect(within(sheet).getByRole('button', { name: 'Switch to German' })).toBeInTheDocument();
     });
 
     it('closes again on its close button', async () => {

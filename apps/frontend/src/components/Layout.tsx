@@ -153,17 +153,22 @@ export function Layout() {
               Tiny<span className="text-primary">Steps</span>
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 text-sm font-semibold lg:flex">
-            {globalNavItems.map(({ to, label }) => (
-              <Link
-                key={to}
-                to={to}
-                className="rounded-md px-3 py-1.5 text-foreground hover:bg-muted hover:text-primary"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          {/* Every global destination sits behind ProtectedRoute, so a guest
+              (login/register/invite screens) gets no links that would only
+              bounce them back to the login. */}
+          {showSessionControls && (
+            <nav className="hidden items-center gap-1 text-sm font-semibold lg:flex">
+              {globalNavItems.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className="rounded-md px-3 py-1.5 text-foreground hover:bg-muted hover:text-primary"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -220,30 +225,37 @@ export function Layout() {
         >
           <div className="flex flex-col gap-4">
             {showSessionControls && (
-              <Link
-                to="/profile"
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
-              >
-                <Avatar name={displayName} size="sm" />
-                <span>{displayName}</span>
-              </Link>
+              <>
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+                >
+                  <Avatar name={displayName} size="sm" />
+                  <span>{displayName}</span>
+                </Link>
+
+                <nav className="flex flex-col gap-1 border-t border-border pt-4">
+                  {sheetNavItems.map(({ to, label }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+              </>
             )}
 
-            <nav className="flex flex-col gap-1 border-t border-border pt-4">
-              {sheetNavItems.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="flex items-center gap-1 border-t border-border pt-4">
+            <div
+              className={cn(
+                'flex items-center gap-1',
+                showSessionControls && 'border-t border-border pt-4',
+              )}
+            >
               <LanguageButtons
                 currentLanguage={i18n.language}
                 onChangeLanguage={(lng) => void i18n.changeLanguage(lng)}
