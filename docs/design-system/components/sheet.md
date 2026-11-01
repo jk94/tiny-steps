@@ -2,8 +2,10 @@
 
 ## Purpose
 
-An edge-anchored panel that slides in over the page, used for navigation that doesn't fit a narrow
-viewport — currently the mobile header menu behind the hamburger trigger. It is a modal dialog
+An edge-anchored panel that slides in over the page. Two placements are in use: `right` for
+navigation that doesn't fit a narrow viewport (the mobile header menu behind the hamburger trigger)
+and `bottom` for thumb-reachable action sheets (the quick-add sheet behind the floating action
+button, and the "more" sheet listing every area of a child). It is a modal dialog
 positioned against a screen edge rather than centered, so it shares [Modal](modal.md)'s foundation
 instead of duplicating focus-trap/scroll-lock behaviour.
 
@@ -16,6 +18,8 @@ Prefer `Sheet` over `Dialog` when the content is a *list of destinations* the us
 | --------- | ------------------- | ---------------------------------------------------------- |
 | `Sheet`   | portaled `dialog`   | Edge-anchored surface + backdrop + close button.           |
 | (backdrop)| `<div>`             | Dims the page; **clicking it dismisses** the sheet.        |
+| (handle)  | `<span>`            | `bottom` only: a decorative grab bar at the top edge.      |
+| (title)   | `h2` (Radix `Title`) | Optional visible heading, left of the ✕; names the dialog. |
 | (close)   | `<button>`          | ✕ in the panel's top-right.                                |
 | children  | —                   | Scrollable content area; no further layout slots.          |
 
@@ -28,8 +32,9 @@ Deliberately flatter than `Dialog`: a sheet holds a `nav` and a couple of contro
 | ----------------- | ------------------------- | --------- | ------------------------------------------------- |
 | `isOpen`          | `boolean` (required)      | —         | Controlled open state.                            |
 | `onOpenChange`    | `(open: boolean) => void` | —         | Called with `false` on close (✕, ESC, **or an outside click**). |
-| `side`            | `'right'`                 | `'right'` | Edge the panel is anchored to. Typed as a union for future extension; only `right` exists today. |
-| `aria-label`      | `string`                  | —         | Accessible name for the panel (it has no `Title` slot). |
+| `side`            | `'right' \| 'bottom'`     | `'right'` | Edge the panel is anchored to. |
+| `title`           | `ReactNode`               | —         | Visible heading; when set it is also the panel's accessible name. |
+| `aria-label`      | `string`                  | —         | Accessible name for the panel when it has no `title`. |
 | `aria-labelledby` | `string`                  | —         | Id of the element naming the panel, as an alternative to `aria-label`. |
 | `className`       | `string`                  | —         | Merged onto the panel surface.                    |
 
@@ -37,17 +42,18 @@ Deliberately flatter than `Dialog`: a sheet holds a `nav` and a couple of contro
 
 | State   | Appearance                                                                       |
 | ------- | -------------------------------------------------------------------------------- |
-| Open    | Full-height panel flush to the right edge (85% width, capped at `max-w-xs`), left border + shadow, dimmed backdrop. |
+| Open (`right`) | Full-height panel flush to the right edge (85% width, capped at `max-w-xs`), left border + shadow, dimmed and slightly blurred backdrop. |
+| Open (`bottom`) | Full-width panel flush to the bottom edge (capped at `max-w-lg` and centred on wide screens, at most 85% of the viewport height), rounded top corners, grab bar, bottom safe-area padding. |
 | Closed  | Not rendered at all (the whole subtree is unmounted).                             |
-| Opening/closing | Slides horizontally over 300ms, between fully off-screen and flush to the edge. Under `prefers-reduced-motion: reduce` it appears and disappears with no slide. |
+| Opening/closing | Slides in from its edge (300ms horizontally, 320ms in / 220ms out vertically) while the backdrop fades. Under `prefers-reduced-motion: reduce` it appears and disappears with no motion. |
 | Focus   | Focus moves into the panel on open and is trapped there; controls show a focus ring. |
 
 ## Accessibility
 
 - Backed by the same Radix Dialog primitive as [Modal](modal.md): portal, **focus trap**, scroll
   lock, inert background, ESC handling and focus restoration on close.
-- The panel has no title slot, so it **must** be given an `aria-label` (or `aria-labelledby`) —
-  otherwise it announces as an unnamed dialog.
+- Without a `title` the panel **must** be given an `aria-label` (or `aria-labelledby`) —
+  otherwise it announces as an unnamed dialog. With a `title`, the heading names it.
 - ESC, the ✕ button and an **outside click** all invoke `onOpenChange(false)`. The outside-click
   dismissal is the deliberate difference from `Dialog`: tapping the dimmed area beside a slide-out
   menu is the expected way to close it on touch, and unlike a form dialog there's no unsaved input
@@ -63,9 +69,10 @@ Deliberately flatter than `Dialog`: a sheet holds a `nav` and a couple of contro
 The slide must be a real `@keyframes` animation (`src/styles/animations.css`), not a CSS
 transition. Radix's `Presence` keeps a closing panel mounted only while it observes an
 `animationend` event; a transition emits `transitionend`, which it ignores, so the panel would be
-unmounted before anything became visible. The backdrop is deliberately not animated, matching
-[Modal](modal.md).
+unmounted before anything became visible. The backdrop fades with the same keyframe mechanism
+(`fade-in`/`fade-out`).
 
 ## Icon / illustration suggestion
 
-A hamburger (`lucide-react` `Menu`) for the trigger and a ✕ (`X`) for the close affordance.
+A hamburger (`lucide-react` `Menu`) for the navigation trigger, a `Plus` floating action button or a
+`LayoutGrid` "more" tab for the bottom sheets, and a ✕ (`X`) for the close affordance.

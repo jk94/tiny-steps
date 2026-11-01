@@ -6,17 +6,18 @@ import type { ManifestOptions } from 'vite-plugin-pwa';
 // other future consumer share one definition instead of duplicating it
 // inline.
 //
-// `theme_color`/`background_color` are a placeholder neutral dark pair —
-// there is no design system yet (that's Phase 6). The same `theme_color`
-// value must also be used in index.html's `<meta name="theme-color">` tag.
+// `theme_color` is the design system's light `primary` token and
+// `background_color` its light `canvas` token (the splash screen matches the
+// page background the app then paints). The same `theme_color` value must also
+// be used in index.html's `<meta name="theme-color">` tag.
 export const pwaManifest: Partial<ManifestOptions> = {
   name: 'TinySteps',
   short_name: 'TinySteps',
   start_url: '/',
   scope: '/',
   display: 'standalone',
-  theme_color: '#1e293b',
-  background_color: '#0f172a',
+  theme_color: '#6246ea',
+  background_color: '#fbf7f2',
   prefer_related_applications: false,
   icons: [
     {

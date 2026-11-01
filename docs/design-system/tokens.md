@@ -15,29 +15,30 @@ appear both here and in the Event-type table below.
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--color-background` | `#ffffff` | `#0f172a` |
-| `--color-foreground` | `#1f2933` | `#e2e8f0` |
-| `--color-card` | `#ffffff` | `#0f172a` |
-| `--color-card-foreground` | `#1f2933` | `#e2e8f0` |
-| `--color-popover` | `#ffffff` | `#0f172a` |
-| `--color-popover-foreground` | `#1f2933` | `#e2e8f0` |
-| `--color-primary` | `#4f46e5` | `#818cf8` |
-| `--color-primary-foreground` | `#ffffff` | `#0f172a` |
-| `--color-secondary` | `#f1f5f9` | `#1e293b` |
-| `--color-secondary-foreground` | `#1f2933` | `#e2e8f0` |
-| `--color-muted` | `#f1f5f9` | `#1e293b` |
-| `--color-muted-foreground` | `#64748b` | `#94a3b8` |
-| `--color-accent` | `#f1f5f9` | `#1e293b` |
-| `--color-accent-foreground` | `#1f2933` | `#e2e8f0` |
+| `--color-background` | `#ffffff` | `#16131f` |
+| `--color-canvas` | `#fbf7f2` | `#100e17` |
+| `--color-foreground` | `#2a2438` | `#ece9f5` |
+| `--color-card` | `#ffffff` | `#1d1a2b` |
+| `--color-card-foreground` | `#2a2438` | `#ece9f5` |
+| `--color-popover` | `#ffffff` | `#1d1a2b` |
+| `--color-popover-foreground` | `#2a2438` | `#ece9f5` |
+| `--color-primary` | `#6246ea` | `#a99bff` |
+| `--color-primary-foreground` | `#ffffff` | `#16112b` |
+| `--color-secondary` | `#f2eefe` | `#2a2541` |
+| `--color-secondary-foreground` | `#2a2438` | `#ece9f5` |
+| `--color-muted` | `#f5f1ec` | `#24203a` |
+| `--color-muted-foreground` | `#6b6478` | `#a8a2bd` |
+| `--color-accent` | `#f2eefe` | `#2a2541` |
+| `--color-accent-foreground` | `#2a2438` | `#ece9f5` |
 | `--color-success` | `#16a34a` | `#4ade80` |
 | `--color-success-foreground` | `#052e16` | `#052e16` |
 | `--color-warning` | `#d97706` | `#fbbf24` |
 | `--color-warning-foreground` | `#451a03` | `#451a03` |
 | `--color-destructive` | `#dc2626` | `#f87171` |
 | `--color-destructive-foreground` | `#ffffff` | `#450a0a` |
-| `--color-border` | `#e2e8f0` | `#334155` |
-| `--color-input` | `#e2e8f0` | `#334155` |
-| `--color-ring` | `#4f46e5` | `#818cf8` |
+| `--color-border` | `#ebe4dc` | `#312c47` |
+| `--color-input` | `#e3dbd2` | `#3a3452` |
+| `--color-ring` | `#6246ea` | `#a99bff` |
 | `--color-feeding` | `#f59e0b` | `#fbbf24` |
 | `--color-feeding-foreground` | `#000000` | `#1f2933` |
 | `--color-feeding-breast` | `#ec4899` | `#f472b6` |
@@ -68,12 +69,20 @@ appear both here and in the Event-type table below.
 | `--color-milestone-social-foreground` | `#000000` | `#1f2933` |
 | `--color-milestone-physical` | `#be123c` | `#fda4af` |
 | `--color-milestone-physical-foreground` | `#ffffff` | `#1f2933` |
+| `--color-growth` | `#10b981` | `#34d399` |
+| `--color-growth-foreground` | `#022c22` | `#022c22` |
+| `--color-milestone` | `#ec4899` | `#f472b6` |
+| `--color-milestone-foreground` | `#000000` | `#1f2933` |
+| `--color-health` | `#f43f5e` | `#fb7185` |
+| `--color-health-foreground` | `#000000` | `#1f2933` |
+| `--color-development` | `#0ea5e9` | `#38bdf8` |
+| `--color-development-foreground` | `#000000` | `#082f49` |
 
 ## Typography
 
 | Token | Value |
 | --- | --- |
-| `--font-family-sans` | `system-ui, Avenir, Helvetica, Arial, sans-serif` |
+| `--font-family-sans` | `Nunito Variable, system-ui, Avenir, Helvetica, Arial, sans-serif` |
 | `--font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
 | `--font-family-report` | `Inter` |
 | `--font-size-xs` | `0.75rem` |
@@ -112,18 +121,19 @@ appear both here and in the Event-type table below.
 
 | Token | Value |
 | --- | --- |
-| `--radius-sm` | `0.25rem` |
-| `--radius-md` | `0.5rem` |
-| `--radius-lg` | `0.75rem` |
+| `--radius-sm` | `0.375rem` |
+| `--radius-md` | `0.75rem` |
+| `--radius-lg` | `1.25rem` |
+| `--radius-xl` | `1.75rem` |
 | `--radius-full` | `9999px` |
 
 ## Shadows
 
 | Token | Value |
 | --- | --- |
-| `--shadow-sm` | `0 1px 2px 0 rgb(0 0 0 / 0.05)` |
-| `--shadow-md` | `0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)` |
-| `--shadow-lg` | `0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)` |
+| `--shadow-sm` | `0 1px 2px 0 rgb(42 36 56 / 0.06)` |
+| `--shadow-md` | `0 6px 16px -4px rgb(42 36 56 / 0.12), 0 2px 4px -2px rgb(42 36 56 / 0.06)` |
+| `--shadow-lg` | `0 16px 32px -8px rgb(42 36 56 / 0.2), 0 4px 8px -4px rgb(42 36 56 / 0.08)` |
 
 ## Breakpoints
 

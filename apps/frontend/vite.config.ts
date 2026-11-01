@@ -38,6 +38,11 @@ export default defineConfig({
         // out-of-scope slice; see ADR-0008).
         navigateFallbackDenylist: [/^\/api\//, /^\/health/],
         cleanupOutdatedCaches: true,
+        // The plugin's default (`js,css,html`) plus the one app-font subset
+        // German and English text actually uses, so the installed app keeps
+        // its typeface offline. The other Nunito subsets (cyrillic,
+        // vietnamese, latin-ext) load on demand via `unicode-range` only.
+        globPatterns: ['**/*.{js,css,html}', '**/nunito-latin-wght-normal-*.woff2'],
       },
     }),
   ],

@@ -45,3 +45,34 @@ export const Controlled: Story = {
   },
   render: () => <ControlledSheetDemo />,
 };
+
+function BottomSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open quick add</Button>
+      <Sheet isOpen={open} onOpenChange={setOpen} side="bottom" title="Quick add">
+        <div className="grid grid-cols-3 gap-3">
+          {['Feeding', 'Sleep', 'Diaper'].map((label) => (
+            <button
+              key={label}
+              type="button"
+              className="rounded-lg bg-secondary px-3 py-6 text-sm font-semibold hover:bg-accent"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Sheet>
+    </>
+  );
+}
+
+export const BottomWithTitle: Story = {
+  args: {
+    isOpen: false,
+    onOpenChange: () => {},
+    children: null,
+  },
+  render: () => <BottomSheetDemo />,
+};

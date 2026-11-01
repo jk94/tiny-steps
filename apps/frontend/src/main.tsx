@@ -10,6 +10,9 @@ import { SyncQueueProvider } from './offline/SyncQueueProvider.tsx';
 import { ConflictNoticeBanner } from './components/ConflictNoticeBanner.tsx';
 import { Toaster } from './components/ui';
 import { ServiceWorkerUpdateBanner } from './pwa/ServiceWorkerUpdateBanner.tsx';
+// The app font, bundled rather than fetched from a font CDN: a self-hosted
+// app must not phone home to Google on every page load (see ADR-0016).
+import '@fontsource-variable/nunito/wght.css';
 import './index.css';
 import App from './App.tsx';
 

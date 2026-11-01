@@ -53,3 +53,4 @@ Proposed | Accepted | Deprecated | Superseded by ADR-NNNN
 | [0013](0013-design-system-styling-approach.md) | Design-system styling approach: Tailwind v4 + cva + native-element primitives | Accepted |
 | [0014](0014-charting-library-visx.md) | visx as the charting library for the growth trend | Accepted |
 | [0015](0015-pdf-report-generation.md) | PDF report generation — `@react-pdf/renderer` behind a renderer-neutral `ReportDocument` | Accepted (partially implemented) |
+| [0016](0016-playful-visual-language-navigation-and-motion.md) | Playful visual language — four-item child navigation, quick-add FAB, view transitions and an SVG illustration set | Accepted |

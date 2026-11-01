@@ -199,3 +199,16 @@ beschreiben), damit M2/M3 nicht auf unterschiedlichen Zwischenständen aufbauen.
   2 Taps) bleiben nach dem Redesign nachweislich erhalten
 - Kein Regressions-Fehler in bestehenden Unit-/Komponenten-/E2E-Tests; ggf. angepasste Tests sind grün
 - Barrierefreiheits-Audit zeigt keine kritischen Befunde (ausreichende Kontraste, Tastaturbedienbarkeit)
+
+## Nachtrag: Design-Überarbeitung (2026-11-01)
+
+Nach Abschluss von Phase 6/7 auf Nutzerwunsch nachgezogen (nicht im PRD, analog zu 7.7 als
+Wunsch-Erweiterung): mobile Kind-Navigation von acht auf vier Einträge plus „Mehr“-Sheet,
+Schnell-Hinzufügen-FAB (Standard-Ereignis bleibt bei **2 Taps** — FAB → Typ — und erfüllt damit
+weiterhin das Tap-Kriterium dieser Phase), View-Transitions („expandierende Kachel“ Kind → Übersicht,
+Meilenstein → Detail), Meilenstein-Album mit Cover-Bild und neuer Detailseite, wärmere Farb-/
+Radius-/Schatten-Tokens, gebündelte Schrift (Nunito) und ein handgezeichneter SVG-Illustrationssatz.
+Entscheidungen: [ADR-0016](../adr/0016-playful-visual-language-navigation-and-motion.md);
+Umsetzung: [`implementation-notes.md`](../implementation-notes.md); offene Echt-Geräte-Prüfungen:
+[`known-issues.md`](../known-issues.md).
+

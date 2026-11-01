@@ -98,3 +98,21 @@ export function ageInDays(birthDate: string, now: Date = new Date()): number {
 
   return Math.max(0, Math.round((today - birthDay) / MS_PER_DAY));
 }
+
+/** From this age on, an age reads better in years than in a long month count. */
+const YEARS_FROM_MONTHS = 24;
+
+/**
+ * The child's age as a short, human label: whole months up to the second
+ * birthday ("7 months old"), whole years after it ("2 years old").
+ */
+export function formatChildAge(
+  t: (key: 'child.home.ageMonths' | 'child.home.ageYears', options: { count: number }) => string,
+  birthDate: string,
+  now: Date = new Date(),
+): string {
+  const months = ageInMonths(birthDate, now);
+  return months < YEARS_FROM_MONTHS
+    ? t('child.home.ageMonths', { count: months })
+    : t('child.home.ageYears', { count: Math.floor(months / 12) });
+}

@@ -5,6 +5,7 @@ import { fetchHousehold } from '../api/household-api';
 import { ChildList } from '../components/ChildList';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { InviteGenerator } from '../components/InviteGenerator';
+import { HomeIllustration } from '../components/illustrations';
 import { MemberList } from '../components/MemberList';
 import { Skeleton } from '../components/ui';
 import { householdRoleLabelKey } from '../household/householdRoleLabelKey';
@@ -42,28 +43,32 @@ export function HouseholdDetail() {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <Link to="/households" className="text-sm font-medium text-primary hover:underline">
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+      <Link to="/households" className="text-sm font-bold text-primary hover:underline">
         {t('household.detail.backLink')}
       </Link>
-      <div>
-        <h1 className="text-xl font-bold text-foreground">{data.name}</h1>
-        <div className="mt-1 flex gap-3 text-sm text-muted-foreground">
-          <span>
-            {t('household.detail.yourRoleLabel')}:{' '}
-            <strong className="text-foreground">{t(householdRoleLabelKey(data.role))}</strong>
-          </span>
-          <span>
-            {t('household.detail.createdAtLabel')}:{' '}
-            <strong className="text-foreground">
-              {new Date(data.createdAt).toLocaleDateString()}
-            </strong>
-          </span>
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-black text-foreground">{data.name}</h1>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span>
+              {t('household.detail.yourRoleLabel')}:{' '}
+              <strong className="text-foreground">{t(householdRoleLabelKey(data.role))}</strong>
+            </span>
+            <span>
+              {t('household.detail.createdAtLabel')}:{' '}
+              <strong className="text-foreground">
+                {new Date(data.createdAt).toLocaleDateString()}
+              </strong>
+            </span>
+          </div>
         </div>
+        <HomeIllustration className="h-20 w-20" />
       </div>
+      {/* Children first: picking a child is what this screen is mostly for. */}
+      <ChildList householdId={data.id} role={data.role} />
       <InviteGenerator householdId={data.id} role={data.role} />
       <MemberList householdId={data.id} role={data.role} />
-      <ChildList householdId={data.id} role={data.role} />
     </section>
   );
 }

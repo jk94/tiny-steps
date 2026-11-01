@@ -59,7 +59,8 @@ export function MilestoneEdit() {
   );
   const [pendingPhotoDeleteId, setPendingPhotoDeleteId] = useState<string | null>(null);
 
-  const milestonePath = `/households/${householdId}/children/${childId}/milestones`;
+  // Editing starts from — and returns to — the milestone's detail screen.
+  const milestonePath = `/households/${householdId}/children/${childId}/milestones/${milestoneId}`;
 
   const childQuery = useQuery({
     queryKey: ['households', householdId, 'children', childId],
@@ -141,11 +142,11 @@ export function MilestoneEdit() {
         to={milestonePath}
         className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
       >
-        {t('milestone.form.backLink')}
+        {t('milestone.form.backToDetail')}
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('milestone.form.editTitle')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('milestone.form.editTitle')}</h1>
 
           {milestone.photos.length > 0 && (
             <div className="flex flex-col gap-2">

@@ -6,7 +6,11 @@ import { formatCalendarDate } from '../../lib/calendarDate';
 import { milestoneCategoryVisuals } from '../../lib/milestoneCategoryVisuals';
 import { useHouseholdRole } from '../../household/useHouseholdRole';
 import { canWrite, ENTRY_WRITE_ROLES } from '../../lib/householdPermissions';
+import { MilestoneIllustration } from '../illustrations';
 import { Badge, Card, EmptyState, Skeleton } from '../ui';
+import { MilestoneCover } from './MilestoneCover';
+import { AreaCardHeading } from '../AreaCardHeading';
+import { CHILD_AREAS } from '../../lib/childAreas';
 
 export interface MilestoneSummaryCardProps {
   householdId: string;
@@ -57,37 +61,48 @@ export function MilestoneSummaryCard({ householdId, childId }: MilestoneSummaryC
   return (
     <Card>
       <Card.Body className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-          {t('milestone.card.title')}
-        </h2>
+        <AreaCardHeading area={CHILD_AREAS.milestones}>{t('milestone.card.title')}</AreaCardHeading>
 
         {latest ? (
           <>
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="font-medium text-foreground">{latest.title}</span>
-              {visual && (
-                <Badge variant={visual.badgeVariant} size="sm">
-                  {t(visual.labelKey)}
-                </Badge>
-              )}
-            </div>
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="text-sm text-muted-foreground">
-                {t('milestone.card.achievedOn', {
-                  date: formatCalendarDate(latest.achievedAt, i18n.language),
-                })}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {t('milestone.card.ageAt', { count: latest.ageInMonthsAtMilestone })}
-              </span>
+            <div className="flex items-center gap-3">
+              <MilestoneCover
+                householdId={householdId}
+                childId={childId}
+                milestone={latest}
+                className="h-16 w-16 shrink-0 rounded-md"
+                illustrationClassName="h-full w-full"
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-bold text-foreground">{latest.title}</span>
+                  {visual && (
+                    <Badge variant={visual.badgeVariant} size="sm">
+                      {t(visual.labelKey)}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <span className="text-sm text-muted-foreground">
+                    {t('milestone.card.achievedOn', {
+                      date: formatCalendarDate(latest.achievedAt, i18n.language),
+                    })}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('milestone.card.ageAt', { count: latest.ageInMonthsAtMilestone })}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <Link to={milestonePath} className="text-sm font-medium text-primary hover:underline">
+            <Link to={milestonePath} className="text-sm font-bold text-primary hover:underline">
               {t('milestone.card.link')}
             </Link>
           </>
         ) : (
           <EmptyState
+            icon={<MilestoneIllustration className="h-20 w-20" />}
+            className="py-4"
             description={t('milestone.card.empty')}
             // The "nothing recorded yet" statement stays for every role; only
             // the call to action a read-only role couldn't follow is dropped.

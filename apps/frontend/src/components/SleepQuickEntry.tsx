@@ -10,6 +10,13 @@ import { Button } from './ui';
 export interface SleepQuickEntryProps {
   householdId: string;
   childId: string;
+  /** Called after the timer was started (the quick-add sheet closes on it). */
+  onCreated?: () => void;
+  /**
+   * Drops the "Quick entry" heading — for the quick-add sheet, which names
+   * each section itself.
+   */
+  hideTitle?: boolean;
 }
 
 /**
@@ -23,7 +30,12 @@ export interface SleepQuickEntryProps {
  * A successful create invalidates the `active-timer`/sleep-events query
  * prefix so `SleepHome` immediately swaps to `<SleepTimer>`.
  */
-export function SleepQuickEntry({ householdId, childId }: SleepQuickEntryProps) {
+export function SleepQuickEntry({
+  householdId,
+  childId,
+  onCreated,
+  hideTitle = false,
+}: SleepQuickEntryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -34,14 +46,17 @@ export function SleepQuickEntry({ householdId, childId }: SleepQuickEntryProps) 
       await queryClient.invalidateQueries({
         queryKey: ['households', householdId, 'children', childId, 'sleep-events'],
       });
+      onCreated?.();
     },
   });
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-        {t('sleep.quickEntry.title')}
-      </h2>
+      {!hideTitle && (
+        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+          {t('sleep.quickEntry.title')}
+        </h2>
+      )}
       <Button
         type="button"
         variant="primary"

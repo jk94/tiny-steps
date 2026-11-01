@@ -37,4 +37,26 @@ describe('ChildPhoto', () => {
       `/api/households/h1/children/c1/photo?v=${expectedCacheBust}`,
     );
   });
+
+  it('shows the baby illustration instead of initials when asked to and there is no photo', () => {
+    render(
+      <ChildPhoto
+        childId="c1"
+        householdId="h1"
+        hasPhoto={false}
+        name="Alex"
+        illustrationFallback
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Alex' })).toBeInTheDocument();
+    expect(screen.queryByText('AL')).not.toBeInTheDocument();
+    expect(document.querySelector('svg[viewBox="0 0 120 120"]')).not.toBeNull();
+  });
+
+  it('still prefers the real photo over the illustration', async () => {
+    render(<ChildPhoto childId="c1" householdId="h1" hasPhoto name="Alex" illustrationFallback />);
+
+    expect((await screen.findByAltText('Alex')).tagName).toBe('IMG');
+  });
 });

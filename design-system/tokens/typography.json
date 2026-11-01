@@ -1,6 +1,6 @@
 {
   "fontFamily": {
-    "sans": "system-ui, Avenir, Helvetica, Arial, sans-serif",
+    "sans": "Nunito Variable, system-ui, Avenir, Helvetica, Arial, sans-serif",
     "mono": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     "report": "Inter"
   },

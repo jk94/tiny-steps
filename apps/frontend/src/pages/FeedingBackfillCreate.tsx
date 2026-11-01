@@ -43,7 +43,7 @@ export function FeedingBackfillCreate() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('feeding.backfill.title')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('feeding.backfill.title')}</h1>
           <FeedingEventForm mode="create" onSubmit={handleSubmit} />
         </Card.Body>
       </Card>

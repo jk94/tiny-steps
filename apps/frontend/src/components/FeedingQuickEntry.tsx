@@ -14,6 +14,17 @@ const BOTTLE_AMOUNT_PRESETS_ML = [60, 90, 120, 150];
 export interface FeedingQuickEntryProps {
   householdId: string;
   childId: string;
+  /**
+   * Called after a successful create with what was logged — the quick-add
+   * sheet uses it to close itself and, for a breastfeeding timer, to open the
+   * feeding screen where the timer runs.
+   */
+  onCreated?: (input: CreateFeedingEventInput) => void;
+  /**
+   * Drops the "Quick entry" heading — for the quick-add sheet, which names
+   * each section itself.
+   */
+  hideTitle?: boolean;
 }
 
 /**
@@ -27,7 +38,12 @@ export interface FeedingQuickEntryProps {
  * list queries so `FeedingHome` immediately swaps to `<FeedingTimer>` (for
  * BREAST) or the updated list (for BOTTLE/SOLID) reflects the new entry.
  */
-export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryProps) {
+export function FeedingQuickEntry({
+  householdId,
+  childId,
+  onCreated,
+  hideTitle = false,
+}: FeedingQuickEntryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [showBottlePresets, setShowBottlePresets] = useState(false);
@@ -36,13 +52,14 @@ export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryPro
     // `user` is always non-null here — this component only renders behind `ProtectedRoute`.
     mutationFn: (input: CreateFeedingEventInput) =>
       createFeedingEventOptimistic(householdId, childId, user!.id, input),
-    onSuccess: async () => {
+    onSuccess: async (_data, input) => {
       setShowBottlePresets(false);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['households', householdId, 'children', childId, 'feeding-events'],
         }),
       ]);
+      onCreated?.(input);
     },
   });
 
@@ -50,9 +67,11 @@ export function FeedingQuickEntry({ householdId, childId }: FeedingQuickEntryPro
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-        {t('feeding.quickEntry.title')}
-      </h2>
+      {!hideTitle && (
+        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+          {t('feeding.quickEntry.title')}
+        </h2>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <Button
           type="button"

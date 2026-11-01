@@ -75,7 +75,7 @@ export function GrowthMeasurementCreate() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('growth.form.titleCreate')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('growth.form.titleCreate')}</h1>
           <GrowthMeasurementForm
             mode="create"
             birthDate={childQuery.data.birthDate.slice(0, 10)}

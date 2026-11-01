@@ -85,7 +85,7 @@ export function Export() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('export.title')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('export.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('export.includesGrowthNote')}</p>
 
           <div className="flex flex-col gap-2">

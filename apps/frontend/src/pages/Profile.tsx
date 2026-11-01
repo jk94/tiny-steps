@@ -19,7 +19,7 @@ export function Profile() {
 
   return (
     <section className="mx-auto w-full max-w-sm">
-      <h1 className="mb-4 text-xl font-bold text-foreground">{t('profile.title')}</h1>
+      <h1 className="mb-4 text-2xl font-black text-foreground">{t('profile.title')}</h1>
       <Card>
         <Card.Body className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">{t('profile.description')}</p>

@@ -13,6 +13,9 @@ import { useHouseholdRole } from '../../household/useHouseholdRole';
 import { canWrite, ENTRY_WRITE_ROLES } from '../../lib/householdPermissions';
 import { Card, EmptyState, Skeleton } from '../ui';
 import { GrowthMeasureValueRow } from './GrowthMeasureValueRow';
+import { AreaCardHeading } from '../AreaCardHeading';
+import { GrowthIllustration } from '../illustrations';
+import { CHILD_AREAS } from '../../lib/childAreas';
 
 export interface GrowthSummaryCardProps {
   householdId: string;
@@ -65,9 +68,7 @@ export function GrowthSummaryCard({ householdId, childId, birthDate }: GrowthSum
   return (
     <Card>
       <Card.Body className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-          {t('growth.card.title')}
-        </h2>
+        <AreaCardHeading area={CHILD_AREAS.growth}>{t('growth.card.title')}</AreaCardHeading>
 
         {latest ? (
           <>
@@ -96,6 +97,8 @@ export function GrowthSummaryCard({ householdId, childId, birthDate }: GrowthSum
           </>
         ) : (
           <EmptyState
+            icon={<GrowthIllustration className="h-20 w-20" />}
+            className="py-4"
             description={t('growth.card.empty')}
             // The "nothing recorded yet" statement stays for every role; only
             // the call to action a read-only role couldn't follow is dropped.

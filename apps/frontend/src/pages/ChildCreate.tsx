@@ -60,7 +60,7 @@ export function ChildCreate() {
       >
         {household.name}
       </Link>
-      <h1 className="text-xl font-bold text-foreground">{t('child.create.title')}</h1>
+      <h1 className="text-2xl font-black text-foreground">{t('child.create.title')}</h1>
       <ChildForm mode="create" onSubmit={handleSubmit} />
     </section>
   );

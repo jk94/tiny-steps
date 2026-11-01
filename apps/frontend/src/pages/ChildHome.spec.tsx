@@ -183,6 +183,30 @@ describe('ChildHome', () => {
     expect(screen.queryByText('Last diaper change')).not.toBeInTheDocument();
   });
 
+  it('turns each time-since tile into a link to its screen', async () => {
+    renderChildHome();
+
+    expect(await screen.findByRole('link', { name: /Last feeding/ })).toHaveAttribute(
+      'href',
+      `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/feeding`,
+    );
+    expect(screen.getByRole('link', { name: /Last sleep/ })).toHaveAttribute(
+      'href',
+      `/households/${HOUSEHOLD_ID}/children/${CHILD_ID}/sleep`,
+    );
+  });
+
+  it('renders the hero straight from the household list cache, before its own fetch answers', () => {
+    mockedChildApi.fetchChild.mockReturnValue(new Promise(() => {}));
+    queryClient.setQueryData(['households', HOUSEHOLD_ID, 'children'], [child]);
+
+    renderChildHome();
+
+    // No skeleton detour: this is what lets the tile→hero view transition
+    // capture the finished header.
+    expect(screen.getByRole('heading', { name: 'Alex' })).toBeInTheDocument();
+  });
+
   it('links onward to the daily timeline', async () => {
     renderChildHome();
 

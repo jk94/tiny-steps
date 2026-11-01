@@ -1,6 +1,8 @@
 import type { HTMLAttributes } from 'react';
 import { childPhotoUrl } from '../api/child-api';
 import { getPhotoCacheBust } from '../child/childPhotoCacheBust';
+import { cn } from '../lib/cn';
+import { BabyIllustration } from './illustrations';
 import { Avatar } from './ui';
 
 export interface ChildPhotoProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
@@ -9,6 +11,12 @@ export interface ChildPhotoProps extends Omit<HTMLAttributes<HTMLSpanElement>, '
   hasPhoto: boolean;
   name: string;
   size?: 'sm' | 'md' | 'lg';
+  /**
+   * Without an uploaded photo, show the baby illustration instead of initials
+   * — used on the large, decorative child tiles and the child-home hero, where
+   * two letters on a grey disc would look like a placeholder.
+   */
+  illustrationFallback?: boolean;
 }
 
 /**
@@ -27,12 +35,32 @@ export function ChildPhoto({
   hasPhoto,
   name,
   size,
+  illustrationFallback = false,
+  className,
   ...rest
 }: ChildPhotoProps) {
+  if (!hasPhoto && illustrationFallback) {
+    return (
+      <span
+        data-slot="avatar"
+        role="img"
+        aria-label={name}
+        className={cn(
+          'inline-flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white',
+          className,
+        )}
+        {...rest}
+      >
+        <BabyIllustration className="h-[115%] w-[115%]" />
+      </span>
+    );
+  }
+
   return (
     <Avatar
       name={name}
       size={size}
+      className={className}
       src={hasPhoto ? childPhotoUrl(householdId, childId, getPhotoCacheBust(childId)) : undefined}
       {...rest}
     />

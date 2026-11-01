@@ -208,4 +208,28 @@ describe('ChildList', () => {
 
     expect(await screen.findByText('Child home')).toBeInTheDocument();
   });
+
+  it('shows each child as a tile with its age, sharing a view-transition name with the hero', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 0, 15, 12, 0, 0));
+    mockedChildApi.listChildren.mockResolvedValueOnce([
+      {
+        id: 'c1',
+        householdId: 'h1',
+        name: 'Alex',
+        birthDate: '2025-07-01',
+        hasPhoto: false,
+        sex: null,
+        createdAt: '2025-07-01T00:00:00.000Z',
+      },
+    ]);
+
+    renderChildList('OWNER');
+
+    const link = await screen.findByRole('link', { name: 'Alex' });
+    expect(screen.getByText('6 months old')).toBeInTheDocument();
+    const tile = link.closest('[style*="view-transition-name"]') as HTMLElement | null;
+    expect(tile?.style.viewTransitionName).toBe('child-c1');
+    vi.useRealTimers();
+  });
 });

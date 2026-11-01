@@ -15,6 +15,9 @@ import { OVERDUE_BADGE_VARIANT } from '../../lib/healthRecordVisuals';
 import { useHouseholdRole } from '../../household/useHouseholdRole';
 import { canWrite, ENTRY_WRITE_ROLES } from '../../lib/householdPermissions';
 import { Badge, Card, EmptyState, Skeleton } from '../ui';
+import { AreaCardHeading } from '../AreaCardHeading';
+import { HealthIllustration } from '../illustrations';
+import { CHILD_AREAS } from '../../lib/childAreas';
 
 export interface HealthSummaryCardProps {
   householdId: string;
@@ -79,9 +82,7 @@ export function HealthSummaryCard({ householdId, childId }: HealthSummaryCardPro
   return (
     <Card>
       <Card.Body className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-          {t('health.card.title')}
-        </h2>
+        <AreaCardHeading area={CHILD_AREAS.health}>{t('health.card.title')}</AreaCardHeading>
 
         {nextDue ? (
           <>
@@ -117,6 +118,8 @@ export function HealthSummaryCard({ householdId, childId }: HealthSummaryCardPro
           </>
         ) : (
           <EmptyState
+            icon={<HealthIllustration className="h-20 w-20" />}
+            className="py-4"
             description={t('health.card.empty')}
             // The "nothing recorded yet" statement stays for every role; only
             // the call to action a read-only role couldn't follow is dropped.

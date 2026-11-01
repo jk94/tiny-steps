@@ -99,7 +99,7 @@ export function MilestoneCreate() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('milestone.form.createTitle')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('milestone.form.createTitle')}</h1>
           <MilestoneForm
             mode="create"
             birthDate={childQuery.data.birthDate.slice(0, 10)}

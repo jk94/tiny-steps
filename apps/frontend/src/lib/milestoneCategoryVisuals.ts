@@ -1,6 +1,15 @@
+import type { ComponentType } from 'react';
 import type { ParseKeys } from 'i18next';
 import { Baby, Footprints, MessageCircle, Smile, type LucideIcon } from 'lucide-react';
 import type { MilestoneCategory } from '../api/milestone-api';
+import {
+  FootprintsIllustration,
+  HeartsIllustration,
+  MilestoneIllustration,
+  SpeechIllustration,
+  ToothIllustration,
+  type IllustrationProps,
+} from '../components/illustrations';
 import type { BadgeVariant } from '../components/ui';
 
 export interface MilestoneCategoryVisual {
@@ -13,6 +22,10 @@ export interface MilestoneCategoryVisual {
   labelKey: ParseKeys;
   /** The `Badge` variant carrying this category's token pair. */
   badgeVariant: BadgeVariant;
+  /** Drawn on a milestone tile's cover when the milestone has no photo. */
+  Illustration: ComponentType<IllustrationProps>;
+  /** Soft category-tinted surface behind that illustration (literal for Tailwind). */
+  coverTint: string;
 }
 
 /**
@@ -35,25 +48,39 @@ export const milestoneCategoryVisuals: Record<MilestoneCategory, MilestoneCatego
     Icon: Footprints,
     labelKey: 'milestone.categories.motor',
     badgeVariant: 'milestone-motor',
+    Illustration: FootprintsIllustration,
+    coverTint: 'bg-milestone-motor/15',
   },
   LANGUAGE: {
     colorVar: '--color-milestone-language',
     Icon: MessageCircle,
     labelKey: 'milestone.categories.language',
     badgeVariant: 'milestone-language',
+    Illustration: SpeechIllustration,
+    coverTint: 'bg-milestone-language/15',
   },
   SOCIAL: {
     colorVar: '--color-milestone-social',
     Icon: Smile,
     labelKey: 'milestone.categories.social',
     badgeVariant: 'milestone-social',
+    Illustration: HeartsIllustration,
+    coverTint: 'bg-milestone-social/20',
   },
   PHYSICAL: {
     colorVar: '--color-milestone-physical',
     Icon: Baby,
     labelKey: 'milestone.categories.physical',
     badgeVariant: 'milestone-physical',
+    Illustration: ToothIllustration,
+    coverTint: 'bg-milestone-physical/15',
   },
+};
+
+/** Cover art for a milestone without a category (a free entry left uncategorised). */
+export const UNCATEGORISED_MILESTONE_COVER = {
+  Illustration: MilestoneIllustration,
+  coverTint: 'bg-milestone/15',
 };
 
 /**

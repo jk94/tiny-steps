@@ -78,7 +78,7 @@ export function DailyTimeline() {
         >
           {t('timeline.backLink')}
         </Link>
-        <h1 className="mt-1 text-xl font-bold text-foreground">
+        <h1 className="mt-1 text-2xl font-black text-foreground">
           {t('timeline.title', { name: child.name })}
         </h1>
       </div>

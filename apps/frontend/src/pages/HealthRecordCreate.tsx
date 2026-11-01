@@ -81,7 +81,7 @@ export function HealthRecordCreate() {
       </Link>
       <Card>
         <Card.Body className="flex flex-col gap-4">
-          <h1 className="text-xl font-bold text-foreground">{t('health.form.createTitle')}</h1>
+          <h1 className="text-2xl font-black text-foreground">{t('health.form.createTitle')}</h1>
           <HealthRecordForm
             mode="create"
             birthDate={childQuery.data.birthDate.slice(0, 10)}
