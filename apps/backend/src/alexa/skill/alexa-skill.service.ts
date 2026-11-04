@@ -30,7 +30,13 @@ type IntentHandler = (
 @Injectable()
 export class AlexaSkillService {
   private readonly logger = new Logger(AlexaSkillService.name);
-  private readonly handlers: Readonly<Record<string, IntentHandler>>;
+  /**
+   * A `Map`, not an object literal: the intent name comes from the request,
+   * and a plain-object lookup would also find `Object.prototype` members —
+   * an intent named `toString` or `constructor` must hit the fallback, not
+   * call a built-in.
+   */
+  private readonly handlers: ReadonlyMap<string, IntentHandler>;
 
   constructor(
     private readonly oauth: AlexaOAuthService,
@@ -42,26 +48,28 @@ export class AlexaSkillService {
     queries: AlexaQueryHandlers,
     private readonly reminders: AlexaReminderHandlers,
   ) {
-    this.handlers = {
-      [ALEXA_INTENTS.logFeeding]: (turn, intent) => recording.logFeeding(turn, intent),
-      [ALEXA_INTENTS.stopFeeding]: (turn, intent) => recording.stopFeeding(turn, intent),
-      [ALEXA_INTENTS.logDiaper]: (turn, intent) => recording.logDiaper(turn, intent),
-      [ALEXA_INTENTS.startSleep]: (turn, intent) => recording.startSleep(turn, intent),
-      [ALEXA_INTENTS.stopSleep]: (turn, intent) => recording.stopSleep(turn, intent),
-      [ALEXA_INTENTS.logSleep]: (turn, intent) => recording.logSleep(turn, intent),
-      [ALEXA_INTENTS.lastActivity]: (turn, intent) => queries.lastActivity(turn, intent),
-      [ALEXA_INTENTS.dailySummary]: (turn, intent) => queries.dailySummary(turn, intent),
-      [ALEXA_INTENTS.upcomingHealth]: (turn, intent) => queries.upcomingHealthRecords(turn, intent),
-      [ALEXA_INTENTS.setDefaultChild]: (turn, intent) => queries.setDefaultChild(turn, intent),
-      [ALEXA_INTENTS.feedingReminder]: (turn, intent) => reminders.feedingReminder(turn, intent),
-      [ALEXA_INTENTS.medicationReminder]: (turn, intent) =>
-        reminders.medicationReminder(turn, intent),
-    };
+    this.handlers = new Map<string, IntentHandler>([
+      [ALEXA_INTENTS.logFeeding, (turn, intent) => recording.logFeeding(turn, intent)],
+      [ALEXA_INTENTS.stopFeeding, (turn, intent) => recording.stopFeeding(turn, intent)],
+      [ALEXA_INTENTS.logDiaper, (turn, intent) => recording.logDiaper(turn, intent)],
+      [ALEXA_INTENTS.startSleep, (turn, intent) => recording.startSleep(turn, intent)],
+      [ALEXA_INTENTS.stopSleep, (turn, intent) => recording.stopSleep(turn, intent)],
+      [ALEXA_INTENTS.logSleep, (turn, intent) => recording.logSleep(turn, intent)],
+      [ALEXA_INTENTS.lastActivity, (turn, intent) => queries.lastActivity(turn, intent)],
+      [ALEXA_INTENTS.dailySummary, (turn, intent) => queries.dailySummary(turn, intent)],
+      [ALEXA_INTENTS.upcomingHealth, (turn, intent) => queries.upcomingHealthRecords(turn, intent)],
+      [ALEXA_INTENTS.setDefaultChild, (turn, intent) => queries.setDefaultChild(turn, intent)],
+      [ALEXA_INTENTS.feedingReminder, (turn, intent) => reminders.feedingReminder(turn, intent)],
+      [
+        ALEXA_INTENTS.medicationReminder,
+        (turn, intent) => reminders.medicationReminder(turn, intent),
+      ],
+    ]);
   }
 
   /** Names of every custom intent with a handler — the interaction-model sync test reads this. */
   get handledIntents(): string[] {
-    return Object.keys(this.handlers);
+    return [...this.handlers.keys()];
   }
 
   async handle(envelope: AlexaRequestEnvelope): Promise<AlexaResponseEnvelope> {
@@ -130,7 +138,7 @@ export class AlexaSkillService {
         return this.fallback(turn);
     }
 
-    const handler = this.handlers[intent.name];
+    const handler = this.handlers.get(intent.name);
     if (!handler) {
       return this.fallback(turn);
     }

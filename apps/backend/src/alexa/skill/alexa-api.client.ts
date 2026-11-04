@@ -29,9 +29,12 @@ export type ReminderOutcome = 'created' | 'permissionMissing' | 'failed';
  * Outbound calls to Amazon's Alexa APIs on behalf of one skill request, using
  * the short-lived `apiAccessToken` Amazon put into that request.
  *
- * `apiEndpoint` arrives inside the (signature-verified) request; it is still
- * pinned to Amazon's API hosts here, so a skill request can never make the
- * backend send that bearer token — or any request — elsewhere.
+ * `apiEndpoint` arrives inside the (signature-verified) request; it is never
+ * used as a URL itself. It only *selects* one of Amazon's fixed regional API
+ * origins below, so a skill request can never make the backend send that
+ * bearer token — or any request — anywhere else (SSRF guard). The device ID,
+ * the only other request-derived URL part, must look like an Alexa device ID
+ * and is path-encoded.
  */
 @Injectable()
 export class AlexaApiClient {
@@ -44,8 +47,8 @@ export class AlexaApiClient {
    */
   async getDeviceTimeZone(system: AlexaSystem): Promise<string | null> {
     const deviceId = system.device?.deviceId;
-    const base = apiBase(system.apiEndpoint);
-    if (!deviceId || !base || !system.apiAccessToken) {
+    const base = alexaApiOrigin(system.apiEndpoint);
+    if (!deviceId || !ALEXA_DEVICE_ID.test(deviceId) || !base || !system.apiAccessToken) {
       return null;
     }
 
@@ -89,7 +92,7 @@ export class AlexaApiClient {
     system: AlexaSystem,
     reminder: AlexaReminderRequest,
   ): Promise<ReminderOutcome> {
-    const base = apiBase(system.apiEndpoint);
+    const base = alexaApiOrigin(system.apiEndpoint);
     if (!base || !system.apiAccessToken) {
       return 'failed';
     }
@@ -122,18 +125,40 @@ export class AlexaApiClient {
   }
 }
 
-/** Amazon's regional Alexa API hosts (`api.amazonalexa.com`, `api.eu.amazonalexa.com`, …). */
-const ALEXA_API_HOST = /^api(\.[a-z]{2})?\.amazonalexa\.com$/;
+/**
+ * Amazon's regional Alexa API origins (North America, Europe, Far East) — the
+ * only values `context.System.apiEndpoint` takes.
+ */
+export const ALEXA_API_ORIGINS = [
+  'https://api.amazonalexa.com',
+  'https://api.eu.amazonalexa.com',
+  'https://api.fe.amazonalexa.com',
+] as const;
 
-function apiBase(apiEndpoint: string | undefined): string | null {
+/** `amzn1.ask.device.…` — Alexa device IDs are opaque but always of this shape. */
+const ALEXA_DEVICE_ID = /^amzn1\.ask\.device\.[A-Za-z0-9_-]{1,512}$/;
+
+/**
+ * The allow-listed origin a request's `apiEndpoint` names, or `null`. Returns
+ * the constant from `ALEXA_API_ORIGINS`, never the request's own string.
+ */
+export function alexaApiOrigin(
+  apiEndpoint: string | undefined,
+): (typeof ALEXA_API_ORIGINS)[number] | null {
   if (!apiEndpoint) return null;
+  let origin: string;
   try {
     const url = new URL(apiEndpoint);
-    if (url.protocol !== 'https:' || !ALEXA_API_HOST.test(url.hostname) || url.port !== '') {
+    if (
+      url.username !== '' ||
+      url.password !== '' ||
+      (url.pathname !== '/' && url.pathname !== '')
+    ) {
       return null;
     }
-    return url.origin;
+    origin = url.origin;
   } catch {
     return null;
   }
+  return ALEXA_API_ORIGINS.find((allowed) => allowed === origin) ?? null;
 }

@@ -184,7 +184,7 @@ describe('Alexa (e2e)', () => {
           System: {
             application: { applicationId: SKILL_ID },
             user: { userId: 'amzn1.ask.account.e2e', accessToken },
-            device: { deviceId: 'device-e2e' },
+            device: { deviceId: 'amzn1.ask.device.E2E' },
           },
         },
         request: {

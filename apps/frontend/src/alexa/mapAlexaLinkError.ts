@@ -27,7 +27,10 @@ export function mapAlexaLinkError(error: unknown): AlexaLinkErrorKey {
   if (error instanceof ApiError) {
     if (error.status === 404) return 'alexa.link.errors.disabled';
     const code = (error.body as { code?: unknown } | undefined)?.code;
-    if (typeof code === 'string' && code in CODE_TO_KEY) return CODE_TO_KEY[code];
+    // Own keys only: `in` would also match `constructor`/`toString` from the prototype.
+    if (typeof code === 'string' && Object.prototype.hasOwnProperty.call(CODE_TO_KEY, code)) {
+      return CODE_TO_KEY[code];
+    }
   }
   return 'alexa.link.errors.generic';
 }

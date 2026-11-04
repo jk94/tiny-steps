@@ -14,6 +14,13 @@ describe('mapAlexaLinkError', () => {
     expect(mapAlexaLinkError(new ApiError(400, { code }))).toBe(key);
   });
 
+  it.each(['constructor', 'toString', '__proto__'])(
+    'does not treat the prototype member %s as a known code',
+    (code) => {
+      expect(mapAlexaLinkError(new ApiError(400, { code }))).toBe('alexa.link.errors.generic');
+    },
+  );
+
   it('maps a 404 to "not set up on this instance"', () => {
     expect(mapAlexaLinkError(new ApiError(404, {}))).toBe('alexa.link.errors.disabled');
   });

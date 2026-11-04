@@ -106,7 +106,9 @@ describe('AlexaRequestVerifier', () => {
     const env = envelope();
     const { rawBody, headers } = signedRequest(env, WRONG_SAN_KEY);
 
-    await expect(verifier.verify(headers, rawBody, env)).rejects.toThrow(/echo-api.amazon.com/);
+    await expect(verifier.verify(headers, rawBody, env)).rejects.toThrow(
+      'not for echo-api.amazon.com',
+    );
   });
 
   it('rejects a chain that does not end at a trusted root', async () => {

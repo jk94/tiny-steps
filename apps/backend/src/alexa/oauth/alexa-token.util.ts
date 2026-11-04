@@ -24,14 +24,22 @@ export function hashAlexaToken(token: string): string {
 }
 
 /**
- * Constant-time string comparison for the client secret. Both sides are hashed
- * first so `timingSafeEqual` always compares equal-length buffers and the
- * length of the configured secret does not leak either.
+ * Constant-time comparison of the presented client secret with the configured
+ * one.
+ *
+ * `timingSafeEqual` needs equal-length buffers. On a length mismatch the
+ * configured secret is compared with itself, so the call always takes the
+ * same time for a given configuration and the outcome never depends on where
+ * the bytes first differ. Deliberately no hashing of the secret: a fast hash
+ * of a password-like value is exactly what CodeQL's
+ * `js/insufficient-password-hash` warns about, and it would add nothing here.
  */
 export function secretsMatch(presented: string, expected: string): boolean {
-  const a = createHash('sha256').update(presented).digest();
-  const b = createHash('sha256').update(expected).digest();
-  return timingSafeEqual(a, b);
+  const presentedBytes = Buffer.from(presented, 'utf8');
+  const expectedBytes = Buffer.from(expected, 'utf8');
+  const sameLength = presentedBytes.length === expectedBytes.length;
+  const equal = timingSafeEqual(sameLength ? presentedBytes : expectedBytes, expectedBytes);
+  return sameLength && equal;
 }
 
 /** RFC 7636 `S256`: BASE64URL(SHA256(ASCII(code_verifier))). */

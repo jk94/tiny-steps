@@ -101,7 +101,7 @@ function system(options: { token?: string; personToken?: string; consent?: boole
     ...(options.personToken
       ? { person: { personId: 'amzn1.ask.person.test', accessToken: options.personToken } }
       : {}),
-    device: { deviceId: 'device-1' },
+    device: { deviceId: 'amzn1.ask.device.TEST1' },
     apiEndpoint: 'https://api.eu.amazonalexa.com',
     apiAccessToken: 'api-token',
   };
@@ -221,6 +221,16 @@ describe('AlexaSkillService', () => {
       expect(speech(response)).toContain('nicht verstanden');
       expect(response.response.shouldEndSession).toBe(false);
     });
+
+    it.each(['toString', 'constructor', 'hasOwnProperty', '__proto__'])(
+      'falls back for an intent named like an Object.prototype member (%s)',
+      async (name) => {
+        const { service, oauth } = setup();
+        const response = await service.handle(intent(name));
+        expect(speech(response)).toContain('nicht verstanden');
+        expect(oauth.resolveAccessToken).not.toHaveBeenCalled();
+      },
+    );
 
     it('answers in English for an English request', async () => {
       const { service } = setup();
