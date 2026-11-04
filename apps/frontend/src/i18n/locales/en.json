@@ -993,6 +993,57 @@
     "saveSuccess": "Name saved.",
     "saveError": "Couldn't save your name. Please try again."
   },
+  "alexa": {
+    "link": {
+      "title": "Link Alexa with TinySteps",
+      "intro": "The Alexa app wants to connect your TinySteps skill to your account.",
+      "signedInAs": "Signed in as {{email}}",
+      "permissionsTitle": "Alexa will then be able to, on your behalf:",
+      "permissionRecord": "log feedings, diapers and sleep",
+      "permissionRead": "tell you when the baby was last fed, changed or asleep, and summarize the day",
+      "permissionHealth": "read planned medications and vaccinations for reminders",
+      "rolesNote": "Your household roles apply — as an observer you can only ask by voice. You can unlink any time on your profile.",
+      "defaultChildLabel": "Default child for voice commands",
+      "defaultChildNone": "None — Alexa asks when needed",
+      "defaultChildHint": "Used when you don't name a child in a voice command.",
+      "singleChildHint": "Voice commands without a name refer to {{name}}.",
+      "noChildrenHint": "You haven't added a child yet. You can do that in the app after linking.",
+      "approveButton": "Link",
+      "approveButtonPending": "Linking…",
+      "denyButton": "Cancel",
+      "loading": "Checking the request…",
+      "redirecting": "Returning to the Alexa app…",
+      "errors": {
+        "invalidRequest": "This link is incomplete. Please start linking again in the Alexa app.",
+        "disabled": "Alexa is not set up on this TinySteps instance.",
+        "invalidClient": "This linking request doesn't come from the configured Alexa skill (unknown client ID).",
+        "invalidRedirectUri": "This request's redirect address isn't in the configuration. Please check \"redirectUris\" in config.yml.",
+        "unsupportedResponseType": "This kind of linking isn't supported.",
+        "invalidPkce": "This request's security parameters (PKCE) are invalid.",
+        "childNotAccessible": "This child doesn't belong to any of your households.",
+        "generic": "Linking failed. Please try again."
+      }
+    },
+    "settings": {
+      "title": "Alexa",
+      "description": "With the TinySteps skill you log and look up feedings, diapers and sleep by voice. Link your account in the Alexa app under Skills.",
+      "empty": "No Amazon account linked yet.",
+      "linkHeading": "Amazon account, linked on {{date}}",
+      "lastUsed": "Last used on {{date}}",
+      "neverUsed": "Not used yet",
+      "defaultChildLabel": "Default child",
+      "defaultChildNone": "None — Alexa asks when needed",
+      "defaultChildSaved": "Default child saved.",
+      "saveError": "The default child couldn't be saved.",
+      "unlinkButton": "Unlink",
+      "unlinkConfirmTitle": "Unlink Alexa?",
+      "unlinkConfirmDescription": "Alexa won't be able to log or look up anything until you link the skill again in the Alexa app.",
+      "unlinkConfirm": "Unlink",
+      "unlinkCancel": "Cancel",
+      "unlinkError": "The link couldn't be removed.",
+      "loadError": "The Alexa links couldn't be loaded."
+    }
+  },
   "mandatoryNameDialog": {
     "title": "What should we call you?",
     "description": "Your account doesn't have a name yet. Please enter one to continue.",

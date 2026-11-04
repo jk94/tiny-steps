@@ -993,6 +993,57 @@
     "saveSuccess": "Name gespeichert.",
     "saveError": "Dein Name konnte nicht gespeichert werden. Bitte versuche es erneut."
   },
+  "alexa": {
+    "link": {
+      "title": "Alexa mit TinySteps verknüpfen",
+      "intro": "Die Alexa-App möchte deinen TinySteps-Skill mit deinem Konto verbinden.",
+      "signedInAs": "Angemeldet als {{email}}",
+      "permissionsTitle": "Alexa darf dann in deinem Namen:",
+      "permissionRecord": "Fütterungen, Windeln und Schlaf eintragen",
+      "permissionRead": "vorlesen, wann zuletzt gefüttert, gewickelt oder geschlafen wurde, und den Tag zusammenfassen",
+      "permissionHealth": "geplante Medikamente und Impfungen für Erinnerungen lesen",
+      "rolesNote": "Es gelten deine Rollen in den Haushalten — als Beobachter kannst du per Sprache nur abfragen. Die Verknüpfung lässt sich jederzeit im Profil aufheben.",
+      "defaultChildLabel": "Standardkind für Sprachbefehle",
+      "defaultChildNone": "Keins — Alexa fragt bei Bedarf nach",
+      "defaultChildHint": "Gilt, wenn du im Sprachbefehl kein Kind nennst.",
+      "singleChildHint": "Sprachbefehle ohne Namen beziehen sich auf {{name}}.",
+      "noChildrenHint": "Du hast noch kein Kind angelegt. Das kannst du nach der Verknüpfung in der App nachholen.",
+      "approveButton": "Verknüpfen",
+      "approveButtonPending": "Verknüpft…",
+      "denyButton": "Abbrechen",
+      "loading": "Anfrage wird geprüft…",
+      "redirecting": "Zurück zur Alexa-App…",
+      "errors": {
+        "invalidRequest": "Dieser Link ist unvollständig. Bitte starte die Verknüpfung erneut in der Alexa-App.",
+        "disabled": "Alexa ist auf dieser TinySteps-Instanz nicht eingerichtet.",
+        "invalidClient": "Diese Verknüpfungsanfrage stammt nicht vom eingerichteten Alexa-Skill (unbekannte Client-ID).",
+        "invalidRedirectUri": "Die Rücksprungadresse dieser Anfrage ist nicht in der Konfiguration hinterlegt. Bitte prüfe die „redirectUris“ in config.yml.",
+        "unsupportedResponseType": "Diese Art der Verknüpfung wird nicht unterstützt.",
+        "invalidPkce": "Die Sicherheitsangaben (PKCE) dieser Anfrage sind ungültig.",
+        "childNotAccessible": "Dieses Kind gehört zu keinem deiner Haushalte.",
+        "generic": "Die Verknüpfung ist fehlgeschlagen. Bitte versuche es erneut."
+      }
+    },
+    "settings": {
+      "title": "Alexa",
+      "description": "Mit dem TinySteps-Skill trägst du Fütterungen, Windeln und Schlaf per Sprache ein und fragst sie ab. Verknüpfen kannst du dein Konto in der Alexa-App unter Skills.",
+      "empty": "Noch kein Amazon-Konto verknüpft.",
+      "linkHeading": "Amazon-Konto, verknüpft am {{date}}",
+      "lastUsed": "Zuletzt benutzt am {{date}}",
+      "neverUsed": "Noch nicht benutzt",
+      "defaultChildLabel": "Standardkind",
+      "defaultChildNone": "Keins — Alexa fragt bei Bedarf nach",
+      "defaultChildSaved": "Standardkind gespeichert.",
+      "saveError": "Das Standardkind konnte nicht gespeichert werden.",
+      "unlinkButton": "Verknüpfung aufheben",
+      "unlinkConfirmTitle": "Alexa-Verknüpfung aufheben?",
+      "unlinkConfirmDescription": "Alexa kann danach nichts mehr eintragen oder abfragen, bis du den Skill in der Alexa-App erneut verknüpfst.",
+      "unlinkConfirm": "Aufheben",
+      "unlinkCancel": "Abbrechen",
+      "unlinkError": "Die Verknüpfung konnte nicht aufgehoben werden.",
+      "loadError": "Die Alexa-Verknüpfungen konnten nicht geladen werden."
+    }
+  },
   "mandatoryNameDialog": {
     "title": "Wie sollen wir dich nennen?",
     "description": "Dein Konto hat noch keinen Namen. Bitte gib einen ein, um fortzufahren.",

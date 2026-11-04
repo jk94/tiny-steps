@@ -94,6 +94,41 @@ describe('OidcController', () => {
       );
       expect(res.redirect).toHaveBeenCalledWith(302, 'https://idp.example.com/authorize?state=s');
     });
+
+    it('carries a safe returnTo path in the transaction', async () => {
+      oidcService.buildLoginRedirect.mockResolvedValue({
+        authorizationUrl: 'https://idp.example.com/authorize?state=s',
+        txn: { providerId: 'keycloak', state: 's', nonce: 'n', codeVerifier: 'c' },
+      });
+      txnCookieService.encode.mockResolvedValue('encoded-txn');
+
+      await controller.login(
+        'keycloak',
+        buildResponse() as unknown as Response,
+        '/alexa/link?client_id=x',
+      );
+
+      expect(txnCookieService.encode).toHaveBeenCalledWith(
+        expect.objectContaining({ returnTo: '/alexa/link?client_id=x' }),
+      );
+    });
+
+    it('drops an off-site returnTo', async () => {
+      oidcService.buildLoginRedirect.mockResolvedValue({
+        authorizationUrl: 'https://idp.example.com/authorize?state=s',
+        txn: { providerId: 'keycloak', state: 's', nonce: 'n', codeVerifier: 'c' },
+      });
+      txnCookieService.encode.mockResolvedValue('encoded-txn');
+
+      await controller.login('keycloak', buildResponse() as unknown as Response, '//evil.example');
+
+      expect(txnCookieService.encode).toHaveBeenCalledWith({
+        providerId: 'keycloak',
+        state: 's',
+        nonce: 'n',
+        codeVerifier: 'c',
+      });
+    });
   });
 
   describe('callback', () => {
@@ -241,6 +276,30 @@ describe('OidcController', () => {
       expect(authCookieService.setAuthCookies).toHaveBeenCalledWith(res, authResult.tokens);
       expect(res.redirect).toHaveBeenCalledWith(302, '/');
       expect(res.clearCookie).toHaveBeenCalledWith(OIDC_TXN_COOKIE_NAME, expect.anything());
+    });
+
+    it('redirects to the returnTo path carried in the transaction', async () => {
+      registry.get.mockReturnValue({} as never);
+      txnCookieService.decode.mockResolvedValue({
+        providerId: 'keycloak',
+        state: 's',
+        nonce: 'n',
+        codeVerifier: 'c',
+        returnTo: '/alexa/link?state=abc',
+      });
+      oidcService.handleCallback.mockResolvedValue({
+        user: { id: 'user-1', email: 'parent@example.com', name: null, createdAt: new Date() },
+        tokens: { accessToken: 'a', refreshToken: 'r' },
+      });
+      const res = buildResponse();
+
+      await controller.callback(
+        'keycloak',
+        buildRequest({ cookies: { [OIDC_TXN_COOKIE_NAME]: 'encoded' } }),
+        res as unknown as Response,
+      );
+
+      expect(res.redirect).toHaveBeenCalledWith(302, '/alexa/link?state=abc');
     });
   });
 });

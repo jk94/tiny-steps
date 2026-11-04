@@ -9,10 +9,10 @@ vi.mock('../api/oidc-api');
 
 const mockedOidcApi = vi.mocked(oidcApi);
 
-function renderOidcProviderButtons() {
+function renderOidcProviderButtons(returnTo?: string) {
   return render(
     <QueryClientProvider client={queryClient}>
-      <OidcProviderButtons />
+      <OidcProviderButtons returnTo={returnTo} />
     </QueryClientProvider>,
   );
 }
@@ -69,5 +69,18 @@ describe('OidcProviderButtons', () => {
 
     expect(screen.getAllByText('or continue with')).toHaveLength(1);
     expect(screen.getAllByRole('link')).toHaveLength(2);
+  });
+
+  it('carries the page to return to after login', async () => {
+    mockedOidcApi.fetchOidcProviders.mockResolvedValueOnce([
+      { id: 'keycloak', displayName: 'Keycloak' },
+    ]);
+
+    renderOidcProviderButtons('/alexa/link?client_id=a&state=b');
+
+    expect(await screen.findByRole('link', { name: /Keycloak/ })).toHaveAttribute(
+      'href',
+      `/api/auth/oidc/keycloak/login?returnTo=${encodeURIComponent('/alexa/link?client_id=a&state=b')}`,
+    );
   });
 });

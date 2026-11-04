@@ -39,5 +39,8 @@ import { DiaperService } from './diaper.service';
   // own provider graph — same pattern as `ChildModule`/`FeedingModule`/
   // `SleepModule`.
   providers: [DiaperService, HouseholdMembershipGuard],
+  // Exported for the Alexa skill (Phase 8), which records by voice through
+  // the very same service — same rules, same realtime broadcast.
+  exports: [DiaperService],
 })
 export class DiaperModule {}

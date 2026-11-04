@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Implemented: **Phases 0–6** (scaffolding, auth/multi-user incl. OIDC, tracking core, realtime sync + overview, offline/PWA, export/native wrapper/push, design system M1–M4), **Phases 7.1–7.5** — 7.4 deliberately in *reduced* scope (no external HTML renderer, no per-domain CSV endpoints) — and **7.7** (development calendar, a request-driven addition outside the PRD).
+Implemented: **Phases 0–6** (scaffolding, auth/multi-user incl. OIDC, tracking core, realtime sync + overview, offline/PWA, export/native wrapper/push, design system M1–M4), **Phases 7.1–7.5** — 7.4 deliberately in *reduced* scope (no external HTML renderer, no per-domain CSV endpoints) — **7.7** (development calendar, a request-driven addition outside the PRD) and **Phase 8** (Alexa skill, opt-in per instance).
 
-**Open: Phase 7.6** (dedicated user-settings area + server-side persisted language choice; i18n infrastructure itself already exists — [ADR-0005](docs/adr/0005-i18n-infrastructure-brought-forward.md) — with a header language switch and `localStorage` persistence). Phase 8 is still only a brainstorm (`docs/roadmap/phase-8/brainstorm.md`, Alexa skill).
+**Open: Phase 7.6** (dedicated user-settings area + server-side persisted language choice; i18n infrastructure itself already exists — [ADR-0005](docs/adr/0005-i18n-infrastructure-brought-forward.md) — with a header language switch and `localStorage` persistence). When 7.6 lands, the profile page's Alexa block moves into the new settings area as its own section.
 
-Everything else outstanding is a **manual real-device/real-viewer check** or a documentation follow-up, tracked in [`docs/known-issues.md`](docs/known-issues.md): PWA install, Capacitor Android build + cookie/origin auth smoke test, real push delivery, growth-chart touch scrub, PDF report in a real viewer, mobile CLS/load-time, the German-only push texts, the development calendar's link check and medical review, and the Phase-7.5 doc follow-ups (ADR-0002 addendum, ADR-0003 correction, PRD section-3 wording).
+Everything else outstanding is a **manual real-device/real-viewer check** or a documentation follow-up, tracked in [`docs/known-issues.md`](docs/known-issues.md): PWA install, Capacitor Android build + cookie/origin auth smoke test, real push delivery, growth-chart touch scrub, PDF report in a real viewer, mobile CLS/load-time, the German-only push texts, the development calendar's link check and medical review, the Phase-7.5 doc follow-ups (ADR-0002 addendum, ADR-0003 correction, PRD section-3 wording), and the Alexa skill against a real Echo/Alexa app.
 
 The long-form per-phase notes (what was built, why, and which alternatives were rejected) live in [`docs/implementation-notes.md`](docs/implementation-notes.md). **Read the relevant entry before changing a phase's code** — much of what looks like an oversight there is a recorded decision.
 
@@ -21,6 +21,7 @@ The long-form per-phase notes (what was built, why, and which alternatives were 
 | 7.4 | PDF report (`GET .../export/report.pdf`) beside the untouched raw export — renderer-neutral `ReportDocument` IR rendered by `@react-pdf/renderer`; growth chart shared via `packages/growth-chart-static/` | [ADR-0015](docs/adr/0015-pdf-report-generation.md) |
 | 7.5 | Roles `CAREGIVER`/`OBSERVER` beside `OWNER`/`CO_PARENT`; permission matrix + fail-closed `@RequireRole` on every writing route; frontend *hides* disallowed actions | `docs/roadmap/phase-7/phase-7-5-erweiterte-rollen.md` |
 | 7.7 | Development calendar — frontend-only, 52 weeks + months 13–36 per locale in lazy-loaded `development/content/{de,en}.ts` (deliberately **not** in the i18n JSON), one source registry, `ChildHome` card + detail screen | `docs/roadmap/phase-7/phase-7-7-entwicklungskalender.md` |
+| 8 | Alexa skill — private skill per instance (`alexa/skill-package`), endpoint `POST /api/alexa/skill` **in the backend** (Amazon signature verified over the raw body; `rawBody: true` in `main.ts`), built-in minimal OAuth 2.0 server for account linking (opaque hashed tokens, non-rotating refresh, consent page `/alexa/link`), voice reuses the domain services + role bundles in-process; off unless `config.yml` has an `alexa` section | [ADR-0017](docs/adr/0017-alexa-skill-account-linking-and-in-process-endpoint.md), `docs/roadmap/phase-8/`, `alexa/README.md` |
 | Redesign | Request-driven (2026-11-01): four-item mobile child nav + "more" sheet + quick-add FAB (2-tap budget kept), View Transitions via `lib/viewTransition.ts` (BrowserRouter-compatible), milestone album + `MilestoneDetail` route, warmer tokens, bundled Nunito, SVG illustration set in `components/illustrations/` | [ADR-0016](docs/adr/0016-playful-visual-language-navigation-and-motion.md) |
 
 ## Cross-cutting rules that later work keeps having to respect
@@ -31,6 +32,7 @@ The long-form per-phase notes (what was built, why, and which alternatives were 
 - **Never hand-edit a `*.generated.*` file.** Design tokens flow `design-system/tokens/*.json` → `bun run design-tokens:build` → four targets (frontend CSS, `docs/design-system/tokens.md`, `eventTypeTokens.generated.ts`, and the backend report tokens). Rerun it after any token edit; see `docs/design-system/reconciliation-process.md`.
 - Calendar-day fields (`birthDate`, `measuredAt`, `achievedAt`, `dueAt`) are bare `YYYY-MM-DD` at UTC midnight and use `@IsDateOnly()`; comparisons tolerate a max UTC offset. Timestamps (`occurredAt`, `administeredAt`) are real instants.
 - **Per-child areas are registered once in `apps/frontend/src/lib/childAreas.ts`** (route segment, label, icon, illustration, tint classes); the bottom bar, "more" sheet, sidebar, quick-add sheet and area headers all read it. A new area needs an entry there and an illustration. Quick-add must keep a standard event at **2 taps** (FAB → type).
+- **Voice is just another client of the domain services.** The Alexa skill (`apps/backend/src/alexa/`) never re-implements a rule: it builds the routes' own DTO classes (validated via `toValidatedDto`), calls `FeedingService`/`SleepService`/`DiaperService`/`EventService`/`HealthRecordService`, and checks roles with `mayRecordEntries`. Intent/slot names are shared with `alexa/skill-package/` and pinned by `alexa-interaction-model.spec.ts`; spoken texts live in `alexa-messages.ts` (not the i18n JSON) and may be overridden per key in `config.yml`.
 - **Storybook is scoped to `components/ui/**` only** — rebuild it only when a primitive actually changes.
 - **Jest cannot load `@react-pdf/renderer` natively** (ESM-only chain, `import.meta.url` in `yoga-layout`) — both Jest configs map it to `apps/backend/test-support/react-pdf-renderer.cjs`. Don't "clean up" that shim.
 
@@ -76,6 +78,7 @@ Occasional/build-time only:
 
 - `bun run --cwd packages/growth-chart-static build` — compile the shared growth chart to its dual ESM/CJS output (the backend consumes the build, the frontend the source via a Vite alias)
 - `bun apps/backend/src/growth/reference-data/scripts/convert-who-tables.ts` — regenerate the vendored WHO LMS data modules from `reference-data/source/*.txt`; deterministic codegen, never run at runtime (provenance/licence in that directory's `README.md`)
+- `alexa/` — the Alexa skill package (interaction models, manifest, account-linking template) operators import into their own developer console; setup in `alexa/README.md`
 - `bun run --cwd apps/backend report:bench` — re-measure PDF report generation over 1/3/12/24-month periods; not part of the test suite, the numbers are machine-dependent
 
 ## Working conventions

@@ -5,6 +5,16 @@ import { fetchOidcProviders } from '../api/oidc-api';
 const OIDC_PROVIDERS_QUERY_KEY = ['auth', 'oidc', 'providers'] as const;
 
 /**
+ * `returnTo` is where the user wanted to go before being sent to log in (the
+ * `from` location `ProtectedRoute` passes along, e.g. the Alexa consent page
+ * or an invite). The backend only honours same-origin app paths.
+ */
+function oidcLoginHref(providerId: string, returnTo: string | undefined): string {
+  const base = `/api/auth/oidc/${providerId}/login`;
+  return returnTo ? `${base}?returnTo=${encodeURIComponent(returnTo)}` : base;
+}
+
+/**
  * Renders one login link per configured OIDC provider, or nothing while
  * loading, on error, or when no providers are configured. Each link is a
  * plain `<a href>` navigation (not routed through `apiFetch`) — the login
@@ -13,7 +23,7 @@ const OIDC_PROVIDERS_QUERY_KEY = ['auth', 'oidc', 'providers'] as const;
  * `Button` `variant="secondary"` look by hand, since `Button` can't render
  * as an anchor.
  */
-export function OidcProviderButtons() {
+export function OidcProviderButtons({ returnTo }: { returnTo?: string } = {}) {
   const { t } = useTranslation();
   const { data } = useQuery({
     queryKey: OIDC_PROVIDERS_QUERY_KEY,
@@ -40,7 +50,7 @@ export function OidcProviderButtons() {
         {data.map((provider) => (
           <a
             key={provider.id}
-            href={`/api/auth/oidc/${provider.id}/login`}
+            href={oidcLoginHref(provider.id, returnTo)}
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-muted px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/80"
           >
             {t('auth.oidc.continueWithProvider', { provider: provider.displayName })}

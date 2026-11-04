@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { Profile } from './Profile';
 import type { AuthUser } from '../api/auth-api';
 import * as useAuthModule from '../auth/useAuth';
+import * as alexaApi from '../api/alexa-api';
+import { queryClient } from '../lib/query-client';
 
 vi.mock('../auth/useAuth');
+vi.mock('../api/alexa-api');
 
 const mockedUseAuth = vi.mocked(useAuthModule.useAuth);
 
@@ -30,13 +34,25 @@ function renderProfile(
     updateName,
     logout: vi.fn(),
   });
-  const utils = render(<Profile />);
+  // The Alexa section (Phase 8) is covered by AlexaSettingsCard.spec; here the
+  // instance simply has no Alexa configured, so it renders nothing.
+  vi.mocked(alexaApi.fetchAlexaLinks).mockResolvedValue({
+    enabled: false,
+    links: [],
+    children: [],
+  });
+  const utils = render(
+    <QueryClientProvider client={queryClient}>
+      <Profile />
+    </QueryClientProvider>,
+  );
   return { ...utils, updateName };
 }
 
 describe('Profile', () => {
   afterEach(() => {
     vi.resetAllMocks();
+    queryClient.clear();
   });
 
   it('pre-fills the field with the current name', () => {

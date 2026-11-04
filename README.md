@@ -16,6 +16,7 @@ This is a Bun-workspace monorepo:
 apps/
   backend/   # NestJS API (serves the built frontend too, see below)
   frontend/  # React + Vite SPA
+alexa/       # optional Alexa skill package + setup guide (see alexa/README.md)
 ```
 
 ## Tooling notes

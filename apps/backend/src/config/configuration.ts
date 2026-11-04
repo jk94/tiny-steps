@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import { configValidationSchema } from './configuration.schema';
+import type { AlexaConfig } from './alexa.config';
 import { OidcProviderConfig } from './oidc-provider.config';
 
 export interface AppConfig {
@@ -31,6 +32,9 @@ export interface AppConfig {
       serviceAccountPath: string;
     };
   };
+  // Optional: when absent, the Alexa integration is disabled and every
+  // `/api/alexa/**` route answers 404 (Phase 8, ADR-0017).
+  alexa?: AlexaConfig;
 }
 
 /**

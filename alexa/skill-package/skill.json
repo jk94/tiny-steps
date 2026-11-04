@@ -1,0 +1,53 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "de-DE": {
+          "name": "TinySteps",
+          "summary": "Fütterungen, Windeln und Schlaf deines Babys per Sprache in deiner eigenen TinySteps-Instanz eintragen und abfragen.",
+          "description": "Verbindet Alexa mit deiner selbst gehosteten TinySteps-Instanz. Trage Fütterungen, Windeln und Schlaf per Sprache ein, frage nach, wann zuletzt gefüttert, gewickelt oder geschlafen wurde, lass dir den Tag zusammenfassen und stelle Erinnerungen für die nächste Fütterung oder ein Medikament.",
+          "examplePhrases": [
+            "Alexa, öffne tiny steps",
+            "Alexa, sag tiny steps Windel nass",
+            "Alexa, frag tiny steps wann zuletzt gefüttert wurde"
+          ],
+          "keywords": ["Baby", "Stillen", "Windel", "Schlaf", "Fütterung"]
+        },
+        "en-US": {
+          "name": "TinySteps",
+          "summary": "Log and look up your baby's feedings, diapers and sleep by voice in your own TinySteps instance.",
+          "description": "Connects Alexa to your self-hosted TinySteps instance. Log feedings, diapers and sleep by voice, ask when the baby was last fed, changed or asleep, get a daily summary, and set reminders for the next feeding or a medication.",
+          "examplePhrases": [
+            "Alexa, open tiny steps",
+            "Alexa, tell tiny steps wet diaper",
+            "Alexa, ask tiny steps when was the last feeding"
+          ],
+          "keywords": ["baby", "breastfeeding", "diaper", "sleep", "feeding"]
+        }
+      },
+      "testingInstructions": "Private skill for one self-hosted TinySteps instance; not intended for certification."
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "https://tinysteps.example.com/api/alexa/skill",
+          "sslCertificateType": "Trusted"
+        },
+        "interfaces": []
+      }
+    },
+    "permissions": [
+      {
+        "name": "alexa::alerts:reminders:skill:readwrite"
+      }
+    ],
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": true,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false
+    }
+  },
+  "manifestVersion": "1.0"
+}

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { JwtSecrets } from '../../config/jwt.config';
 import { JWT_SECRETS } from '../jwt-secrets.token';
+import { sanitizeReturnTo } from './return-to';
 
 /** Distinguishing claim so this token can never be confused with a real access token — see `JwtStrategy`. */
 const OIDC_TXN_PURPOSE = 'oidc-txn';
@@ -18,6 +19,12 @@ export interface OidcTransaction {
   state: string;
   nonce: string;
   codeVerifier: string;
+  /**
+   * Same-origin SPA path to land on after a successful login (see
+   * `sanitizeReturnTo`). Optional: absent means `/`, the behaviour before
+   * Phase 8.
+   */
+  returnTo?: string;
 }
 
 interface OidcTransactionPayload extends OidcTransaction {
@@ -80,11 +87,15 @@ export class OidcTransactionCookieService {
       return null;
     }
 
+    // Re-sanitized on the way out too: the value is signed, but this keeps
+    // the open-redirect rule in one function no matter who produced it.
+    const returnTo = sanitizeReturnTo(payload.returnTo);
     return {
       providerId: payload.providerId,
       state: payload.state,
       nonce: payload.nonce,
       codeVerifier: payload.codeVerifier,
+      ...(returnTo ? { returnTo } : {}),
     };
   }
 }
